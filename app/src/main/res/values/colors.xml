@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette matched to the uploaded reference image: dark iPhone-style keyboard -->
+    <color name="keyboard_background">#1C1C1E</color>
+    <color name="toolbar_background">#1C1C1E</color>
+    <color name="key_background">#3A3A3C</color>
+    <color name="key_background_pressed">#545456</color>
+    <color name="key_background_special">#2C2C2E</color>
+    <color name="key_background_special_pressed">#48484A</color>
+    <color name="key_background_accent">#0A84FF</color>
+    <color name="key_background_accent_pressed">#3D9BFF</color>
+    <color name="key_text">#FFFFFF</color>
+    <color name="key_text_secondary">#8E8E93</color>
+    <color name="toolbar_icon">#E5E5EA</color>
+    <color name="suggestion_text">#E5E5EA</color>
+    <color name="divider">#38383A</color>
+
+    <color name="app_background">#1C1C1E</color>
+    <color name="app_surface">#2C2C2E</color>
+    <color name="app_accent">#0A84FF</color>
+    <color name="app_text_primary">#FFFFFF</color>
+    <color name="app_text_secondary">#8E8E93</color>
+</resources>

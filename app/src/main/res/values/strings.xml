@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JuJuKeys</string>
+    <string name="settings_title">JuJuKeys Settings</string>
+    <string name="subtype_english">English</string>
+    <string name="subtype_bengali">বাংলা</string>
+
+    <string name="spacebar_english">ENGLISH</string>
+    <string name="spacebar_bengali">বাংলা</string>
+
+    <string name="onboarding_title">Welcome to JuJuKeys</string>
+    <string name="onboarding_step1_title">1. Enable JuJuKeys</string>
+    <string name="onboarding_step1_body">Open Android Settings → System → Languages &amp; input → On-screen keyboard, then turn JuJuKeys on.</string>
+    <string name="onboarding_step2_title">2. Switch to JuJuKeys</string>
+    <string name="onboarding_step2_body">Tap any text field, tap the keyboard/globe icon, and choose JuJuKeys as your active keyboard.</string>
+    <string name="open_keyboard_settings">Open Keyboard Settings</string>
+    <string name="open_jujukeys_settings">Open JuJuKeys Settings</string>
+
+    <string name="cd_clipboard">Clipboard</string>
+    <string name="cd_translate">Translate</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_mic">Voice input</string>
+    <string name="cd_globe">Switch language</string>
+    <string name="cd_backspace">Backspace</string>
+    <string name="cd_emoji">Emoji</string>
+    <string name="cd_shift_symbols">Symbols</string>
+    <string name="cd_back_to_letters">Back to letters</string>
+
+    <string name="translation_unavailable_online">Online translation is not configured. Showing offline dictionary results only.</string>
+    <string name="translation_no_match">No offline match found for this word/phrase yet.</string>
+    <string name="mic_unavailable">Speech recognition is not available on this device.</string>
+    <string name="mic_permission_needed">Microphone permission is needed for voice input.</string>
+</resources>

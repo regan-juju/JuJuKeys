@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IME metadata. This is what makes JuJuKeys a REAL Android system keyboard:
+  it registers the service under Settings > System > Languages & input > On-screen keyboard,
+  and declares the languages ("subtypes") it supports so Android offers it as a keyboard choice
+  in any text field system-wide.
+-->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.reganbarua.jujukeys.settings.SettingsActivity"
+    android:supportsSwitchingToNextInputMethod="true">
+
+    <subtype
+        android:label="@string/subtype_english"
+        android:imeSubtypeLocale="en_US"
+        android:imeSubtypeMode="keyboard"
+        android:icon="@mipmap/ic_launcher" />
+
+    <subtype
+        android:label="@string/subtype_bengali"
+        android:imeSubtypeLocale="bn_BD"
+        android:imeSubtypeMode="keyboard"
+        android:icon="@mipmap/ic_launcher" />
+
+</input-method>

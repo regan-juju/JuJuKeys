@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.JuJuKeys" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="colorPrimary">@color/app_accent</item>
+    </style>
+
+    <!-- Theme applied to the IME window itself: no title, floats above the current app -->
+    <style name="Theme.JuJuKeys.Keyboard" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@color/keyboard_background</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation</item>
+    </style>
+</resources>
