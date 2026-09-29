@@ -67,5 +67,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Offline translation (Google ML Kit — Google Translate's on-device models)
+    implementation("com.google.mlkit:translate:17.0.3")
+
     testImplementation("junit:junit:4.13.2")
 }

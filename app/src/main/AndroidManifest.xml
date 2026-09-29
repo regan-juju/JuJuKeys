@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Translation: downloading the offline model once, and optional online translation -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- So the keyboard can open Google Keep and Google Translate -->
+    <queries>
+        <package android:name="com.google.android.keep" />
+        <package android:name="com.google.android.apps.translate" />
+    </queries>
 
     <application
         android:allowBackup="true"

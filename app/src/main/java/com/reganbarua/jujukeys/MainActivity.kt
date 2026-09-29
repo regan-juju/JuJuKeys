@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.reganbarua.jujukeys.settings.Prefs
+import com.reganbarua.jujukeys.translate.TranslateEngine
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,7 +118,63 @@ private fun SetupScreen(
             placeholder = { Text("এখানে টাইপ করুন…") }
         )
 
+        TranslateSettingsCard()
         GuideCard()
+    }
+}
+
+/** Offline model download + optional Google Cloud key for online translation. */
+@Composable
+private fun TranslateSettingsCard() {
+    val context = LocalContext.current
+    val engine = remember { TranslateEngine(context) }
+    var modelReady by remember { mutableStateOf<Boolean?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
+    var key by remember { mutableStateOf(Prefs.cloudApiKey(context)) }
+    LaunchedEffect(Unit) { engine.checkOfflineModel { modelReady = it } }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF1E232B), RoundedCornerShape(14.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("অনুবাদ (Google Translate)", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            "অফলাইন: Google-এর ML Kit — বাংলা মডেল (~৩০MB) একবার নামালে ইন্টারনেট ছাড়াই অনুবাদ হবে।",
+            color = Color(0xFFB9BDC5), fontSize = 14.sp
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                enabled = !busy && modelReady != true,
+                onClick = {
+                    busy = true; message = "নামানো হচ্ছে…"
+                    engine.downloadOfflineModel { ok, err ->
+                        busy = false; modelReady = ok
+                        message = if (ok) "" else "হয়নি: ${err ?: "ইন্টারনেট দেখুন"}"
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+            ) { Text(if (modelReady == true) "✓ অফলাইন মডেল আছে" else "অফলাইন মডেল নামান", color = Color.White) }
+            Spacer(Modifier.width(10.dp))
+            Text(message, color = Color(0xFFFDD663), fontSize = 13.sp)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "অনলাইন (ঐচ্ছিক): Google Cloud Translation API key দিলে ইন্টারনেট থাকলে সেটি দিয়ে অনুবাদ হবে; না দিলে অফলাইন ML Kit-ই চলবে।",
+            color = Color(0xFFB9BDC5), fontSize = 14.sp
+        )
+        OutlinedTextField(
+            value = key, onValueChange = { key = it },
+            modifier = Modifier.fillMaxWidth(), singleLine = true,
+            placeholder = { Text("API key (ঐচ্ছিক)") }
+        )
+        Button(
+            onClick = { Prefs.setCloudApiKey(context, key); message = "সেভ হয়েছে" },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3C4043))
+        ) { Text("Key সেভ করুন", color = Color.White) }
     }
 }
 
