@@ -8,23 +8,22 @@ https://github.com/regan-juju/JuJuKeys/releases/latest
 
 সব APK একই কী দিয়ে সাইন করা, তাই নতুন ভার্সন পুরনোটার উপর আপডেট হিসেবে ইনস্টল হয়।
 
-## ধাপ ১ (এখন আছে)
-- ENGLISH: সবসময় বড় হাতের অক্ষর (CAPITAL)
-- বাংলা: অভ্র ফোনেটিক, অফলাইন — `ami → আমি`, `bhalo → ভালো`
-  - Shift ছাড়া ছোট হাতের (t → ত), Shift চেপে বড় হাতের (T → ট), দুবার চাপলে লক
-- কী-তে সবসময় বড় হাতের লেবেল; লম্বা চাপলে কোণের সংখ্যা/চিহ্ন
-- ?123 ও #+= চিহ্নের পাতা, গ্লোব বোতামে ভাষা বদল, টাইপ করার সময় `bhalo → ভালো` প্রিভিউ
-- নীল অ্যাকশন কী (SEND / GO / SEARCH / DONE / নতুন লাইন)
+## যা আছে
+- iPhone 16 Pro Max-এর মতো লেআউট: সাজেশন বার (ক/A বোতাম), 123 · ইমোজি · স্পেস · রিটার্ন, নিচে 🌐 ও 🎤
+- নিচের পট্টির মাঝখানে: Google Keep ক্লিপবোর্ড ও Google Translate
+- ENGLISH সবসময় CAPITAL (পাসওয়ার্ড ঘর বাদে); বাংলা অভ্র: Shift ছাড়া ছোট হাতের, Shift দিয়ে বড় হাতের
+- শব্দ সাজেশন (বাংলা শব্দ মিলিয়ে: amra → আমরা, dhonnobad → ধন্যবাদ)
+- ক্লিপবোর্ড ইতিহাস: পিন, মুছুন, এক ট্যাপে পেস্ট, 💡 চাপলে Google Keep-এ সেভ
+- অনুবাদ: অফলাইন (Google ML Kit) + অনলাইন (নিজের Google Cloud API key দিলে)
+- ইমোজি, ভয়েস টাইপিং (Google ভয়েস), স্পেসে আঙুল টেনে কার্সর সরানো, দুবার স্পেসে দাঁড়ি
 
-## ধাপ ২ (পরবর্তী)
-- ক্লিপবোর্ড ইতিহাস + এক ট্যাপে Google Keep-এ পাঠানো
-- Google Translate: অফলাইন (ML Kit, বাংলা↔ইংলিশ মডেল একবার ডাউনলোড) ও অনলাইন
-- ইমোজি, ভয়েস টাইপিং, সেটিংস
+শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0)।
 
 ## কোডের গঠন
 - `bengali/AvroPhonetic.kt` — অভ্র ইঞ্জিন (Android ছাড়া বিশুদ্ধ Kotlin; `app/src/test`-এ টেস্ট)
 - `JuJuKeysInputMethodService.kt` — কীবোর্ড সার্ভিস, টেক্সট বসানো
-- `keyboard/KeyboardView.kt` — ডিজাইন (Compose)
+- `keyboard/KeyboardView.kt`, `keyboard/Panels.kt` — ডিজাইন (Compose)
+- `suggest/Suggester.kt`, `clipboard/ClipHistory.kt`, `translate/TranslateEngine.kt`
 - `keyboard/KeyboardLayouts.kt`, `keyboard/KeyboardState.kt`
 - `MainActivity.kt` — সেটআপ স্ক্রিন
 
