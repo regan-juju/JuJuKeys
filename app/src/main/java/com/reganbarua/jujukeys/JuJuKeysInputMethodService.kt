@@ -421,7 +421,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if (subtype != null) switchInputMethod(info.id, subtype) else switchInputMethod(info.id)
         } else {
-            val token = window?.window?.attributes?.token
+            val token = window?.window?.attributes?.token ?: return
             @Suppress("DEPRECATION")
             imm.setInputMethodAndSubtype(token, info.id, subtype)
         }
