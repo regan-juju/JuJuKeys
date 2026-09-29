@@ -1,27 +1,40 @@
 package com.reganbarua.jujukeys.keyboard
 
-enum class KeyboardLanguage { ENGLISH, BENGALI }
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
-enum class KeyboardPanel {
-    LETTERS,
-    SYMBOLS_1,
-    SYMBOLS_2,
-    EMOJI,
-    CLIPBOARD,
-    TRANSLATE
+enum class Language { BANGLA, ENGLISH }
+
+/** OFF = small letters (Bangla), ONCE = next letter capital, LOCK = caps lock. */
+enum class ShiftState { OFF, ONCE, LOCK }
+
+enum class Page { LETTERS, SYMBOLS, MORE_SYMBOLS }
+
+enum class ToolbarItem { MENU, CLIPBOARD, TRANSLATE, SETTINGS, MIC, EMOJI }
+
+/** Everything the keyboard UI draws. Compose re-draws automatically when these change. */
+class KeyboardState {
+    var language by mutableStateOf(Language.BANGLA)
+    var shift by mutableStateOf(ShiftState.OFF)
+    var page by mutableStateOf(Page.LETTERS)
+
+    /** Roman letters typed for the current Bangla word, and their Bangla preview. */
+    var romanPreview by mutableStateOf("")
+    var banglaPreview by mutableStateOf("")
+
+    /** Label for the blue action key: "SEND", "GO", "SEARCH", … or "" for a new-line key. */
+    var enterLabel by mutableStateOf("")
 }
 
-/**
- * Single source of truth for what the keyboard is currently showing.
- * Held in the IME service and passed down into the Compose UI.
- */
-data class KeyboardUiState(
-    val language: KeyboardLanguage = KeyboardLanguage.ENGLISH,
-    val panel: KeyboardPanel = KeyboardPanel.LETTERS,
-    /** Only meaningful in Bengali letters mode: shift affects the *case* of the next
-     * phonetic key (e.g. "t" -> ত vs "T" -> ট), since Bengali phonetic rules are
-     * case-sensitive. English is always forced uppercase regardless of this flag. */
-    val bengaliShiftOn: Boolean = false,
-    val suggestions: List<String> = emptyList(),
-    val editorActionLabel: String? = null // e.g. "Send", "Go", "Search" from EditorInfo
-)
+/** What the keyboard UI asks the service to do. */
+interface KeyboardActions {
+    fun onChar(c: Char)
+    fun onBackspace()
+    fun onSpace()
+    fun onEnter()
+    fun onShift()
+    fun onToggleLanguage()
+    fun onPage(page: Page)
+    fun onToolbar(item: ToolbarItem)
+}

@@ -1,36 +1,22 @@
 package com.reganbarua.jujukeys.keyboard
 
-/**
- * Static layout data. English and Bengali share the same QWERTY key *positions*
- * (Bengali is typed phonetically using Latin keys), but Bengali keys additionally
- * carry a Bengali glyph hint for the base sound that key represents.
- */
+/** A character key: [label] is shown big, [hint] small in the corner and typed on long-press. */
+data class CharKey(val label: Char, val hint: Char? = null)
+
 object KeyboardLayouts {
 
-    val englishRows: List<List<Char>> = listOf(
-        listOf('q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'),
-        listOf('a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'),
-        listOf('z', 'x', 'c', 'v', 'b', 'n', 'm')
-    )
+    // Letter rows with the long-press hints shown in the design.
+    val lettersRow1 = "QWERTYUIOP".zip("1234567890").map { (l, h) -> CharKey(l, h) }
+    val lettersRow2 = "ASDFGHJKL".zip("@#\$_&-+()").map { (l, h) -> CharKey(l, h) }
+    val lettersRow3 = "ZXCVBNM".zip("*\"':;!?").map { (l, h) -> CharKey(l, h) }
 
-    /** Bengali base-sound hint per Latin letter, shown as a small glyph above the key label. */
-    val bengaliHint: Map<Char, String> = mapOf(
-        'q' to "ক", 'w' to "ও", 'e' to "এ", 'r' to "র", 't' to "ত",
-        'y' to "য়", 'u' to "উ", 'i' to "ই", 'o' to "ও", 'p' to "প",
-        'a' to "আ", 's' to "স", 'd' to "দ", 'f' to "ফ", 'g' to "গ",
-        'h' to "হ", 'j' to "জ", 'k' to "ক", 'l' to "ল",
-        'z' to "য", 'x' to "ক্স", 'c' to "চ", 'v' to "ভ", 'b' to "ব", 'n' to "ন", 'm' to "ম"
-    )
+    // iOS-style "123" page.
+    val symbolsRow1 = "1234567890".map { CharKey(it) }
+    val symbolsRow2 = "-/:;()৳&@\"".map { CharKey(it) }
+    val symbolsRow3 = ".,?!'".map { CharKey(it) }
 
-    val symbols1Rows: List<List<String>> = listOf(
-        listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
-        listOf("-", "/", ":", ";", "(", ")", "৳", "&", "@", "\""),
-        listOf(".", ",", "?", "!", "'")
-    )
-
-    val symbols2Rows: List<List<String>> = listOf(
-        listOf("[", "]", "{", "}", "#", "%", "^", "*", "+", "="),
-        listOf("_", "\\", "|", "~", "<", ">", "€", "£", "¥", "•"),
-        listOf(".", ",", "?", "!", "'")
-    )
+    // iOS-style "#+=" page.
+    val moreRow1 = "[]{}#%^*+=".map { CharKey(it) }
+    val moreRow2 = "_\\|~<>€£¥•".map { CharKey(it) }
+    val moreRow3 = ".,?!'".map { CharKey(it) }
 }
