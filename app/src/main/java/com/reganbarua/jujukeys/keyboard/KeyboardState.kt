@@ -54,6 +54,13 @@ class KeyboardState {
     var translateStatus by mutableStateOf("")
     var online by mutableStateOf(false)
     var offlineReady by mutableStateOf(false)
+
+    // ---- Emoji
+    /** Bumped when the full emoji list has loaded. */
+    var emojiLoaded by mutableStateOf(false)
+    /** Non-null while searching emoji: the letters typed so far. */
+    var emojiSearch by mutableStateOf<String?>(null)
+    var emojiResults by mutableStateOf<List<String>>(emptyList())
 }
 
 /** Key-press bubble shown above a letter key (like iPhone). */
@@ -88,6 +95,8 @@ interface KeyboardActions {
     fun onSuggestion(index: Int)
     fun onSuggestionWord(word: String)
     fun onVoice()
+    /** Open (true) / close (false) emoji search: the letter keys then type into the search. */
+    fun onEmojiSearch(open: Boolean)
 
     // translate
     fun onTranslateToggle()

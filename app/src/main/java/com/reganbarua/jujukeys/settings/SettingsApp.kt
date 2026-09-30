@@ -6,6 +6,15 @@ import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.reganbarua.jujukeys.keyboard.KbTheme
+import com.reganbarua.jujukeys.keyboard.Themes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,7 +106,7 @@ fun SettingsApp(enabled: Boolean, selected: Boolean, onClose: () -> Unit) {
                 Screen.MAIN -> MainList(enabled, selected) { screen = it }
                 Screen.LANGUAGES -> LanguagesPage(prefs, refresh)
                 Screen.PREFERENCES -> PreferencesPage(prefs, refresh)
-                Screen.THEME -> ThemePage()
+                Screen.THEME -> ThemePage(prefs, refresh)
                 Screen.TEXT -> TextPage(prefs, refresh)
                 Screen.VOICE -> VoicePage(prefs, refresh)
                 Screen.CLIPBOARD -> ClipboardPage(prefs, refresh)
@@ -256,7 +265,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     }
     Item("ভাষা", "বাংলা (অভ্র), ENGLISH", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
     Item("পছন্দসমূহ", "কী, লেআউট, শব্দ ও কম্পন", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
-    Item("থিম", "ডার্ক (সবসময়)", Icons.Outlined.Palette) { open(Screen.THEME) }
+    Item("থিম", "৭টি লিকুইড গ্লাস থিম", Icons.Outlined.Palette) { open(Screen.THEME) }
     Item("সংশোধন ও সাজেশন", "স্বয়ংক্রিয় সংশোধন, বড় হাতের অক্ষর, সাজেশন", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
     Item("ভয়েস টাইপিং", "Google ভয়েস টাইপিং", Icons.Outlined.Mic) { open(Screen.VOICE) }
     Item("ক্লিপবোর্ড", "ইতিহাস, পিন, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
@@ -292,13 +301,33 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     ToggleItem("বোল্ড অক্ষর", "কী-র লেখা মোটা করে দেখাও", "bold_keys", p.boldKeys, refresh)
     ToggleItem("নম্বরের সারি", "অক্ষরের উপরে ১–০ সারি দেখাও", "number_row", p.numberRow, refresh)
     ToggleItem("ইমোজি বোতাম দেখাও", null, "emoji_key", p.showEmojiKey, refresh)
-    ToggleItem("ভাষা বদলের বোতাম দেখাও", "সাজেশন বারের ক / A বোতাম", "language_key", p.showLanguageKey, refresh)
     ToggleItem("ভয়েস ইনপুট বোতাম", null, "voice_key", p.showVoiceKey, refresh)
     Header("লেআউট")
     ChoiceItem(
         "কীবোর্ডের উচ্চতা",
         listOf(0.9f to "ছোট", 1.0f to "মাঝারি", 1.1f to "বড়", 1.2f to "অনেক বড়"), p.heightScale
     ) { Prefs.setFloat(context, "height_scale", it); refresh() }
+    Header("স্বয়ংক্রিয়ভাবে লুকানো")
+    ToggleItem("কিছু না লিখলে কীবোর্ড লুকাও", "নির্দিষ্ট সময় কোনো কী না চাপলে কীবোর্ড নিজে থেকে নেমে যাবে", "auto_hide", p.autoHide, refresh)
+    if (p.autoHide) {
+        Text("কতক্ষণ পর লুকাবে", color = TextMain, fontSize = 17.sp, modifier = Modifier.padding(start = 20.dp, top = 6.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(5 to "৫ সে.", 10 to "১০ সে.", 20 to "২০ সে.", 30 to "৩০ সে.").forEach { (sec, label) ->
+                val on = p.autoHideSeconds == sec
+                Box(
+                    Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp))
+                        .background(if (on) Accent else Color.Transparent)
+                        .border(1.dp, if (on) Accent else Color(0xFF5F6368), RoundedCornerShape(10.dp))
+                        .clickable { Prefs.setInt(context, "auto_hide_seconds", sec); refresh() },
+                    contentAlignment = Alignment.Center
+                ) { Text(label, color = if (on) Color(0xFF062E6F) else TextMain, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal) }
+            }
+        }
+        Note("আবার খুলতে: লেখার ঘরে একবার ট্যাপ করলেই কীবোর্ড ফিরে আসবে।")
+    }
     Header("কী চাপলে")
     ToggleItem("কী চাপলে শব্দ", null, "sound", p.sound, refresh)
     ToggleItem("কী চাপলে কম্পন", null, "vibrate", p.vibrate, refresh)
@@ -317,10 +346,66 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
 }
 
 @Composable
-private fun ThemePage() {
+private fun ThemePage(p: KeyboardPrefs, refresh: () -> Unit) {
+    val context = LocalContext.current
     Header("থিম")
-    Item("ডার্ক", "iPhone-এর মতো কালো থিম — সবসময় চালু, ফোন লাইট মোডে থাকলেও")
-    Note("আপনার নির্দেশমতো কীবোর্ড সবসময় ডার্ক থাকে।")
+    Note("একটি থিম বেছে নিন — কীবোর্ড সাথে সাথে বদলে যাবে। সব থিমে লিকুইড গ্লাস কী; শুধু একটি সাদা, বাকিগুলো ডার্ক।")
+    Themes.all.forEach { t ->
+        val selected = t.id == p.theme
+        Column(
+            Modifier.fillMaxWidth()
+                .clickable { Prefs.setString(context, "theme", t.id); refresh() }
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = selected, onClick = { Prefs.setString(context, "theme", t.id); refresh() })
+                Text(t.name, color = TextMain, fontSize = 17.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            }
+            ThemePreview(t, selected)
+        }
+    }
+}
+
+/** A small picture of the keyboard in theme [t]. */
+@Composable
+private fun ThemePreview(t: KbTheme, selected: Boolean) {
+    Canvas(
+        Modifier.fillMaxWidth().height(96.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .then(if (selected) Modifier.border(2.dp, Accent, RoundedCornerShape(14.dp)) else Modifier)
+    ) {
+        val w = size.width; val h = size.height
+        drawRect(t.bg.copy(alpha = 1f))
+        t.blobs.forEach { b ->
+            drawRect(Brush.radialGradient(listOf(b.color, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r))
+        }
+        val gap = 4.dp.toPx(); val kh = (h - gap * 5) / 4f
+        val cr = CornerRadius(4.dp.toPx())
+        val glass = Brush.verticalGradient(0f to t.glassTop, 0.4f to Color.Transparent)
+        fun key(x: Float, y: Float, kw: Float, color: Color) {
+            drawRoundRect(color, Offset(x, y), Size(kw, kh), cr)
+            if (color != t.faded) drawRoundRect(glass, Offset(x, y), Size(kw, kh), cr, style = Stroke(1f))
+        }
+        // top bar: ক · · · ⟵
+        val y0 = gap
+        key(gap * 2, y0, kh * 1.1f, t.key)
+        key(w - gap * 2 - kh * 1.6f, y0, kh * 1.6f, t.key)
+        for (i in 0 until 3) drawRoundRect(t.text.copy(alpha = if (i == 0) 0.9f else 0.5f),
+            Offset(w * (0.3f + i * 0.14f), y0 + kh * 0.4f), Size(w * 0.08f, kh * 0.2f), cr)
+        // two rows of letters
+        for (r in 0 until 2) {
+            val n = 10 - r
+            val kw = (w - gap * 2 - gap * 10) / 10f
+            val start = gap + (10 - n) * (kw + gap) / 2f
+            for (i in 0 until n) key(start + i * (kw + gap), gap + (r + 1) * (kh + gap), kw, t.key)
+        }
+        // bottom: 123 · space · return (faded)
+        val y3 = gap + 3 * (kh + gap)
+        val unit = (w - gap * 4) / 10f
+        key(gap, y3, unit * 1.5f, t.key)
+        key(gap * 2 + unit * 1.5f, y3, unit * 5.5f, t.key)
+        key(gap * 3 + unit * 7f, y3, unit * 3f, t.faded)
+    }
 }
 
 @Composable

@@ -17,7 +17,9 @@ import android.os.Vibrator
 import android.text.InputType
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -36,7 +38,9 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.reganbarua.jujukeys.bengali.AvroPhonetic
 import com.reganbarua.jujukeys.clipboard.ClipHistory
+import com.reganbarua.jujukeys.keyboard.EmojiRepo
 import com.reganbarua.jujukeys.keyboard.KeyKind
+import com.reganbarua.jujukeys.keyboard.Themes
 import com.reganbarua.jujukeys.keyboard.KeyboardActions
 import com.reganbarua.jujukeys.keyboard.KeyboardState
 import com.reganbarua.jujukeys.keyboard.KeyboardView
@@ -150,6 +154,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 }
             }
             main.post { refreshSuggestions() }
+            // every emoji (like iPhone) — read after the dictionaries, still in the background
+            EmojiRepo.load(this)
+            main.post { state.emojiLoaded = true }
         }
     }
 
@@ -159,13 +166,32 @@ class JuJuKeysInputMethodService : InputMethodService(),
             decor.setViewTreeViewModelStoreOwner(this)
             decor.setViewTreeSavedStateRegistryOwner(this)
         }
-        return ComposeView(this).apply {
+        val compose = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@JuJuKeysInputMethodService)
             setViewTreeViewModelStoreOwner(this@JuJuKeysInputMethodService)
             setViewTreeSavedStateRegistryOwner(this@JuJuKeysInputMethodService)
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent { KeyboardView(state, clips.items, this@JuJuKeysInputMethodService) }
         }
+        // Any touch on the keyboard restarts the "hide after N seconds" timer.
+        return object : FrameLayout(this) {
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                if (ev.actionMasked == MotionEvent.ACTION_DOWN) bumpAutoHide()
+                return super.dispatchTouchEvent(ev)
+            }
+        }.apply { addView(compose) }
+    }
+
+    // ================================================================== auto-hide
+
+    private val autoHideRunnable = Runnable {
+        if (state.prefs.autoHide && isInputViewShown) requestHideSelf(0)
+    }
+
+    /** Restart the timer: the keyboard hides itself after N seconds without a key press. */
+    private fun bumpAutoHide() {
+        main.removeCallbacks(autoHideRunnable)
+        if (state.prefs.autoHide) main.postDelayed(autoHideRunnable, state.prefs.autoHideSeconds.coerceAtLeast(3) * 1000L)
     }
 
     override fun onWindowShown() {
@@ -173,19 +199,26 @@ class JuJuKeysInputMethodService : InputMethodService(),
         darkNavigationBar()
     }
 
-    /** Always dark: paint the navigation bar under the keyboard dark too. */
+    /** Navigation bar under the keyboard follows the theme (dark, or light for সাদা গ্লাস). */
     @Suppress("DEPRECATION")
     private fun darkNavigationBar() {
         val w = window?.window ?: return
-        w.navigationBarColor = 0xFF212121.toInt()
+        val t = Themes.byId(state.prefs.theme)
+        w.navigationBarColor = t.nav
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val v = w.decorView
-            v.systemUiVisibility = v.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+            v.systemUiVisibility = if (t.light) v.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            else v.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
         }
     }
 
     private fun loadPrefs() {
+        val old = state.prefs
         state.prefs = Prefs.load(this)
+        if (old.theme != state.prefs.theme) darkNavigationBar()
+        if (old.autoHide != state.prefs.autoHide || old.autoHideSeconds != state.prefs.autoHideSeconds) {
+            if (isInputViewShown) bumpAutoHide() else main.removeCallbacks(autoHideRunnable)
+        }
         state.recentEmoji = Prefs.recentEmoji(this)
         suggester?.setUserWords(Prefs.userWords(this))
         if (Prefs.sp(this).getBoolean("clear_learned", false)) {
@@ -211,6 +244,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         roman.clear(); enWord.clear(); lastWord = null
         state.shift = ShiftState.OFF
         state.panel = Panel.KEYS
+        state.emojiSearch = null
+        bumpAutoHide()
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val variation = info.inputType and InputType.TYPE_MASK_VARIATION
         passwordField = (cls == InputType.TYPE_CLASS_TEXT &&
@@ -236,6 +271,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        main.removeCallbacks(autoHideRunnable)
+        state.emojiSearch = null
         if (state.translateOn) stopTranslate() else { commitWord(); endEnglishWord() }
         saveLearned()
         super.onFinishInputView(finishingInput)
@@ -249,6 +286,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (state.translateOn) return
         // Our own typing also moves the cursor — ignore that (it is already tracked here).
         if (SystemClock.uptimeMillis() - lastEditTime < 500) return
+        bumpAutoHide()      // the user is working in the text (tap, select, paste…)
         // The user tapped somewhere else in the text: start fresh.
         if (roman.isNotEmpty()) {
             roman.clear()
@@ -310,6 +348,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     // ================================================================== keys
 
     override fun onChar(c: Char) {
+        state.emojiSearch?.let { q -> setEmojiQuery(q + c.lowercaseChar()); return }
         state.freshClip = null
         state.typing = true
         if (state.language == Language.ENGLISH || passwordField) {
@@ -348,6 +387,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onLongChar(c: Char) {
+        if (state.emojiSearch != null) return
         onBackspace()        // remove the letter typed on touch-down
         val shown = if (state.language == Language.BANGLA && c in '0'..'9') "০১২৩৪৫৬৭৮৯"[c - '0'] else c
         onRawText(shown.toString())
@@ -372,6 +412,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onBackspace() {
+        val q = state.emojiSearch
+        if (q != null && q.isNotEmpty()) { setEmojiQuery(q.dropLast(1)); return }
         if (roman.isNotEmpty()) {
             roman.setLength(roman.length - 1)
             if (roman.isEmpty()) {
@@ -394,6 +436,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onSpace() {
+        state.emojiSearch?.let { q -> if (q.isNotEmpty() && !q.endsWith(" ")) setEmojiQuery("$q "); return }
         val now = SystemClock.uptimeMillis()
         val hadWord = roman.isNotEmpty() || enWord.isNotEmpty()
         commitWord()
@@ -549,9 +592,30 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onPanel(panel: Panel) {
+        if (state.emojiSearch != null) { onEmojiSearch(false); if (panel == Panel.EMOJI) return }
         if (panel != Panel.SUGGESTIONS) { commitWord(); endEnglishWord() }
         if (panel == Panel.CLIPBOARD) readClipboard(fresh = false)
         state.panel = panel
+    }
+
+    // ================================================================== emoji search
+
+    override fun onEmojiSearch(open: Boolean) {
+        if (open) {
+            commitWord(); endEnglishWord()
+            state.page = Page.LETTERS
+            state.shift = ShiftState.OFF
+            state.panel = Panel.EMOJI
+            setEmojiQuery("")
+        } else {
+            state.emojiSearch = null
+            state.emojiResults = emptyList()
+        }
+    }
+
+    private fun setEmojiQuery(q: String) {
+        state.emojiSearch = q
+        state.emojiResults = EmojiRepo.search(q)
     }
 
     // ================================================================== suggestions

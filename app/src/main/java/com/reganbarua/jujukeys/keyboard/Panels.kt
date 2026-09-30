@@ -1,6 +1,19 @@
 package com.reganbarua.jujukeys.keyboard
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,140 +75,156 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reganbarua.jujukeys.clipboard.ClipItem
 
-// ------------------------------------------------------------------ suggestion bar
+// ------------------------------------------------------------------ top bar
 
 /**
- * Top bar (iPhone style).
- *  • Not typing: Google Keep clipboard and Translate buttons.
- *  • Typing: three suggestions.
- * The language button moves like on iPhone: "A" on the left in বাংলা, "ক" on the right in English.
- * ⌃⌄ (a little in from the edge, away from ক) opens many more suggestions.
+ * Top bar:  [ক / A]   suggestion  suggestion  suggestion   [⟵]
+ *  • ক / A shows the language in use; tap = switch language.
+ *  • Hold ক / A → the Keep clipboard and Translate buttons slide out (left → right).
+ *  • ⟵ = backspace (hold to keep deleting), faded like a computer's Backspace key.
  */
 @Composable
 internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, forceSuggestions: Boolean = false) {
     val bangla = state.language == Language.BANGLA
-    val showChip = state.prefs.showLanguageKey
-    val expanded = state.panel == Panel.SUGGESTIONS
+    var toolsOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(toolsOpen) { if (toolsOpen) { delay(6000); toolsOpen = false } }
+    val toolsVisible = remember { MutableTransitionState(false) }
+    toolsVisible.targetState = toolsOpen
+
     Row(
         Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (bangla && showChip) { LangChip("A") { actions.onToggleLanguage() }; Spacer(Modifier.width(10.dp)) }
-        else Spacer(Modifier.width(6.dp))
+        PressBox(
+            Modifier.size(width = 44.dp, height = 38.dp)
+                .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier),
+            shape = RoundedCornerShape(10.dp),
+            color = IosColors.key, pressedColor = IosColors.keyPressed,
+            onTap = { toolsOpen = false; actions.onToggleLanguage() },
+            onLongPress = { toolsOpen = !toolsOpen }
+        ) {
+            Text(
+                if (bangla) "ক" else "A", color = IosColors.text, fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold, fontFamily = if (bangla) BanglaFont else null
+            )
+        }
 
-        val clip = state.freshClip
-        when {
-            clip != null && !forceSuggestions -> Row(
-                // Just copied → one tap pastes it (like Gboard)
-                Modifier.weight(1f).padding(horizontal = 8.dp).height(34.dp)
-                    .clip(RoundedCornerShape(17.dp)).background(IosColors.key)
-                    .clickable { actions.onClipPaste(clip) }.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Filled.ContentPaste, null, tint = IosColors.text, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    clip.replace('\n', ' '), color = IosColors.text, fontSize = 15.sp, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip)
-                )
-            }
-            !state.typing && !forceSuggestions -> Row(
-                Modifier.weight(1f),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ToolButton(state.panel == Panel.CLIPBOARD, { actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD) }) {
-                    Box(Modifier.size(26.dp)) {
-                        Icon(Symbols.clipboard, "ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(26.dp))
-                        Box(
-                            Modifier.align(Alignment.BottomEnd).size(13.dp)
-                                .background(IosColors.keepYellow, RoundedCornerShape(3.5.dp)),
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(10.dp)) }
-                    }
-                }
-                Spacer(Modifier.width(20.dp))
-                ToolButton(state.translateOn, { actions.onTranslateToggle() }) {
-                    Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(24.dp))
-                }
-            }
-            else -> {
-                val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
-                for (i in 0 until 3) {
-                    if (i > 0 && words.isNotEmpty()) Box(Modifier.width(1.dp).height(24.dp).background(IosColors.divider))
-                    val w = words.getOrNull(i)
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .then(if (w != null) Modifier.clickable { actions.onSuggestion(i) } else Modifier),
-                        contentAlignment = Alignment.Center
+        Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+            if (!toolsOpen) {
+                val clip = state.freshClip
+                if (clip != null && !forceSuggestions) {
+                    // Just copied → one tap pastes it (like Gboard)
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(34.dp)
+                            .clip(RoundedCornerShape(17.dp)).background(IosColors.key)
+                            .clickable { actions.onClipPaste(clip) }.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (w != null) {
-                            Text(
-                                w, color = if (i == 0) IosColors.text else IosColors.suggestion,
-                                fontSize = 18.sp, fontWeight = if (i == 0) FontWeight.Bold else FontWeight.SemiBold,
-                                fontFamily = fontOf(w), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
+                        Icon(Icons.Filled.ContentPaste, null, tint = IosColors.text, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            clip.replace('\n', ' '), color = IosColors.text, fontSize = 15.sp, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip)
+                        )
+                    }
+                } else {
+                    val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
+                    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                        for (i in 0 until 3) {
+                            val w = words.getOrNull(i)
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight()
+                                    .then(if (w != null) Modifier.clickable { actions.onSuggestion(i) } else Modifier),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (w != null) Text(
+                                    w, color = if (i == 0) IosColors.text else IosColors.suggestion,
+                                    fontSize = 17.5.sp, fontWeight = if (i == 0) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontFamily = fontOf(w), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 3.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
+            AnimatedVisibility(
+                visibleState = toolsVisible,
+                enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+                exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
+                    ToolButton(state.panel == Panel.CLIPBOARD, {
+                        toolsOpen = false
+                        actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD)
+                    }) { KeepIcon() }
+                    Spacer(Modifier.width(8.dp))
+                    ToolButton(state.translateOn, { toolsOpen = false; actions.onTranslateToggle() }) {
+                        Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
+                    }
+                }
+            }
         }
-        // ⌃⌄ = more suggestions — moved in from the edge so it is not hit by mistake
-        Column(
-            Modifier
-                .padding(start = 6.dp, end = if (bangla || !showChip) 18.dp else 8.dp)
-                .size(44.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .clickable { actions.onPanel(if (expanded) Panel.KEYS else Panel.SUGGESTIONS) },
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(Icons.Filled.KeyboardArrowUp, null, tint = IosColors.dim, modifier = Modifier.size(20.dp))
-            Icon(Icons.Filled.KeyboardArrowDown, "আরও সাজেশন", tint = IosColors.dim, modifier = Modifier.size(20.dp))
-        }
-        if (!bangla && showChip) { Spacer(Modifier.width(6.dp)); LangChip("ক") { actions.onToggleLanguage() } }
+        BackKey(actions)
+    }
+}
+
+/** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
+@Composable
+internal fun BackKey(actions: KeyboardActions) {
+    PressBox(
+        Modifier.size(width = 62.dp, height = 38.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        onTap = { actions.onBackspace() },
+        repeating = true,
+        kind = KeyKind.DELETE
+    ) {
+        Icon(Symbols.longBack, "Backspace", tint = IosColors.text.copy(alpha = 0.5f), modifier = Modifier.size(width = 36.dp, height = 18.dp))
+    }
+}
+
+@Composable
+private fun KeepIcon() {
+    Box(Modifier.size(24.dp)) {
+        Icon(Symbols.clipboard, "Keep ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(24.dp))
+        Box(
+            Modifier.align(Alignment.BottomEnd).size(12.dp)
+                .background(IosColors.keepYellow, RoundedCornerShape(3.dp)),
+            contentAlignment = Alignment.Center
+        ) { Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(9.dp)) }
     }
 }
 
 @Composable
 private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 56.dp, height = 38.dp),
-        shape = RoundedCornerShape(19.dp),
+        Modifier.size(width = 48.dp, height = 38.dp),
+        shape = RoundedCornerShape(10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,
         onTap = onTap
     ) { content() }
 }
 
-@Composable
-private fun LangChip(text: String, onTap: () -> Unit) {
-    PressBox(
-        Modifier.size(width = 32.dp, height = 32.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = IosColors.chip, pressedColor = IosColors.keyPressed,
-        onTap = onTap
-    ) {
-        Text(text, color = IosColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = fontOf(text))
-    }
-}
-
 /** Many suggestions at once (the ⌃⌄ button). */
 @Composable
 internal fun MoreSuggestionsPanel(state: KeyboardState, actions: KeyboardActions) {
     val words = state.moreSuggestions
+    val sheet = Modifier.fillMaxSize()
+        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+        .background(IosColors.panel)
+        .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
     if (words.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(sheet, contentAlignment = Alignment.Center) {
             Text("লিখতে শুরু করুন — এখানে অনেক শব্দ দেখাবে", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
         }
         return
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxSize(),
+        modifier = sheet,
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -422,54 +451,179 @@ private fun ActionChip(text: String, icon: ImageVector?, tint: Color = IosColors
     }
 }
 
-// ------------------------------------------------------------------ emoji panel
+// ------------------------------------------------------------------ emoji
 
+/** Emoji top bar: "ইমোজি খুঁজুন" search box + ⟵. */
 @Composable
-internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
-    val recent = if (state.prefs.recentEmoji) state.recentEmoji else emptyList()
-    val groups = if (recent.isNotEmpty()) listOf("🕘" to recent) + EmojiData.groups else EmojiData.groups
-    var group by remember { mutableIntStateOf(0) }
-    if (group >= groups.size) group = 0
-    Column(Modifier.fillMaxSize()) {
+internal fun EmojiTopBar(actions: KeyboardActions) {
+    Row(
+        Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Row(
-            Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 4.dp),
+            Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(IosColors.chip.copy(alpha = 0.35f))
+                .clickable { actions.onEmojiSearch(true) }.padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(Symbols.search, null, tint = IosColors.dim, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("ইমোজি খুঁজুন (English)", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+        }
+        Spacer(Modifier.width(8.dp))
+        BackKey(actions)
+    }
+}
+
+/** While searching: [🔍 query ✕] [results …] [⟵] — the letter keys type into the search. */
+@Composable
+internal fun EmojiSearchBar(state: KeyboardState, actions: KeyboardActions) {
+    val q = state.emojiSearch ?: ""
+    Row(
+        Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            Modifier.width(128.dp).height(36.dp).clip(RoundedCornerShape(18.dp))
+                .background(IosColors.chip.copy(alpha = 0.35f)).padding(start = 10.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Symbols.search, null, tint = IosColors.dim, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
-                "ABC", color = IosColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { actions.onPanel(Panel.KEYS) }.padding(horizontal = 10.dp, vertical = 8.dp)
+                if (q.isEmpty()) "খুঁজুন…" else "$q│", color = if (q.isEmpty()) IosColors.dim else IosColors.text,
+                fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = fontOf(if (q.isEmpty()) "খ" else q),
+                modifier = Modifier.weight(1f)
             )
-            LazyRow(Modifier.weight(1f)) {
-                itemsIndexed(groups) { i, g ->
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .background(
-                                if (i == group) IosColors.key else Color.Transparent,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { group = i },
-                        contentAlignment = Alignment.Center
-                    ) { Text(g.first, fontSize = 20.sp) }
-                }
-            }
             Box(
-                Modifier.size(42.dp).clickable { actions.onBackspace() },
+                Modifier.size(28.dp).clip(CircleShape).clickable { actions.onEmojiSearch(false) },
                 contentAlignment = Alignment.Center
-            ) {
-                Icon(Symbols.backspace, "Backspace", tint = IosColors.text, modifier = Modifier.size(24.dp))
+            ) { Icon(Symbols.close, "বন্ধ", tint = IosColors.dim, modifier = Modifier.size(18.dp)) }
+        }
+        LazyRow(Modifier.weight(1f).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            items(state.emojiResults) { e ->
+                Box(
+                    Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).clickable { actions.onText(e) },
+                    contentAlignment = Alignment.Center
+                ) { Text(e, fontSize = 25.sp) }
             }
         }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(8),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 4.dp)
-        ) {
-            items(groups[group].second) { e ->
+        BackKey(actions)
+    }
+}
+
+private class EmojiSection(val title: String, val icon: ImageVector, val items: List<EmojiItem>)
+
+private val CategoryIcons: List<ImageVector> by lazy {
+    listOf(
+        Symbols.catSmileys, Symbols.catPeople, Symbols.catAnimals, Symbols.catFood, Symbols.catTravel,
+        Symbols.catActivities, Symbols.catObjects, Symbols.catSymbols, Symbols.catFlags,
+    )
+}
+
+/**
+ * Every emoji (like the iPhone keyboard), one scrolling list with a heading per group.
+ * Bottom row: ABC and the group icons (tap to jump). Hold an emoji → skin tones.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
+    @Suppress("UNUSED_VARIABLE") val loaded = state.emojiLoaded      // re-read when the list arrives
+    val recent = if (state.prefs.recentEmoji) state.recentEmoji else emptyList()
+    val sections = remember(recent, EmojiRepo.groups) {
+        buildList {
+            if (recent.isNotEmpty()) add(EmojiSection("সাম্প্রতিক", Symbols.catRecent, recent.map { EmojiItem(it, "", emptyList()) }))
+            EmojiRepo.groups.forEachIndexed { i, g -> add(EmojiSection(g.name, CategoryIcons.getOrElse(i) { Symbols.catSymbols }, g.items)) }
+        }
+    }
+    // index of each heading in the grid
+    val headerIndex = remember(sections) {
+        var n = 0
+        sections.map { sec -> n.also { n += 1 + sec.items.size } }
+    }
+    val grid = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    val current by remember(headerIndex) {
+        derivedStateOf {
+            val first = grid.firstVisibleItemIndex
+            headerIndex.indexOfLast { it <= first }.coerceAtLeast(0)
+        }
+    }
+    var tonePick by remember { mutableStateOf<EmojiItem?>(null) }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            if (sections.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("ইমোজি লোড হচ্ছে…", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(8),
+                    state = grid,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    sections.forEach { sec ->
+                        item(span = { GridItemSpan(8) }, contentType = 1) {
+                            Text(
+                                sec.title, color = IosColors.dim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                fontFamily = BanglaFont, modifier = Modifier.padding(start = 6.dp, top = 4.dp, bottom = 2.dp)
+                            )
+                        }
+                        items(sec.items, contentType = { 2 }) { e ->
+                            Box(
+                                Modifier.height(42.dp).combinedClickable(
+                                    onClick = { actions.onText(e.emoji) },
+                                    onLongClick = { if (e.alternates.isNotEmpty()) tonePick = e }
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) { Text(e.emoji, fontSize = 27.sp) }
+                        }
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().height(38.dp).padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
-                    Modifier.height(44.dp).clickable { actions.onText(e) },
-                    contentAlignment = Alignment.Center
-                ) { Text(e, fontSize = 27.sp) }
+                    Modifier.clip(RoundedCornerShape(8.dp)).background(IosColors.key)
+                        .clickable { actions.onPanel(Panel.KEYS) }.padding(horizontal = 9.dp, vertical = 5.dp)
+                ) { Text("ABC", color = IosColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                Row(
+                    Modifier.weight(1f).padding(start = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    sections.forEachIndexed { i, sec ->
+                        val on = i == current
+                        Box(
+                            Modifier.size(28.dp).clip(CircleShape)
+                                .background(if (on) IosColors.key else Color.Transparent)
+                                .clickable { scope.launch { grid.scrollToItem(headerIndex[i]) } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(sec.icon, sec.title, tint = if (on) IosColors.text else IosColors.dim, modifier = Modifier.size(19.dp))
+                        }
+                    }
+                }
+            }
+        }
+        // skin-tone choice (hold an emoji)
+        tonePick?.let { item ->
+            Box(Modifier.fillMaxSize().clickable { tonePick = null })
+            LazyRow(
+                Modifier.align(Alignment.TopCenter).padding(8.dp).fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp)).background(IosColors.panel)
+                    .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(14.dp)).padding(4.dp)
+            ) {
+                items(item.alternates) { alt ->
+                    Box(
+                        Modifier.size(46.dp).clip(RoundedCornerShape(10.dp))
+                            .clickable { actions.onText(alt); tonePick = null },
+                        contentAlignment = Alignment.Center
+                    ) { Text(alt, fontSize = 28.sp) }
+                }
             }
         }
     }

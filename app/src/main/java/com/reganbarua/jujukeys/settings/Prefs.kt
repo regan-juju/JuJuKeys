@@ -35,6 +35,11 @@ data class KeyboardPrefs(
     val clipboardOn: Boolean = true,
     // ইমোজি
     val recentEmoji: Boolean = true,
+    // থিম
+    val theme: String = "current",
+    // কিছু না লিখলে কীবোর্ড লুকাও
+    val autoHide: Boolean = true,
+    val autoHideSeconds: Int = 10,
 )
 
 object Prefs {
@@ -69,11 +74,15 @@ object Prefs {
             learnWords = p.getBoolean("learn_words", d.learnWords),
             clipboardOn = p.getBoolean("clipboard", d.clipboardOn),
             recentEmoji = p.getBoolean("recent_emoji", d.recentEmoji),
+            theme = p.getString("theme", d.theme) ?: d.theme,
+            autoHide = p.getBoolean("auto_hide", d.autoHide),
+            autoHideSeconds = p.getInt("auto_hide_seconds", d.autoHideSeconds),
         )
     }
 
     fun setBoolean(context: Context, key: String, value: Boolean) = sp(context).edit().putBoolean(key, value).apply()
     fun setInt(context: Context, key: String, value: Int) = sp(context).edit().putInt(key, value).apply()
+    fun setString(context: Context, key: String, value: String) = sp(context).edit().putString(key, value).apply()
     fun setFloat(context: Context, key: String, value: Float) = sp(context).edit().putFloat(key, value).apply()
 
     /** Optional Google Cloud Translation API key for online translation. Empty = offline only. */

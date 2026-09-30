@@ -46,7 +46,7 @@ import kotlin.math.abs
  * ~35 separate UI pieces. A key press only repaints — nothing is rebuilt — so typing is fast.
  * Handles several fingers at once, long-press, backspace repeat and space-bar cursor slide.
  */
-private enum class KType { CHAR, SHIFT, BACKSPACE, SYMBOLS, EMOJI, SPACE, RETURN, GAP }
+private enum class KType { CHAR, SHIFT, SYMBOLS, EMOJI, SPACE, RETURN, GAP }
 
 private class GKey(
     val type: KType,
@@ -77,7 +77,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             add(
                 listOf(GKey(KType.SHIFT, 1.29f), GKey(KType.GAP, 0.21f)) +
                     chars(KeyboardLayouts.lettersRow3, longPressOn) +
-                    listOf(GKey(KType.GAP, 0.21f), GKey(KType.BACKSPACE, 1.29f))
+                    listOf(GKey(KType.GAP, 0.21f), GKey(KType.SHIFT, 1.29f))   // Shift on both sides (backspace is in the top bar)
             )
             add(
                 buildList {
@@ -104,10 +104,10 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
 
     // ---- text & icons prepared once
     val measurer = rememberTextMeasurer(cacheSize = 80)
-    val labelStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 22.sp, fontWeight = weight) }
-    val smallStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = weight) }
+    val labelStyle = remember(weight) { TextStyle(color = IosColors.text, fontSize = 22.sp, fontWeight = weight) }
+    val smallStyle = remember(weight) { TextStyle(color = IosColors.text, fontSize = 17.sp, fontWeight = weight) }
     val hintStyle = remember { TextStyle(color = IosColors.dim, fontSize = 10.5.sp) }
-    val bubbleStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 32.sp, fontWeight = weight) }
+    val bubbleStyle = remember(weight) { TextStyle(color = IosColors.text, fontSize = 32.sp, fontWeight = weight) }
     val layouts: Map<String, TextLayoutResult> = remember(flat, labelStyle) {
         buildMap {
             flat.forEach { k ->
@@ -131,7 +131,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             ShiftState.LOCK -> IosIcons.capsLock
         }
     )
-    val backPainter = rememberVectorPainter(Symbols.backspace)
     val emojiPainter = rememberVectorPainter(Symbols.emoji)
     val returnPainter = rememberVectorPainter(Symbols.keyboardReturn)
     val searchPainter = rememberVectorPainter(Symbols.search)
@@ -206,7 +205,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     pressed.add(i)
                                     feedback(
                                         when (k.type) {
-                                            KType.BACKSPACE -> KeyKind.DELETE
                                             KType.SPACE -> KeyKind.SPACE
                                             KType.RETURN -> KeyKind.RETURN
                                             else -> KeyKind.NORMAL
@@ -224,13 +222,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                             }
                                         }
                                         KType.SHIFT -> act.onShift()
-                                        KType.BACKSPACE -> {
-                                            act.onBackspace()
-                                            t.job = scope.launch {
-                                                delay(400)
-                                                while (true) { act.onBackspace(); delay(55) }
-                                            }
-                                        }
                                         else -> {}
                                     }
                                 } else if (c.changedToUp()) {
@@ -281,9 +272,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             } else {
                 // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(2.dp.toPx()) else r
-                drawRoundRect(Color(0x2E000000), kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
+                drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 drawRoundRect(if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
-                drawRoundRect(GlassEdge, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
+                drawRoundRect(IosColors.glassEdge, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
@@ -295,9 +286,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                     if (enterLabel == "search") searchPainter else returnPainter,
                     r, iconPx + 1.dp.toPx(), IosColors.fadedIcon
                 )
-                KType.SHIFT -> drawIcon(shiftPainter, r, iconPx, Color.White)
-                KType.BACKSPACE -> drawIcon(backPainter, r, iconPx, Color.White)
-                KType.EMOJI -> drawIcon(emojiPainter, r, iconPx + 1.dp.toPx(), Color.White)
+                KType.SHIFT -> drawIcon(shiftPainter, r, iconPx, IosColors.text)
+                KType.EMOJI -> drawIcon(emojiPainter, r, iconPx + 1.dp.toPx(), IosColors.text)
                 KType.GAP -> {}
             }
         }
@@ -311,8 +301,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             val y = r.bottom - h - r.height * 0.55f
             val cr = CornerRadius(10.dp.toPx(), 10.dp.toPx())
             drawRoundRect(Color(0x66000000), Offset(x, y + 2.dp.toPx()), Size(w, h), cr)
-            drawRoundRect(Color(0xFF5E5E5E), Offset(x, y), Size(w, h), cr)
-            drawRoundRect(GlassEdge, Offset(x, y), Size(w, h), cr, style = Stroke(width = 0.8.dp.toPx()))
+            drawRoundRect(IosColors.bubble, Offset(x, y), Size(w, h), cr)
+            drawRoundRect(IosColors.glassEdge, Offset(x, y), Size(w, h), cr, style = Stroke(width = 0.8.dp.toPx()))
             drawText(l, topLeft = Offset(x + w / 2f - l.size.width / 2f, y + h / 2f - l.size.height / 2f))
         }
     }

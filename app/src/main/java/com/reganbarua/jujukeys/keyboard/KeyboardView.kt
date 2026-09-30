@@ -1,5 +1,11 @@
 package com.reganbarua.jujukeys.keyboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -25,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -64,33 +71,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-// ------------------------------------------------------------------ iPhone dark colours
-// Measured from an iPhone 16 Pro Max dark-mode screenshot.
-
-internal object IosColors {
-    // Liquid-glass look: see-through keys over a soft, dark, colour-tinted background.
-    val bg = Color(0xF0171917)             // a bit darker
-    val faded = Color(0x42AFAFAF)          // return / search key: plain, faded
-    val fadedPressed = Color(0x66AFAFAF)
-    val fadedIcon = Color(0x99FFFFFF)
-    val key = Color(0x668C8C8C)
-    val keyPressed = Color(0xA8B4B4B4)
-    val fn = Color(0x38707070)            // number pad side columns
-    val text = Color.White
-    val dim = Color(0xFF8A8A8A)
-    val returnIcon = Color(0xFF8E8E8E)
-    val suggestion = Color(0xFFC8C8C8)
-    val divider = Color(0x33FFFFFF)
-    val chip = Color(0x80909090)
-    val blue = Color(0xFF0A84FF)
-    val bluePressed = Color(0xFF409CFF)
-    val lightBlue = Color(0xFF8AB4F8)
-    val lightBlueText = Color(0xFF062E6F)
-    val keepYellow = Color(0xFFFBBC04)
-    val card = Color(0x558A8A8A)
-    val glassTop = Color(0x59FFFFFF)      // light on the top edge of a key
-}
-
 /** Noto Sans Bengali, bundled with the app, for all Bangla text on the keyboard. */
 internal val BanglaFont = FontFamily(
     Font(R.font.noto_bengali_regular, FontWeight.Normal),
@@ -109,12 +89,6 @@ private val BaseRowHeight = 52.dp      // 42dp key + 10dp gap (a little bigger, 
 private val KeyHPad = 2.6.dp
 private val KeyVPad = 5.dp
 private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
-
-/** Thin light line along the keyboard's top edge — separates it from the app. */
-internal val TopEdge = Brush.verticalGradient(0f to Color(0x47FFFFFF), 0.04f to Color(0x00FFFFFF), 1f to Color(0x00FFFFFF))
-
-/** Thin bright top edge that makes a key look like glass. */
-internal val GlassEdge = Brush.verticalGradient(0f to Color(0x59FFFFFF), 0.35f to Color(0x10FFFFFF), 1f to Color(0x00FFFFFF))
 
 /** Sound/vibration callback for every key press. */
 internal val LocalKeyFeedback = staticCompositionLocalOf<(KeyKind) -> Unit> { {} }
@@ -142,6 +116,11 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
     }
     val feedback = remember(actions) { { kind: KeyKind -> actions.onKeyFeedback(kind) } }
 
+    val theme = Themes.byId(prefs.theme)
+    IosColors.apply(theme)
+
+    // key(theme): a theme change rebuilds the keyboard once so every part picks up the new colours
+    key(theme.id) {
     CompositionLocalProvider(
         LocalKeyFeedback provides feedback,
         LocalPopupEnabled provides prefs.popup,
@@ -156,38 +135,48 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                 .drawWithCache {
                     // soft colour glow behind the glass keys (drawn once per size)
                     val w = size.width; val h = size.height
-                    val blobs = listOf(
-                        Triple(Offset(w * 0.18f, h * 0.80f), Color(0x38286E3C), w * 0.55f),
-                        Triple(Offset(w * 0.62f, h * 0.72f), Color(0x29822D2D), w * 0.50f),
-                        Triple(Offset(w * 0.88f, h * 0.28f), Color(0x1F3C3C8C), w * 0.50f),
-                        Triple(Offset(w * 0.30f, h * 0.18f), Color(0x1A6E6432), w * 0.45f),
-                    ).map { (c, col, r) -> Brush.radialGradient(listOf(col, Color.Transparent), c, r) }
+                    val bg = theme.bg
+                    val blobs = theme.blobs.map { b ->
+                        Brush.radialGradient(listOf(b.color, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r)
+                    }
                     onDrawBehind {
-                        drawRect(IosColors.bg)
+                        drawRect(bg)
                         blobs.forEach { drawRect(it) }
                     }
                 }
-                .border(1.dp, TopEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                .border(1.dp, IosColors.topEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                 .onGloballyPositioned { rootWidth = it.size.width.toFloat() }
         ) {
             Column(Modifier.fillMaxWidth()) {
-                if (state.translateOn) {
-                    TranslateBar(state, actions)
-                    SuggestionBar(state, actions, forceSuggestions = true)   // suggestions while translating too
-                } else SuggestionBar(state, actions)
+                val searching = state.emojiSearch != null
+                when {
+                    searching -> EmojiSearchBar(state, actions)
+                    state.panel == Panel.EMOJI -> EmojiTopBar(actions)
+                    state.translateOn -> {
+                        TranslateBar(state, actions)
+                        SuggestionBar(state, actions, forceSuggestions = true)   // suggestions while translating too
+                    }
+                    else -> SuggestionBar(state, actions)
+                }
 
                 Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp)) {
                     when (state.panel) {
-                        Panel.KEYS -> KeysPanel(state, actions, preview)
+                        Panel.KEYS, Panel.SUGGESTIONS -> KeysPanel(state, actions, preview)
                         Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
-                        Panel.EMOJI -> EmojiPanel(state, actions)
-                        Panel.SUGGESTIONS -> MoreSuggestionsPanel(state, actions)
+                        Panel.EMOJI -> if (searching) KeysPanel(state, actions, preview) else EmojiPanel(state, actions)
                     }
+                    // more suggestions rise from the bottom (the faded arrow in the bottom strip)
+                    AnimatedVisibility(
+                        visible = state.panel == Panel.SUGGESTIONS,
+                        enter = slideInVertically(tween(180)) { it } + fadeIn(tween(120)),
+                        exit = slideOutVertically(tween(160)) { it } + fadeOut(tween(120))
+                    ) { MoreSuggestionsPanel(state, actions) }
                 }
                 BottomStrip(state, actions)
             }
             KeyPreviewBubble(preview, rootWidth)
         }
+    }
     }
 }
 
@@ -454,7 +443,7 @@ internal fun KeyLabel(text: String, size: TextUnit) {
 
 // ------------------------------------------------------------------ bottom strip
 
-/** iPhone's strip under the keys: 🌐 left, 🎤 right — Keep clipboard and Translate in the middle. */
+/** Strip under the keys: 🌐 · faded ⌃ (more suggestions rise up) ·························· 🎤 */
 @Composable
 private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
     Row(
@@ -465,8 +454,16 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         StripButton(onTap = { actions.onOpenSettings() }, onLongPress = { actions.onShowImePicker() }) {
             Icon(Symbols.globe, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(32.dp))
         }
-        Spacer(Modifier.weight(1f))
-
+        if (state.prefs.showSuggestions && state.emojiSearch == null) {
+            Spacer(Modifier.width(20.dp))
+            val open = state.panel == Panel.SUGGESTIONS
+            StripButton(onTap = { actions.onPanel(if (open) Panel.KEYS else Panel.SUGGESTIONS) }) {
+                Icon(
+                    if (open) Symbols.arrowDown else Symbols.arrowUp, "আরও সাজেশন",
+                    tint = IosColors.text.copy(alpha = 0.42f), modifier = Modifier.size(30.dp)
+                )
+            }
+        }
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
@@ -513,10 +510,10 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
                 .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
                 .size(w.toDp(), h.toDp())
                 .shadow(8.dp, RoundedCornerShape(10.dp))
-                .background(IosColors.keyPressed, RoundedCornerShape(10.dp)),
+                .background(IosColors.bubble, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text, color = Color.White, fontSize = 32.sp, fontWeight = LocalKeyWeight.current, fontFamily = fontOf(text))
+            Text(text, color = IosColors.text, fontSize = 32.sp, fontWeight = LocalKeyWeight.current, fontFamily = fontOf(text))
         }
     }
 }
@@ -592,7 +589,7 @@ internal fun PressBox(
         modifier
             .clip(shape)
             .background(if (pressed) pressedColor else color)
-            .then(if (glass) Modifier.border(0.7.dp, GlassEdge, shape) else Modifier)
+            .then(if (glass) Modifier.border(0.7.dp, IosColors.glassEdge, shape) else Modifier)
             .then(gestures),
         contentAlignment = Alignment.Center,
         content = content
