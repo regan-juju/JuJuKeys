@@ -1,12 +1,16 @@
 package com.reganbarua.jujukeys.suggest
 
 /**
- * Word suggestions, like Gboard / iPhone.
+ * Word suggestions, like Gboard.
  *
  * English: words starting with what is typed, most frequent first.
  * বাংলা:   the Avro result first, then dictionary words that "sound the same".
  *          Matching uses a loose skeleton (no kar/hasanta, শ=ষ=স, ন=ণ, …) so that
  *          amra → আমরা, tomake → তোমাকে, bhalobashi → ভালোবাসি are found.
+ * Next word: learned on the phone from what the user types (never sent anywhere).
+ *
+ * Fast: words are kept sorted, so a prefix is found by binary search instead of
+ * scanning the whole list on every key press.
  *
  * Pure Kotlin: dictionaries are passed in as lines "word<TAB>frequency".
  */
@@ -14,16 +18,27 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     private class Entry(val word: String, val key: String, val freq: Long)
 
-    private val english: List<Entry> = englishLines.mapNotNull { parse(it) { w -> w } }.toList()
-    private val bangla: List<Entry> = banglaLines.mapNotNull { parse(it) { w -> skeleton(w) } }.toList()
+    /** Sorted by key, so all words with the same prefix sit next to each other. */
+    private val english: Array<Entry> =
+        englishLines.mapNotNull { parse(it) { w -> w } }.sortedBy { it.key }.toList().toTypedArray()
+    private val bangla: Array<Entry> =
+        banglaLines.mapNotNull { parse(it) { w -> skeleton(w) } }.sortedBy { it.key }.toList().toTypedArray()
+
+    /** Most frequent words, for when nothing is typed yet. */
+    val topEnglish: List<String> = english.sortedByDescending { it.freq }.take(30).map { it.word }
+    val topBangla: List<String> = bangla.sortedByDescending { it.freq }.take(30).map { it.word }
+
+    private val cache = HashMap<String, List<Entry>>()
 
     private inline fun parse(line: String, keyOf: (String) -> String): Entry? {
         val tab = line.indexOf('\t')
         if (tab <= 0) return null
-        val w = line.substring(0, tab)
+        val w = nfc(line.substring(0, tab))
         val f = line.substring(tab + 1).trim().toLongOrNull() ?: return null
         return Entry(w, keyOf(w), f)
     }
+
+    // ------------------------------------------------------------------ user & learned words
 
     /** The user's own words (settings → অভিধান); always suggested first. */
     @Volatile private var userEnglish: List<String> = emptyList()
@@ -31,22 +46,58 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     fun setUserWords(words: List<String>) {
         userEnglish = words.filter { w -> w.all { it.code < 128 } }
-        userBangla = words.filter { w -> w.any { it in '\u0980'..'\u09FF' } }.map { it to skeleton(it) }
+        userBangla = words.filter { w -> w.any { it in 'ঀ'..'৿' } }.map { it to skeleton(it) }
+    }
+
+    /** Words the user often types get a boost. Filled by [Learner]. */
+    @Volatile var learnedCounts: Map<String, Int> = emptyMap()
+
+    // ------------------------------------------------------------------ lookup
+
+    /** Index range [from, to) of entries whose key starts with [prefix]. */
+    private fun range(arr: Array<Entry>, prefix: String): IntRange {
+        var lo = 0
+        var hi = arr.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (arr[mid].key < prefix) lo = mid + 1 else hi = mid
+        }
+        val start = lo
+        hi = arr.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (arr[mid].key.startsWith(prefix) || arr[mid].key < prefix) lo = mid + 1 else hi = mid
+        }
+        return start until lo
+    }
+
+    /** Top [limit] entries by frequency whose key starts with [prefix] (cached for short prefixes). */
+    private fun top(arr: Array<Entry>, tag: String, prefix: String, limit: Int): List<Entry> {
+        val cacheKey = "$tag|$prefix"
+        if (prefix.length <= 2) synchronized(cache) { cache[cacheKey]?.let { return it } }
+        val r = range(arr, prefix)
+        val list = if (r.isEmpty()) emptyList() else {
+            val slice = ArrayList<Entry>(minOf(r.last - r.first + 1, 20000))
+            for (i in r) slice.add(arr[i])
+            slice.sortedByDescending { it.freq }.take(limit)
+        }
+        if (prefix.length <= 2) synchronized(cache) { cache[cacheKey] = list }
+        return list
     }
 
     /** Up to [n] English words (lowercase) completing [prefix]. */
     fun english(prefix: String, n: Int = 3): List<String> {
         val p = prefix.lowercase()
         if (p.isEmpty()) return emptyList()
-        val out = ArrayList<String>(n)
-        userEnglish.filter { it.lowercase().startsWith(p) }.take(n).forEach { out.add(it) }
-        // exact word first, then completions by frequency (list is already sorted by frequency)
-        english.firstOrNull { it.word == p }?.let { if (out.size < n && it.word !in out) out.add(it.word) }
-        for (e in english) {
-            if (out.size >= n) break
-            if (e.word != p && e.word.startsWith(p) && e.word !in out) out.add(e.word)
-        }
-        return out
+        val out = LinkedHashSet<String>()
+        userEnglish.filter { it.lowercase().startsWith(p) }.forEach { if (out.size < n) out.add(it) }
+        val found = top(english, "en", p, 40)
+        // exact word first, then words the user types often, then by frequency
+        found.firstOrNull { it.word == p }?.let { if (out.size < n) out.add(it.word) }
+        val learned = learnedCounts
+        found.sortedByDescending { (learned[it.word] ?: 0) * 1_000_000_000L + it.freq }
+            .forEach { if (out.size < n) out.add(it.word) }
+        return out.toList()
     }
 
     /** Up to [n] Bangla words for the Avro conversion [converted]. */
@@ -54,35 +105,37 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         if (converted.isEmpty()) return emptyList()
         val key = skeleton(converted)
         if (key.isEmpty()) return listOf(converted)
-        val same = ArrayList<Entry>()
-        val longer = ArrayList<Entry>()
-        for (e in bangla) {
-            if (e.key == key) same.add(e)
-            else if (e.key.startsWith(key) && longer.size < 50) longer.add(e)
-        }
+        val learned = learnedCounts
+        val found = top(bangla, "bn", key, 60)
+        val same = found.filter { it.key == key }
+        val longer = found.filter { it.key != key }
+        val rank = { e: Entry -> (learned[e.word] ?: 0) * 1_000_000_000L + e.freq }
         val out = LinkedHashSet<String>()
-        out.add(converted)
+        out.add(nfc(converted))
         userBangla.filter { it.second.startsWith(key) }.forEach { if (out.size < n) out.add(it.first) }
-        (same.sortedByDescending { it.freq } + longer).forEach { if (out.size < n) out.add(it.word) }
+        (same.sortedByDescending(rank) + longer.sortedByDescending(rank)).forEach { if (out.size < n) out.add(it.word) }
         return out.toList()
     }
 
     companion object {
+        /** One Unicode spelling, so the same word never shows twice. */
+        fun nfc(s: String): String = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC)
+
         private const val DROP = "ািীুূৃৄেৈোৌ্ঁ‌‍ৗ"
 
         /** Loose sound-alike key for a Bangla word. */
         fun skeleton(word: String): String {
             // Decompose precomposed nukta letters so both spellings match.
-            val w = word.replace("\u09DC", "\u09A1\u09BC")
-                .replace("\u09DD", "\u09A2\u09BC")
-                .replace("\u09DF", "\u09AF\u09BC")
+            val w = word.replace("ড়", "ড়")
+                .replace("ঢ়", "ঢ়")
+                .replace("য়", "য়")
             return buildString(w.length) {
                 var i = 0
                 while (i < w.length) {
                     val ch = w[i]
-                    val nukta = i + 1 < w.length && w[i + 1] == '\u09BC'
+                    val nukta = i + 1 < w.length && w[i + 1] == '়'
                     if (nukta) {
-                        append(if (ch == '\u09AF') 'Y' else 'R')   // য় → Y, ড়/ঢ় → R
+                        append(if (ch == 'য') 'Y' else 'R')   // য় → Y, ড়/ঢ় → R
                         i += 2
                         continue
                     }

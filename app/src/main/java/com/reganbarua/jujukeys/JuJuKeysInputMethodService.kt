@@ -5,16 +5,16 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.media.AudioManager
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.view.HapticFeedbackConstants
 import android.inputmethodservice.InputMethodService
+import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.text.InputType
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -44,8 +44,10 @@ import com.reganbarua.jujukeys.keyboard.Page
 import com.reganbarua.jujukeys.keyboard.Panel
 import com.reganbarua.jujukeys.keyboard.ShiftState
 import com.reganbarua.jujukeys.settings.Prefs
+import com.reganbarua.jujukeys.suggest.Learner
 import com.reganbarua.jujukeys.suggest.Suggester
 import com.reganbarua.jujukeys.translate.TranslateEngine
+import java.io.File
 import java.util.concurrent.Executors
 
 /**
@@ -53,11 +55,14 @@ import java.util.concurrent.Executors
  *
  * ENGLISH: key labels are CAPITAL; typing is normal (small letters, Shift / auto-capital = capital).
  * বাংলা:   Avro phonetic (bhalo → ভালো). No Shift = small letter (t → ত), Shift = capital (T → ট).
- * Extras:  word suggestions, clipboard history + Google Keep, Google-quality translation
- *          (offline ML Kit / online Cloud API), emoji, voice typing, space-bar cursor slide.
  *
- * Privacy: typed text is never logged or uploaded. Only text typed into the translate box
- * is translated (on the phone offline, or by Google if the user saved an API key).
+ * Speed: a key types the moment it is touched, and nothing on the key-press path waits for
+ * the app (the current word, capitals and suggestions are all tracked here; dictionary
+ * look-ups run on a background thread).
+ *
+ * Privacy: typed text is never uploaded. Learned words stay in the app's private storage.
+ * Only text typed into the translate box is translated (on the phone, or by Google if the
+ * user saved an API key).
  */
 class JuJuKeysInputMethodService : InputMethodService(),
     LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner, KeyboardActions {
@@ -77,11 +82,18 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private lateinit var clips: ClipHistory
     private lateinit var translator: TranslateEngine
     @Volatile private var suggester: Suggester? = null
+    private val learner = Learner()
+    private var learnedSinceSave = 0
 
     private val roman = StringBuilder()        // Roman letters of the Bangla word being typed
+    private val enWord = StringBuilder()       // English word being typed (kept here: no app round-trip)
+    private val recent = StringBuilder()       // last few characters we typed (for auto-capital, double space)
+    private var lastWord: String? = null       // previous word, for next-word suggestions
     private var lastShiftTap = 0L
     private var lastSpaceTime = 0L
+    private var lastEditTime = 0L
     private var passwordField = false
+    private var fieldWantsCaps = false
     private var suggestionSeq = 0
 
     // ---- translate box
@@ -90,8 +102,12 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var translateSeq = 0
     private val translateRunnable = Runnable { runTranslation() }
 
-    private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { readClipboard() }
+    private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { readClipboard(fresh = true) }
+    private val clearFreshClip = Runnable { state.freshClip = null }
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> loadPrefs() }
+
+    private val audio by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    private val vibrator by lazy { getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
 
     // ================================================================== lifecycle
 
@@ -109,13 +125,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
         translator = TranslateEngine(this)
         clipboard().addPrimaryClipChangedListener(clipListener)
 
-        // Load the dictionaries in the background.
+        // Dictionaries and learned words load in the background.
         worker.execute {
+            runCatching { learner.load(learnedFile().readText()) }
             runCatching {
                 val en = assets.open("dict_en.txt").bufferedReader().readLines()
                 val bn = assets.open("dict_bn.txt").bufferedReader().readLines()
                 suggester = Suggester(en.asSequence(), bn.asSequence()).also {
                     it.setUserWords(Prefs.userWords(this))
+                    it.learnedCounts = learner.snapshotCounts()
                 }
             }
             main.post { refreshSuggestions() }
@@ -157,11 +175,16 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.prefs = Prefs.load(this)
         state.recentEmoji = Prefs.recentEmoji(this)
         suggester?.setUserWords(Prefs.userWords(this))
+        if (Prefs.sp(this).getBoolean("clear_learned", false)) {
+            Prefs.sp(this).edit().remove("clear_learned").apply()
+            learner.clear(); learnedSinceSave = 1; saveLearned()
+        }
     }
 
     override fun onDestroy() {
         clipboard().removePrimaryClipChangedListener(clipListener)
         Prefs.sp(this).unregisterOnSharedPreferenceChangeListener(prefListener)
+        saveLearned()
         translator.close()
         worker.shutdown()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
@@ -172,7 +195,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         if (!restarting && state.translateOn) stopTranslate()
-        roman.clear()
+        roman.clear(); enWord.clear(); lastWord = null
         state.shift = ShiftState.OFF
         state.panel = Panel.KEYS
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
@@ -183,19 +206,24 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
             (cls == InputType.TYPE_CLASS_NUMBER &&
                 variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        fieldWantsCaps = cls == InputType.TYPE_CLASS_TEXT && (info.inputType and
+            (InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_CAP_WORDS or
+                InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS)) != 0
         state.page = when (cls) {
-            InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> Page.SYMBOLS
+            InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> Page.NUMPAD
             else -> Page.LETTERS
         }
         state.enterLabel = enterLabelFor(info)
         loadPrefs()
         clips.reload()
-        updateAutoCaps()
+        readRecentFromApp()     // one read when the field opens, not on every key
+        updateCaps()
         refreshSuggestions()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
-        if (state.translateOn) stopTranslate() else commitWord()
+        if (state.translateOn) stopTranslate() else { commitWord(); endEnglishWord() }
+        saveLearned()
         super.onFinishInputView(finishingInput)
     }
 
@@ -205,32 +233,37 @@ class JuJuKeysInputMethodService : InputMethodService(),
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         if (state.translateOn) return
-        // The user tapped somewhere else in the text: finish the word being typed.
-        if (roman.isNotEmpty() &&
-            (candidatesStart == -1 || newSelStart != candidatesEnd || newSelEnd != candidatesEnd)
-        ) {
+        // Our own typing also moves the cursor — ignore that (it is already tracked here).
+        if (SystemClock.uptimeMillis() - lastEditTime < 500) return
+        // The user tapped somewhere else in the text: start fresh.
+        if (roman.isNotEmpty()) {
             roman.clear()
             currentInputConnection?.finishComposingText()
         }
-        updateAutoCaps()
+        enWord.clear(); lastWord = null
+        readRecentFromApp()
+        updateCaps()
         refreshSuggestions()
-    }
-
-    /** ENGLISH: capital letter at the start of a sentence (like any normal keyboard). */
-    private fun updateAutoCaps() {
-        if (state.language != Language.ENGLISH || state.translateOn || state.shift == ShiftState.LOCK) return
-        val info = currentInputEditorInfo ?: return
-        val caps = state.prefs.autoCapitalize && info.inputType != InputType.TYPE_NULL &&
-            (currentInputConnection?.getCursorCapsMode(info.inputType) ?: 0) != 0
-        state.shift = if (caps) ShiftState.ONCE else ShiftState.OFF
     }
 
     // ================================================================== where text goes
 
+    private fun markEdit() { lastEditTime = SystemClock.uptimeMillis() }
+
+    private fun rememberTyped(text: String) {
+        recent.append(text)
+        if (recent.length > 8) recent.delete(0, recent.length - 8)
+    }
+
+    private fun readRecentFromApp() {
+        recent.setLength(0)
+        currentInputConnection?.getTextBeforeCursor(8, 0)?.let { recent.append(it) }
+    }
+
     /** Text goes into the app, or into the translate box while translate is on. */
     private fun sinkSetComposing(text: String) {
         if (state.translateOn) { tComposing = text; translateInputChanged() }
-        else currentInputConnection?.setComposingText(text, 1)
+        else { markEdit(); currentInputConnection?.setComposingText(text, 1) }
     }
 
     private fun sinkCommit(text: String) {
@@ -239,7 +272,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
             tCommitted.append(text)
             translateInputChanged()
         } else {
+            markEdit()
             currentInputConnection?.commitText(text, 1)
+            rememberTyped(text)
         }
     }
 
@@ -251,13 +286,16 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 translateInputChanged()
             }
         } else {
+            markEdit()
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+            if (recent.isNotEmpty()) recent.setLength(recent.length - 1)
         }
     }
 
     // ================================================================== keys
 
     override fun onChar(c: Char) {
+        state.freshClip = null
         if (state.language == Language.ENGLISH || passwordField) {
             // Key labels are CAPITAL, but typing is normal: small letters, Shift = capital.
             val out = when {
@@ -266,7 +304,14 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 else -> c.uppercaseChar()
             }
             if (state.shift == ShiftState.ONCE && c.isLetter()) state.shift = ShiftState.OFF
-            sinkCommit(out.toString())
+            if (out.isLetter() || (out == '\'' && enWord.isNotEmpty())) {
+                sinkCommit(out.toString())
+                enWord.append(out)
+            } else {
+                endEnglishWord()
+                sinkCommit(out.toString())
+                updateCaps()
+            }
             refreshSuggestions()
             return
         }
@@ -286,13 +331,26 @@ class JuJuKeysInputMethodService : InputMethodService(),
         refreshSuggestions()
     }
 
+    override fun onLongChar(c: Char) {
+        onBackspace()        // remove the letter typed on touch-down
+        val shown = if (state.language == Language.BANGLA && c in '0'..'9') "০১২৩৪৫৬৭৮৯"[c - '0'] else c
+        onRawText(shown.toString())
+    }
+
     override fun onText(text: String) {
         if (state.prefs.recentEmoji) {
             Prefs.addRecentEmoji(this, text)
             state.recentEmoji = Prefs.recentEmoji(this)
         }
+        onRawText(text)
+    }
+
+    override fun onRawText(text: String) {
+        state.freshClip = null
         commitWord()
+        endEnglishWord()
         sinkCommit(text)
+        updateCaps()
         refreshSuggestions()
     }
 
@@ -301,42 +359,47 @@ class JuJuKeysInputMethodService : InputMethodService(),
             roman.setLength(roman.length - 1)
             if (roman.isEmpty()) {
                 if (state.translateOn) { tComposing = ""; translateInputChanged() }
-                else currentInputConnection?.commitText("", 1)
+                else { markEdit(); currentInputConnection?.commitText("", 1) }
             } else {
                 sinkSetComposing(AvroPhonetic.convert(roman.toString()))
             }
         } else {
+            if (enWord.isNotEmpty()) enWord.setLength(enWord.length - 1)
             sinkDeleteBefore()
+            updateCaps()
         }
         refreshSuggestions()
     }
 
     override fun onSpace() {
         val now = SystemClock.uptimeMillis()
-        val hadWord = roman.isNotEmpty()
+        val hadWord = roman.isNotEmpty() || enWord.isNotEmpty()
         commitWord()
-        val ic = currentInputConnection
+        endEnglishWord()
         // Double space → full stop (। in Bangla), like iPhone.
-        if (state.prefs.doubleSpacePeriod && !state.translateOn && !hadWord && ic != null && now - lastSpaceTime < 700) {
-            val before = ic.getTextBeforeCursor(2, 0)
-            if (before != null && before.length == 2 && before[1] == ' ' &&
-                !before[0].isWhitespace() && before[0] !in ".।,!?"
-            ) {
-                ic.deleteSurroundingText(1, 0)
-                ic.commitText(if (state.language == Language.BANGLA) "। " else ". ", 1)
-                lastSpaceTime = 0L
-                refreshSuggestions()
-                return
-            }
+        if (state.prefs.doubleSpacePeriod && !state.translateOn && !hadWord && now - lastSpaceTime < 700 &&
+            recent.length >= 2 && recent[recent.length - 1] == ' ' &&
+            !recent[recent.length - 2].isWhitespace() && recent[recent.length - 2] !in ".।,!?"
+        ) {
+            markEdit()
+            currentInputConnection?.deleteSurroundingText(1, 0)
+            recent.setLength(recent.length - 1)
+            sinkCommit(if (state.language == Language.BANGLA) "। " else ". ")
+            lastSpaceTime = 0L
+            updateCaps()
+            refreshSuggestions()
+            return
         }
         sinkCommit(" ")
         lastSpaceTime = now
+        updateCaps()
         refreshSuggestions()
     }
 
     override fun onCursorMove(steps: Int) {
         if (state.translateOn) return
         commitWord()
+        enWord.clear(); lastWord = null
         val code = if (steps < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
         repeat(kotlin.math.abs(steps)) { sendDownUpKeyEvents(code) }
     }
@@ -350,7 +413,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
             currentInputConnection?.finishComposingText()
         } else {
             commitWord()
+            endEnglishWord()
         }
+        markEdit()
         val ic = currentInputConnection ?: return
         val info = currentInputEditorInfo
         val action = info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_NONE
@@ -359,7 +424,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
             ic.performEditorAction(action)
         } else {
             sendKeyChar('\n')
+            rememberTyped("\n")
         }
+        lastWord = null
+        updateCaps()
         refreshSuggestions()
     }
 
@@ -374,10 +442,24 @@ class JuJuKeysInputMethodService : InputMethodService(),
         lastShiftTap = now
     }
 
+    /** ENGLISH: capital letter at the start of a sentence — worked out here, no app round-trip. */
+    private fun updateCaps() {
+        if (state.language != Language.ENGLISH || state.translateOn || passwordField || state.shift == ShiftState.LOCK) return
+        if (!state.prefs.autoCapitalize || !fieldWantsCaps) {
+            if (state.shift == ShiftState.ONCE && enWord.isEmpty()) state.shift = ShiftState.OFF
+            return
+        }
+        val t = recent.toString()
+        val trimmed = t.trimEnd(' ')
+        val start = t.isEmpty() || t.endsWith("\n") ||
+            (t.endsWith(" ") && (trimmed.isEmpty() || trimmed.last() in ".?!।"))
+        state.shift = if (start && enWord.isEmpty()) ShiftState.ONCE else ShiftState.OFF
+    }
+
     override fun onToggleLanguage() {
         commitWord()
+        endEnglishWord()
         setLanguage(if (state.language == Language.BANGLA) Language.ENGLISH else Language.BANGLA)
-        updateAutoCaps()
         if (state.translateOn) {
             state.translateFrom = state.language
             clearTranslateBox()
@@ -388,6 +470,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.language = lang
         state.shift = ShiftState.OFF
         Prefs.setLastLanguageBangla(this, lang == Language.BANGLA)
+        updateCaps()
         refreshSuggestions()
     }
 
@@ -399,14 +482,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onKeyFeedback(kind: KeyKind) {
         val p = state.prefs
         if (p.sound) {
-            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val fx = when (kind) {
                 KeyKind.DELETE -> AudioManager.FX_KEYPRESS_DELETE
                 KeyKind.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
                 KeyKind.RETURN -> AudioManager.FX_KEYPRESS_RETURN
                 KeyKind.NORMAL -> AudioManager.FX_KEYPRESS_STANDARD
             }
-            am.playSoundEffect(fx, -1f)
+            audio.playSoundEffect(fx, -1f)
         }
         if (p.vibrate) {
             if (p.vibrateStrength == 0) {
@@ -422,7 +504,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     @Suppress("DEPRECATION")
     private fun vibrate(strength: Int) {
-        val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+        val v = vibrator ?: return
         val ms = when (strength) { 1 -> 8L; 2 -> 15L; else -> 25L }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val amp = when (strength) { 1 -> 60; 2 -> 140; else -> 255 }
@@ -437,54 +519,111 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onPage(page: Page) {
+        if (page != Page.LETTERS) { commitWord(); endEnglishWord() }
         state.page = page
     }
 
     override fun onPanel(panel: Panel) {
-        commitWord()
-        if (panel == Panel.CLIPBOARD) readClipboard()
+        if (panel != Panel.SUGGESTIONS) { commitWord(); endEnglishWord() }
+        if (panel == Panel.CLIPBOARD) readClipboard(fresh = false)
         state.panel = panel
     }
 
     // ================================================================== suggestions
 
     override fun onSuggestion(index: Int) {
-        val word = state.suggestions.getOrNull(index) ?: return
+        state.suggestions.getOrNull(index)?.let { onSuggestionWord(it) }
+    }
+
+    override fun onSuggestionWord(word: String) {
+        if (state.translateOn) return
         if (state.language == Language.BANGLA && !passwordField) {
             roman.clear()
             sinkCommit("$word ")                 // replaces the composing word
         } else {
-            val cur = currentEnglishWord()
-            val ic = currentInputConnection
-            if (cur.isNotEmpty()) ic?.deleteSurroundingText(cur.length, 0)
-            ic?.commitText("$word ", 1)
+            if (enWord.isNotEmpty()) {
+                markEdit()
+                currentInputConnection?.deleteSurroundingText(enWord.length, 0)
+                enWord.clear()
+            }
+            sinkCommit("$word ")
         }
+        learn(word)
+        if (state.panel == Panel.SUGGESTIONS) state.panel = Panel.KEYS
+        updateCaps()
         refreshSuggestions()
     }
 
-    private fun currentEnglishWord(): String {
-        val before = currentInputConnection?.getTextBeforeCursor(48, 0)?.toString() ?: return ""
-        return before.takeLastWhile { (it.isLetter() && it.code < 128) || it == '\'' }
+    /** Remember the word (on the phone) for better and next-word suggestions. */
+    private fun learn(word: String) {
+        val w = word.trim()
+        if (w.isEmpty() || passwordField) return
+        if (state.prefs.learnWords) {
+            learner.learn(lastWord, w)
+            if (++learnedSinceSave >= 15) saveLearned()
+        }
+        lastWord = w
+    }
+
+    private fun endEnglishWord() {
+        if (enWord.isEmpty()) return
+        learn(enWord.toString().lowercase())
+        enWord.clear()
+    }
+
+    private fun learnedFile() = File(filesDir, "learned_words.txt")
+
+    private fun saveLearned() {
+        if (learnedSinceSave == 0) return
+        learnedSinceSave = 0
+        val text = learner.serialize()
+        suggester?.learnedCounts = learner.snapshotCounts()
+        worker.execute { runCatching { learnedFile().writeText(text) } }
     }
 
     private fun refreshSuggestions() {
-        if (passwordField) { state.suggestions = emptyList(); return }
+        if (passwordField || state.translateOn) {
+            state.suggestions = emptyList(); state.moreSuggestions = emptyList(); return
+        }
         val seq = ++suggestionSeq
         val bangla = state.language == Language.BANGLA
         val romanNow = roman.toString()
-        val englishWord = if (!bangla && !state.translateOn) currentEnglishWord() else ""
+        val typed = enWord.toString()
+        val prev = lastWord
         val s = suggester
 
-        if (bangla && romanNow.isEmpty()) { state.suggestions = listOf("আমি", "সে", "আপনি"); return }
-        if (!bangla && englishWord.isEmpty()) { state.suggestions = listOf("I", "The", "I'm"); return }
-        if (bangla) state.suggestions = listOf(AvroPhonetic.convert(romanNow))
-        if (s == null) return
+        if (bangla && romanNow.isNotEmpty()) state.suggestions = listOf(AvroPhonetic.convert(romanNow))
 
         worker.execute {
-            val list = if (bangla) s.bangla(AvroPhonetic.convert(romanNow))
-            else s.english(englishWord).map { matchCase(it, englishWord) }
-            main.post { if (seq == suggestionSeq) state.suggestions = list }
+            val list: List<String> = when {
+                bangla && romanNow.isNotEmpty() ->
+                    s?.bangla(AvroPhonetic.convert(romanNow), 18) ?: listOf(AvroPhonetic.convert(romanNow))
+                !bangla && typed.isNotEmpty() ->
+                    (s?.english(typed, 18) ?: emptyList()).map { matchCase(it, typed) }
+                else -> nextWordList(bangla, prev, s)
+            }
+            main.post {
+                if (seq == suggestionSeq) {
+                    state.suggestions = list.take(3)
+                    state.moreSuggestions = list
+                }
+            }
         }
+    }
+
+    /** Nothing typed yet: learned next words first, then the most common words. */
+    private fun nextWordList(bangla: Boolean, prev: String?, s: Suggester?): List<String> {
+        val fits = { w: String -> if (bangla) w.any { it in 'ঀ'..'৿' } else w.all { it.code < 128 } }
+        val out = LinkedHashSet<String>()
+        if (prev != null) learner.nextWords(prev, 12).filter(fits).forEach { out.add(it) }
+        if (bangla) {
+            if (out.isEmpty()) listOf("আমি", "সে", "আপনি").forEach { out.add(it) }
+            s?.topBangla?.forEach { if (out.size < 18) out.add(it) }
+        } else {
+            if (out.isEmpty()) listOf("I", "The", "I'm").forEach { out.add(it) }
+            s?.topEnglish?.forEach { if (out.size < 18) out.add(if (it == "i" || it.startsWith("i'")) it.replaceFirstChar { c -> c.uppercaseChar() } else it) }
+        }
+        return out.toList()
     }
 
     /** "hel" → hello, "Hel" → Hello, "HEL" → HELLO */
@@ -499,6 +638,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onVoice() {
         commitWord()
+        endEnglishWord()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         // Voice keyboards (Google voice typing) register themselves as "shortcut" IMEs.
         var target = imm.shortcutInputMethodsAndSubtypes.entries.firstOrNull()
@@ -530,7 +670,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private fun clipboard() = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-    private fun readClipboard() {
+    /** Called the moment something is copied — it shows up in the clipboard right away. */
+    private fun readClipboard(fresh: Boolean) {
         if (!state.prefs.clipboardOn) return
         runCatching {
             val clip = clipboard().primaryClip ?: return
@@ -538,14 +679,23 @@ class JuJuKeysInputMethodService : InputMethodService(),
             if (Build.VERSION.SDK_INT >= 33 &&
                 clip.description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
             ) return   // passwords etc. are not kept
-            val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: return
+            val text = clip.getItemAt(0).coerceToText(this)?.toString()?.trim() ?: return
+            if (text.isEmpty()) return
             clips.add(text)
+            if (fresh) {
+                state.freshClip = text
+                main.removeCallbacks(clearFreshClip)
+                main.postDelayed(clearFreshClip, 60_000)
+            }
         }
     }
 
     override fun onClipPaste(text: String) {
+        state.freshClip = null
         commitWord()
+        endEnglishWord()
         sinkCommit(text)
+        updateCaps()
         refreshSuggestions()
     }
 
@@ -553,8 +703,20 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onClipDelete(id: Long) = clips.delete(id)
     override fun onClipClear() = clips.clearUnpinned()
 
+    override fun onClipEnabled(on: Boolean) {
+        Prefs.setBoolean(this, "clipboard", on)
+        loadPrefs()
+        if (on) readClipboard(fresh = false)
+    }
+
     override fun onClipToKeep(text: String) {
         if (ClipHistory.sendToKeep(this, text)) toast("Google Keep-এ সেভ করতে 'Save' চাপুন")
+        else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+    }
+
+    override fun onClipAllToKeep() {
+        if (clips.items.isEmpty()) { toast("ক্লিপবোর্ড খালি"); return }
+        if (ClipHistory.sendAllToKeep(this, clips.items)) toast("সব লেখা এক নোটে — Keep-এ 'Save' চাপুন")
         else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
     }
 
@@ -567,12 +729,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onTranslateToggle() {
         if (state.translateOn) { stopTranslate(); return }
         commitWord()
+        endEnglishWord()
         state.panel = Panel.KEYS
         state.translateOn = true
         state.translateFrom = state.language
         state.translateStatus = ""
+        state.suggestions = emptyList()
         clearTranslateBox()
         state.online = translator.isOnline()
+        translator.warmUp()          // load the model now, so the first translation is quick
         translator.checkOfflineModel { ready ->
             state.offlineReady = ready
             if (!ready && translator.isOnline()) {
@@ -580,6 +745,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 translator.downloadOfflineModel { ok, err ->
                     state.offlineReady = ok
                     state.translateStatus = if (ok) "অফলাইন অনুবাদ প্রস্তুত ✓" else "মডেল নামানো যায়নি: ${err ?: ""}"
+                    if (ok) translator.warmUp()
                 }
             } else if (!ready) {
                 state.translateStatus = "অফলাইন মডেল নেই — একবার ইন্টারনেট চালু করুন"
@@ -606,6 +772,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.translateInput = ""
         state.translateOn = false
         state.translateStatus = ""
+        markEdit()
         currentInputConnection?.finishComposingText()   // keep the translation in the app
         refreshSuggestions()
     }
@@ -615,31 +782,32 @@ class JuJuKeysInputMethodService : InputMethodService(),
         roman.clear()
         tCommitted.setLength(0); tComposing = ""
         state.translateInput = ""
+        markEdit()
         currentInputConnection?.setComposingText("", 1)
     }
 
     private fun translateInputChanged() {
         state.translateInput = tCommitted.toString() + tComposing
         main.removeCallbacks(translateRunnable)
-        main.postDelayed(translateRunnable, 450)
+        main.postDelayed(translateRunnable, 250)
     }
 
     private fun runTranslation() {
         val raw = (tCommitted.toString() + tComposing).trim()
         val seq = ++translateSeq
         if (raw.isEmpty()) {
+            markEdit()
             currentInputConnection?.setComposingText("", 1)
             return
         }
         val toEnglish = state.translateFrom == Language.BANGLA
-        val text = if (toEnglish) raw else raw.lowercase()   // English box is all-caps
-        state.online = translator.isOnline()
         translator.translate(
-            text, toEnglish,
+            raw, toEnglish,
             status = { state.translateStatus = it },
             onResult = { result, error ->
                 if (seq != translateSeq || !state.translateOn) return@translate
                 if (result != null) {
+                    markEdit()
                     currentInputConnection?.setComposingText(result.text, 1)
                     state.translateStatus = if (result.online) "অনলাইন (Google Cloud)" else "অফলাইন (Google ML Kit)"
                     if (!result.online) state.offlineReady = true
@@ -662,7 +830,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
             tCommitted.append(bangla)
             translateInputChanged()
         } else {
+            markEdit()
             currentInputConnection?.commitText(bangla, 1)
+            rememberTyped(bangla)
+            learn(bangla)
         }
     }
 

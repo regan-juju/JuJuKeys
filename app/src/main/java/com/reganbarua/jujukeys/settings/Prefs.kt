@@ -12,6 +12,7 @@ data class KeyboardPrefs(
     val showEmojiKey: Boolean = true,
     val showLanguageKey: Boolean = true,
     val showVoiceKey: Boolean = true,
+    val boldKeys: Boolean = true,
     // পছন্দসমূহ — লেআউট
     val heightScale: Float = 1.0f,          // 0.9 ছোট / 1.0 মাঝারি / 1.1 বড় / 1.2 অনেক বড়
     // পছন্দসমূহ — কী চাপলে
@@ -25,6 +26,7 @@ data class KeyboardPrefs(
     val showSuggestions: Boolean = true,
     val autoCapitalize: Boolean = true,
     val doubleSpacePeriod: Boolean = true,
+    val learnWords: Boolean = true,         // শিখে নেওয়া সাজেশন (ফোনেই থাকে)
     // ক্লিপবোর্ড
     val clipboardOn: Boolean = true,
     // ইমোজি
@@ -45,6 +47,7 @@ object Prefs {
             showEmojiKey = p.getBoolean("emoji_key", d.showEmojiKey),
             showLanguageKey = p.getBoolean("language_key", d.showLanguageKey),
             showVoiceKey = p.getBoolean("voice_key", d.showVoiceKey),
+            boldKeys = p.getBoolean("bold_keys", d.boldKeys),
             heightScale = p.getFloat("height_scale", d.heightScale),
             sound = p.getBoolean("sound", d.sound),
             vibrate = p.getBoolean("vibrate", d.vibrate),
@@ -55,6 +58,7 @@ object Prefs {
             showSuggestions = p.getBoolean("suggestions", d.showSuggestions),
             autoCapitalize = p.getBoolean("auto_cap", d.autoCapitalize),
             doubleSpacePeriod = p.getBoolean("double_space", d.doubleSpacePeriod),
+            learnWords = p.getBoolean("learn_words", d.learnWords),
             clipboardOn = p.getBoolean("clipboard", d.clipboardOn),
             recentEmoji = p.getBoolean("recent_emoji", d.recentEmoji),
         )

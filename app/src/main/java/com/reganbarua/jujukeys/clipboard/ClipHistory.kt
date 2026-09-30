@@ -101,6 +101,29 @@ class ClipHistory(private val context: Context) {
             }
         }
 
+        const val KEEP_NOTE_TITLE = "JuJuKeys ক্লিপবোর্ড"
+
+        /**
+         * Opens Keep's "save note" screen with EVERYTHING in the clipboard as one note
+         * (one page). Pinned items first, then recent.
+         */
+        fun sendAllToKeep(context: Context, items: List<ClipItem>): Boolean {
+            val ordered = items.filter { it.pinned } + items.filter { !it.pinned }
+            val text = ordered.joinToString("\n\n") { it.text }
+            val intent = Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, KEEP_NOTE_TITLE)
+                .putExtra(Intent.EXTRA_TITLE, KEEP_NOTE_TITLE)
+                .putExtra(Intent.EXTRA_TEXT, text)
+                .setPackage(KEEP_PACKAGE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            return try {
+                context.startActivity(intent); true
+            } catch (e: ActivityNotFoundException) {
+                openKeepInStore(context); false
+            }
+        }
+
         /** Opens the Google Keep app. */
         fun openKeep(context: Context): Boolean {
             val launch = context.packageManager.getLaunchIntentForPackage(KEEP_PACKAGE)

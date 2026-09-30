@@ -46,19 +46,35 @@ class TranslateEngine(private val context: Context) {
             caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
+    /** Remembered after the first check, so each translation does not ask again (faster). */
+    @Volatile private var modelReady = false
+
     /** Calls back true when the Bangla offline model is already on the phone. */
     fun checkOfflineModel(callback: (Boolean) -> Unit) {
+        if (modelReady) { callback(true); return }
         RemoteModelManager.getInstance()
             .getDownloadedModels(TranslateRemoteModel::class.java)
-            .addOnSuccessListener { models -> callback(models.any { it.language == TranslateLanguage.BENGALI }) }
+            .addOnSuccessListener { models ->
+                modelReady = models.any { it.language == TranslateLanguage.BENGALI }
+                callback(modelReady)
+            }
             .addOnFailureListener { callback(false) }
+    }
+
+    /** Loads both translators into memory ahead of time so the first result comes fast. */
+    fun warmUp() {
+        checkOfflineModel { ready ->
+            if (!ready) return@checkOfflineModel
+            translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH).translate("আমি")
+            translator(TranslateLanguage.ENGLISH, TranslateLanguage.BENGALI).translate("hi")
+        }
     }
 
     /** Downloads the offline model (needs internet once). */
     fun downloadOfflineModel(onDone: (Boolean, String?) -> Unit) {
         val t = translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH)
         t.downloadModelIfNeeded(DownloadConditions.Builder().build())
-            .addOnSuccessListener { onDone(true, null) }
+            .addOnSuccessListener { modelReady = true; onDone(true, null) }
             .addOnFailureListener { onDone(false, it.message) }
     }
 

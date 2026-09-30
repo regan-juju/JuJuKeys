@@ -44,12 +44,17 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.reganbarua.jujukeys.R
 import com.reganbarua.jujukeys.clipboard.ClipItem
+import com.reganbarua.jujukeys.settings.KeyboardPrefs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -63,19 +68,34 @@ internal object IosColors {
     val bg = Color(0xFF212121)
     val key = Color(0xFF464646)
     val keyPressed = Color(0xFF6B6B6B)
+    val fn = Color(0xFF2E2E2E)            // number pad side columns
     val text = Color.White
     val dim = Color(0xFF8A8A8A)
     val returnIcon = Color(0xFF8E8E8E)
-    val suggestion = Color(0xFFA0A0A0)
+    val suggestion = Color(0xFFC8C8C8)
     val divider = Color(0xFF3D3D3D)
     val chip = Color(0xFF5A5A5A)
     val blue = Color(0xFF0A84FF)
     val bluePressed = Color(0xFF409CFF)
+    val lightBlue = Color(0xFF8AB4F8)
+    val lightBlueText = Color(0xFF062E6F)
     val keepYellow = Color(0xFFFBBC04)
-    val card = Color(0xFF333333)
+    val card = Color(0xFF4A4A4A)
 }
 
+/** Noto Sans Bengali, bundled with the app, for all Bangla text on the keyboard. */
+internal val BanglaFont = FontFamily(
+    Font(R.font.noto_bengali_regular, FontWeight.Normal),
+    Font(R.font.noto_bengali_semibold, FontWeight.SemiBold),
+    Font(R.font.noto_bengali_bold, FontWeight.Bold),
+)
+
+/** Bangla text → Noto Sans Bengali; other text keeps the phone's normal font. */
+internal fun fontOf(text: String): FontFamily? =
+    if (text.any { it in 'ঀ'..'৿' }) BanglaFont else null
+
 internal val KeyShape = RoundedCornerShape(5.5.dp)
+private val PillShape = RoundedCornerShape(50)
 private val BaseRowHeight = 50.dp      // 40dp key + 10dp gap, like iPhone
 private val KeyHPad = 2.9.dp
 private val KeyVPad = 5.dp
@@ -83,12 +103,12 @@ private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
 
 /** Sound/vibration callback for every key press. */
 internal val LocalKeyFeedback = staticCompositionLocalOf<(KeyKind) -> Unit> { {} }
-/** Show the key-press bubble? (setting) */
 internal val LocalPopupEnabled = staticCompositionLocalOf { true }
 internal val LocalRowHeight = staticCompositionLocalOf { BaseRowHeight }
+internal val LocalKeyWeight = staticCompositionLocalOf { FontWeight.Bold }
 
-/** Height of the area used by keys / clipboard / emoji. */
-internal fun keyAreaHeight(prefs: com.reganbarua.jujukeys.settings.KeyboardPrefs): Dp =
+/** Height of the area used by keys / clipboard / emoji / suggestions. */
+internal fun keyAreaHeight(prefs: KeyboardPrefs): Dp =
     BaseRowHeight * prefs.heightScale * (if (prefs.numberRow) 5 else 4)
 
 // ------------------------------------------------------------------ keyboard
@@ -105,12 +125,14 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
             override val longPressTimeoutMillis: Long get() = prefs.longPressDelay.toLong()
         }
     }
+    val feedback = remember(actions) { { kind: KeyKind -> actions.onKeyFeedback(kind) } }
 
     CompositionLocalProvider(
-        LocalKeyFeedback provides { kind: KeyKind -> actions.onKeyFeedback(kind) },
+        LocalKeyFeedback provides feedback,
         LocalPopupEnabled provides prefs.popup,
         LocalRowHeight provides BaseRowHeight * prefs.heightScale,
         LocalViewConfiguration provides viewConfig,
+        LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Bold else FontWeight.Normal,
     ) {
         Box(
             Modifier
@@ -124,8 +146,9 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                 Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp)) {
                     when (state.panel) {
                         Panel.KEYS -> KeysPanel(state, actions, preview)
-                        Panel.CLIPBOARD -> ClipboardPanel(clips, actions)
+                        Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
                         Panel.EMOJI -> EmojiPanel(state, actions)
+                        Panel.SUGGESTIONS -> MoreSuggestionsPanel(state, actions)
                     }
                 }
                 BottomStrip(state, actions)
@@ -142,10 +165,10 @@ private fun KeysPanel(state: KeyboardState, actions: KeyboardActions, preview: K
     Column(Modifier.fillMaxWidth().padding(top = 2.dp)) {
         when (state.page) {
             Page.LETTERS -> {
-                if (prefs.numberRow) {
-                    KeyRow { KeyboardLayouts.symbolsRow1.forEach { CharKeyView(it, bangla, prefs.longPressSymbols, actions, preview) } }
-                }
                 val lp = prefs.longPressSymbols
+                if (prefs.numberRow) {
+                    KeyRow { KeyboardLayouts.symbolsRow1.forEach { CharKeyView(it, bangla, false, actions, preview) } }
+                }
                 KeyRow { KeyboardLayouts.lettersRow1.forEach { CharKeyView(it, bangla, lp, actions, preview) } }
                 KeyRow {
                     Spacer(Modifier.weight(0.5f))
@@ -153,34 +176,23 @@ private fun KeysPanel(state: KeyboardState, actions: KeyboardActions, preview: K
                     Spacer(Modifier.weight(0.5f))
                 }
                 KeyRow {
-                    ShiftKey(state, actions)
+                    ShiftKey(state.shift, actions)
                     Spacer(Modifier.weight(0.21f))
                     KeyboardLayouts.lettersRow3.forEach { CharKeyView(it, bangla, lp, actions, preview) }
                     Spacer(Modifier.weight(0.21f))
                     BackspaceKey(actions)
                 }
+                LettersBottomRow(state, actions)
+            }
+            Page.NUMPAD -> {
+                if (prefs.numberRow) Spacer(Modifier.height(LocalRowHeight.current))
+                NumberPad(state.enterLabel, actions)
             }
             Page.SYMBOLS, Page.MORE_SYMBOLS -> {
-                val more = state.page == Page.MORE_SYMBOLS
-                val r1 = if (more) KeyboardLayouts.moreRow1 else KeyboardLayouts.symbolsRow1
-                val r2 = if (more) KeyboardLayouts.moreRow2 else KeyboardLayouts.symbolsRow2
-                val r3 = if (more) KeyboardLayouts.moreRow3 else KeyboardLayouts.symbolsRow3
                 if (prefs.numberRow) Spacer(Modifier.height(LocalRowHeight.current))
-                KeyRow { r1.forEach { CharKeyView(it, bangla, false, actions, preview) } }
-                KeyRow { r2.forEach { CharKeyView(it, bangla, false, actions, preview) } }
-                KeyRow {
-                    val label = if (more) (if (bangla) "১২৩" else "123") else "#+="
-                    FuncKey(Modifier.weight(1.29f), onTap = {
-                        actions.onPage(if (more) Page.SYMBOLS else Page.MORE_SYMBOLS)
-                    }) { KeyLabel(label, 16) }
-                    Spacer(Modifier.weight(0.21f))
-                    r3.forEach { CharKeyView(it, bangla, false, actions, preview, weight = 1.4f) }
-                    Spacer(Modifier.weight(0.21f))
-                    BackspaceKey(actions)
-                }
+                SymbolPage(state.page == Page.MORE_SYMBOLS, bangla, state.enterLabel, actions, preview)
             }
         }
-        BottomKeyRow(state, actions)
     }
 }
 
@@ -197,24 +209,22 @@ private fun KeyRow(content: @Composable RowScope.() -> Unit) {
 
 private fun Modifier.keyPadding() = this.fillMaxHeight().padding(horizontal = KeyHPad, vertical = KeyVPad)
 
+/** iPhone bottom row: 123 · emoji · space · return. */
 @Composable
-private fun BottomKeyRow(state: KeyboardState, actions: KeyboardActions) {
+private fun LettersBottomRow(state: KeyboardState, actions: KeyboardActions) {
     val bangla = state.language == Language.BANGLA
     val showEmoji = state.prefs.showEmojiKey
     KeyRow {
-        val onLetters = state.page == Page.LETTERS
-        FuncKey(Modifier.weight(1.24f), onTap = {
-            actions.onPage(if (onLetters) Page.SYMBOLS else Page.LETTERS)
-        }) {
-            KeyLabel(if (!onLetters) "ABC" else if (bangla) "১২৩" else "123", 17)
+        FuncKey(Modifier.weight(1.24f), onTap = { actions.onPage(Page.NUMPAD) }) {
+            KeyLabel(if (bangla) "১২৩" else "123", 17.sp)
         }
         if (showEmoji) {
             FuncKey(Modifier.weight(1.24f), onTap = { actions.onPanel(Panel.EMOJI) }) {
                 Icon(Symbols.emoji, "Emoji", tint = IosColors.text, modifier = Modifier.size(26.dp))
             }
         }
-        SpaceKey(Modifier.weight(if (showEmoji) 5.02f else 6.26f), bangla, actions)
-        ReturnKey(Modifier.weight(2.5f), state.enterLabel, actions)
+        SpaceKey(Modifier.weight(if (showEmoji) 5.02f else 6.26f), if (bangla) "ক" else "EN BN", actions)
+        ReturnKey(Modifier.weight(2.5f), state.enterLabel, actions, pill = false)
     }
 }
 
@@ -229,10 +239,11 @@ private fun RowScope.CharKeyView(
 ) {
     var bounds by remember { mutableStateOf(Rect.Zero) }
     val popup = LocalPopupEnabled.current
-    val shown = key.label.let { c ->
-        if (bangla && c in '0'..'9') BengaliDigits[c - '0'].toString()
-        else if (bangla && c == '.') "।"
-        else c.uppercaseChar().toString()        // labels are always CAPITAL
+    val shown = remember(key, bangla) {
+        key.label.let { c ->
+            if (bangla && c in '0'..'9') BengaliDigits[c - '0'].toString()
+            else c.uppercaseChar().toString()        // labels are always CAPITAL
+        }
     }
     PressBox(
         Modifier
@@ -241,21 +252,23 @@ private fun RowScope.CharKeyView(
             .onGloballyPositioned { bounds = it.boundsInRoot() },
         color = IosColors.key, pressedColor = IosColors.keyPressed,
         onTap = { actions.onChar(key.label) },
-        onLongPress = if (longPress) key.hint?.let { h -> { actions.onChar(h) } } else null,
+        fireOnDown = true,
+        onLongPress = if (longPress) key.hint?.let { h -> { actions.onLongChar(h) } } else null,
         onPressChange = { down ->
-            if (!popup) return@PressBox
-            if (down) { preview.text = shown; preview.bounds = bounds }
-            else if (preview.text == shown) preview.text = null
+            if (popup) {
+                if (down) { preview.text = shown; preview.bounds = bounds }
+                else if (preview.text == shown) preview.text = null
+            }
         }
     ) {
-        Text(shown, color = IosColors.text, fontSize = 22.sp, fontWeight = FontWeight.Normal, maxLines = 1)
+        KeyLabel(shown, 22.sp)
     }
 }
 
 @Composable
-private fun RowScope.ShiftKey(state: KeyboardState, actions: KeyboardActions) {
-    FuncKey(Modifier.weight(1.29f), onTap = { actions.onShift() }) {
-        val icon = when (state.shift) {
+private fun RowScope.ShiftKey(shift: ShiftState, actions: KeyboardActions) {
+    FuncKey(Modifier.weight(1.29f), onTap = { actions.onShift() }, fireOnDown = true) {
+        val icon = when (shift) {
             ShiftState.OFF -> IosIcons.shiftOff
             ShiftState.ONCE -> IosIcons.shiftOn
             ShiftState.LOCK -> IosIcons.capsLock
@@ -265,10 +278,10 @@ private fun RowScope.ShiftKey(state: KeyboardState, actions: KeyboardActions) {
 }
 
 @Composable
-private fun RowScope.BackspaceKey(actions: KeyboardActions) {
+private fun RowScope.BackspaceKey(actions: KeyboardActions, weight: Float = 1.29f, color: Color = IosColors.key) {
     PressBox(
-        Modifier.weight(1.29f).keyPadding(),
-        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        Modifier.weight(weight).keyPadding(),
+        color = color, pressedColor = IosColors.keyPressed,
         onTap = { actions.onBackspace() },
         repeating = true,
         kind = KeyKind.DELETE
@@ -278,26 +291,29 @@ private fun RowScope.BackspaceKey(actions: KeyboardActions) {
 }
 
 @Composable
-private fun ReturnKey(modifier: Modifier, label: String, actions: KeyboardActions) {
+private fun ReturnKey(modifier: Modifier, label: String, actions: KeyboardActions, pill: Boolean) {
     val action = label.isNotEmpty()
+    val bg = when { pill -> IosColors.lightBlue; action -> IosColors.blue; else -> IosColors.key }
+    val fg = if (pill) IosColors.lightBlueText else if (action) Color.White else IosColors.returnIcon
     PressBox(
         modifier.keyPadding(),
-        color = if (action) IosColors.blue else IosColors.key,
-        pressedColor = if (action) IosColors.bluePressed else IosColors.keyPressed,
+        shape = if (pill) PillShape else KeyShape,
+        color = bg,
+        pressedColor = if (action || pill) IosColors.bluePressed else IosColors.keyPressed,
         onTap = { actions.onEnter() },
         kind = KeyKind.RETURN
     ) {
-        if (action) {
-            Text(label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Normal, maxLines = 1)
+        if (action && !pill) {
+            Text(label, color = fg, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         } else {
-            Icon(Symbols.keyboardReturn, "Return", tint = IosColors.returnIcon, modifier = Modifier.size(26.dp))
+            Icon(Symbols.keyboardReturn, "Return", tint = fg, modifier = Modifier.size(26.dp))
         }
     }
 }
 
 /** Space bar: tap = space, slide left/right = move the cursor (like iPhone / Gboard). */
 @Composable
-private fun SpaceKey(modifier: Modifier, bangla: Boolean, actions: KeyboardActions) {
+private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions, centered: Boolean = false) {
     var pressed by remember { mutableStateOf(false) }
     val feedback = LocalKeyFeedback.current
     val act by rememberUpdatedState(actions)
@@ -337,32 +353,162 @@ private fun SpaceKey(modifier: Modifier, bangla: Boolean, actions: KeyboardActio
                 }
             },
     ) {
-        Text(
-            if (bangla) "ক" else "EN BN",
-            color = IosColors.dim, fontSize = 10.5.sp,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 3.dp)
-        )
+        if (centered) {
+            Text(
+                label, color = IosColors.suggestion, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                fontFamily = fontOf(label), modifier = Modifier.align(Alignment.Center)
+            )
+        } else {
+            Text(
+                label, color = IosColors.dim, fontSize = 10.5.sp, fontFamily = fontOf(label),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 3.dp)
+            )
+        }
     }
 }
+
+// ------------------------------------------------------------------ number pad (?123)
+
+/** Gboard-style number pad: + − * / column, 1–9 grid, % ␣ ⌫ column, bottom ABC , !?# 0 = . ↵ */
+@Composable
+private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
+    val rowH = LocalRowHeight.current
+    Row(Modifier.fillMaxWidth().height(rowH * 3).padding(horizontal = 3.dp)) {
+        // left column: + − * /
+        Column(
+            Modifier.weight(1.3f).fillMaxHeight().padding(horizontal = KeyHPad, vertical = KeyVPad)
+                .clip(RoundedCornerShape(8.dp)).background(IosColors.fn)
+        ) {
+            listOf("+" to "+", "−" to "-", "*" to "*", "/" to "/").forEach { (shown, typed) ->
+                PressBox(
+                    Modifier.weight(1f).fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color.Transparent, pressedColor = IosColors.keyPressed,
+                    onTap = { actions.onRawText(typed) }, fireOnDown = true
+                ) { KeyLabel(shown, 22.sp) }
+            }
+        }
+        Column(Modifier.weight(5.2f).fillMaxHeight()) {
+            val rows = listOf("123", "456", "789")
+            val right: List<@Composable RowScope.() -> Unit> = listOf(
+                { NumKey("%", actions, IosColors.fn, 20.sp) },
+                {
+                    PressBox(
+                        Modifier.weight(1f).keyPadding(), color = IosColors.fn, pressedColor = IosColors.keyPressed,
+                        onTap = { actions.onRawText(" ") }, fireOnDown = true, kind = KeyKind.SPACE
+                    ) { Icon(Symbols.spaceBar, "Space", tint = IosColors.text, modifier = Modifier.size(26.dp)) }
+                },
+                { BackspaceKey(actions, 1f, IosColors.fn) },
+            )
+            rows.forEachIndexed { i, digits ->
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    digits.forEach { d -> NumKey(d.toString(), actions, IosColors.key, 28.sp) }
+                    right[i]()
+                }
+            }
+        }
+    }
+    KeyRow {
+        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+            KeyLabel("ABC", 16.sp)
+        }
+        NumKey(",", actions, IosColors.fn, 20.sp, 0.65f)
+        FuncKey(Modifier.weight(0.65f), color = IosColors.fn, onTap = { actions.onPage(Page.SYMBOLS) }) {
+            KeyLabel("!?#", 15.sp)
+        }
+        NumKey("0", actions, IosColors.key, 28.sp, 1.3f)
+        NumKey("=", actions, IosColors.fn, 20.sp, 0.65f)
+        NumKey(".", actions, IosColors.fn, 20.sp, 0.65f)
+        ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true)
+    }
+}
+
+@Composable
+private fun RowScope.NumKey(text: String, actions: KeyboardActions, color: Color, size: TextUnit, weight: Float = 1f) {
+    PressBox(
+        Modifier.weight(weight).keyPadding(),
+        color = color, pressedColor = IosColors.keyPressed,
+        onTap = { actions.onRawText(text) }, fireOnDown = true
+    ) { KeyLabel(text, size) }
+}
+
+// ------------------------------------------------------------------ symbols (!?#)
+
+/** Gboard-style symbol page; "১২ ৩৪" goes back to the number pad. */
+@Composable
+private fun SymbolPage(more: Boolean, bangla: Boolean, enterLabel: String, actions: KeyboardActions, preview: KeyPreview) {
+    val digits = if (bangla) "১২৩৪৫৬৭৮৯০" else "1234567890"
+    val r1 = if (more) "~ ` | • √ π ÷ × ¶ ∆".split(' ') else digits.map { it.toString() }
+    val r2 = if (more) "£ € ¥ ^ ° = { } \\ %".split(' ') else "@ # ৳ _ & - + ( ) /".split(' ')
+    val r3 = if (more) "© ® ™ ✓ [ ] < >".split(' ') else "* \" ' : ; ! ?".split(' ')
+    KeyRow { r1.forEach { SymKey(it, actions, preview) } }
+    KeyRow { r2.forEach { SymKey(it, actions, preview) } }
+    KeyRow {
+        FuncKey(Modifier.weight(1.4f), color = IosColors.fn, onTap = {
+            actions.onPage(if (more) Page.SYMBOLS else Page.MORE_SYMBOLS)
+        }) { KeyLabel(if (more) "?123" else "=\\<", 15.sp) }
+        r3.forEach { SymKey(it, actions, preview, if (more) 0.9f else 1f) }
+        BackspaceKey(actions, 1.4f, IosColors.fn)
+    }
+    KeyRow {
+        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+            KeyLabel("ABC", 16.sp)
+        }
+        NumKey(",", actions, IosColors.fn, 20.sp, 0.8f)
+        FuncKey(Modifier.weight(0.9f), color = IosColors.fn, onTap = { actions.onPage(Page.NUMPAD) }) {
+            Text(
+                if (bangla) "১ ২\n৩ ৪" else "1 2\n3 4", color = IosColors.text, fontSize = 12.sp,
+                fontWeight = FontWeight.Bold, lineHeight = 13.sp, fontFamily = if (bangla) BanglaFont else null
+            )
+        }
+        SpaceKey(Modifier.weight(4.2f), if (bangla) "বাংলা" else "English", actions, centered = true)
+        NumKey(".", actions, IosColors.fn, 20.sp, 0.8f)
+        ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true)
+    }
+}
+
+@Composable
+private fun RowScope.SymKey(text: String, actions: KeyboardActions, preview: KeyPreview, weight: Float = 1f) {
+    var bounds by remember { mutableStateOf(Rect.Zero) }
+    val popup = LocalPopupEnabled.current
+    PressBox(
+        Modifier.weight(weight).keyPadding().onGloballyPositioned { bounds = it.boundsInRoot() },
+        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        onTap = { actions.onRawText(text) }, fireOnDown = true,
+        onPressChange = { down ->
+            if (popup) {
+                if (down) { preview.text = text; preview.bounds = bounds }
+                else if (preview.text == text) preview.text = null
+            }
+        }
+    ) { KeyLabel(text, 21.sp) }
+}
+
+// ------------------------------------------------------------------ shared keys
 
 @Composable
 internal fun FuncKey(
     modifier: Modifier,
     shape: Shape = KeyShape,
+    color: Color = IosColors.key,
     onTap: () -> Unit,
     onLongPress: (() -> Unit)? = null,
+    fireOnDown: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     PressBox(
         modifier.keyPadding(),
-        shape = shape, color = IosColors.key, pressedColor = IosColors.keyPressed,
-        onTap = onTap, onLongPress = onLongPress, content = content
+        shape = shape, color = color, pressedColor = IosColors.keyPressed,
+        onTap = onTap, onLongPress = onLongPress, fireOnDown = fireOnDown, content = content
     )
 }
 
 @Composable
-internal fun KeyLabel(text: String, sizeSp: Int, weight: FontWeight = FontWeight.Normal) {
-    Text(text, color = IosColors.text, fontSize = sizeSp.sp, fontWeight = weight, maxLines = 1)
+internal fun KeyLabel(text: String, size: TextUnit) {
+    Text(
+        text, color = IosColors.text, fontSize = size, fontWeight = LocalKeyWeight.current,
+        fontFamily = fontOf(text), maxLines = 1
+    )
 }
 
 // ------------------------------------------------------------------ bottom strip
@@ -380,25 +526,23 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         }
         Spacer(Modifier.weight(1f))
 
-        if (state.prefs.clipboardOn) {
-            val clipOpen = state.panel == Panel.CLIPBOARD
-            StripButton(
-                active = clipOpen,
-                onTap = { actions.onPanel(if (clipOpen) Panel.KEYS else Panel.CLIPBOARD) }
-            ) {
-                Box(Modifier.size(30.dp)) {
-                    Icon(Symbols.clipboard, "ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(28.dp))
-                    Box(
-                        Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 1.dp).size(14.dp)
-                            .background(IosColors.keepYellow, RoundedCornerShape(3.5.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(11.dp))
-                    }
+        val clipOpen = state.panel == Panel.CLIPBOARD
+        StripButton(
+            active = clipOpen,
+            onTap = { actions.onPanel(if (clipOpen) Panel.KEYS else Panel.CLIPBOARD) }
+        ) {
+            Box(Modifier.size(30.dp)) {
+                Icon(Symbols.clipboard, "ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(28.dp))
+                Box(
+                    Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 1.dp).size(14.dp)
+                        .background(IosColors.keepYellow, RoundedCornerShape(3.5.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(11.dp))
                 }
             }
-            Spacer(Modifier.width(30.dp))
         }
+        Spacer(Modifier.width(30.dp))
         StripButton(active = state.translateOn, onTap = { actions.onTranslateToggle() }) {
             Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(28.dp))
         }
@@ -452,7 +596,7 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
                 .background(IosColors.keyPressed, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text, color = Color.White, fontSize = 32.sp)
+            Text(text, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fontOf(text))
         }
     }
 }
@@ -460,8 +604,8 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
 // ------------------------------------------------------------------ pressable box
 
 /**
- * A pressable rounded box. Tap, optional long-press, optional auto-repeat while held
- * (backspace). Sound/vibration on every press, following the settings.
+ * A pressable rounded box. [fireOnDown] types the instant the finger touches (no waiting
+ * for release — feels instant). Optional long-press and auto-repeat (backspace).
  */
 @Composable
 internal fun PressBox(
@@ -472,6 +616,7 @@ internal fun PressBox(
     onTap: () -> Unit,
     onLongPress: (() -> Unit)? = null,
     repeating: Boolean = false,
+    fireOnDown: Boolean = false,
     kind: KeyKind = KeyKind.NORMAL,
     onPressChange: ((Boolean) -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
@@ -503,11 +648,12 @@ internal fun PressBox(
             }
         }
     } else {
-        Modifier.pointerInput(hasLongPress) {
+        Modifier.pointerInput(hasLongPress, fireOnDown) {
             val longHandler: ((Offset) -> Unit)? =
                 if (hasLongPress) ({ _: Offset -> longPress?.invoke(); Unit }) else null
             detectTapGestures(
                 onPress = {
+                    if (fireOnDown) tap()           // type immediately on touch
                     pressed = true
                     pressChange?.invoke(true)
                     feedback(kind)
@@ -516,7 +662,7 @@ internal fun PressBox(
                     pressChange?.invoke(false)
                 },
                 onLongPress = longHandler,
-                onTap = { tap() }
+                onTap = if (fireOnDown) null else ({ _: Offset -> tap(); Unit })
             )
         }
     }

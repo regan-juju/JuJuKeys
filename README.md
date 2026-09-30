@@ -19,7 +19,11 @@ https://github.com/regan-juju/JuJuKeys/releases/latest
 - অনুবাদ: অফলাইন (Google ML Kit) + অনলাইন (নিজের Google Cloud API key দিলে)
 - ইমোজি, ভয়েস টাইপিং (Google ভয়েস), স্পেসে আঙুল টেনে কার্সর সরানো, দুবার স্পেসে দাঁড়ি
 
-শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0)।
+- ?123 → নম্বর প্যাড, !?# → চিহ্ন, ১২ ৩৪ → আবার নম্বর প্যাড
+- ⌃⌄ চাপলে অনেক সাজেশন; ফোনেই শিখে পরের শব্দ আন্দাজ
+- ক্লিপবোর্ডের ✎ চাপলে সব লেখা Google Keep-এ এক নোটে
+
+শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0)। বাংলা ফন্ট: Noto Sans Bengali (SIL OFL)।
 
 ## কোডের গঠন
 - `bengali/AvroPhonetic.kt` — অভ্র ইঞ্জিন (Android ছাড়া বিশুদ্ধ Kotlin; `app/src/test`-এ টেস্ট)

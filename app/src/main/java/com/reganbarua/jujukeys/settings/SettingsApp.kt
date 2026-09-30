@@ -276,6 +276,7 @@ private fun LanguagesPage(p: KeyboardPrefs, refresh: () -> Unit) {
 private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     Header("কী")
+    ToggleItem("বোল্ড অক্ষর", "কী-র লেখা মোটা করে দেখাও", "bold_keys", p.boldKeys, refresh)
     ToggleItem("নম্বরের সারি", "অক্ষরের উপরে ১–০ সারি দেখাও", "number_row", p.numberRow, refresh)
     ToggleItem("ইমোজি বোতাম দেখাও", null, "emoji_key", p.showEmojiKey, refresh)
     ToggleItem("ভাষা বদলের বোতাম দেখাও", "সাজেশন বারের ক / A বোতাম", "language_key", p.showLanguageKey, refresh)
@@ -313,6 +314,9 @@ private fun ThemePage() {
 private fun TextPage(p: KeyboardPrefs, refresh: () -> Unit) {
     Header("সাজেশন")
     ToggleItem("সাজেশন বার দেখাও", "লেখার সময় উপরে শব্দ দেখাও", "suggestions", p.showSuggestions, refresh)
+    ToggleItem("আমার লেখা থেকে শেখো", "পরের শব্দ আন্দাজ ও ভালো সাজেশন — শুধু এই ফোনে থাকে", "learn_words", p.learnWords, refresh)
+    val context = LocalContext.current
+    ActionButton("শেখা শব্দ মুছুন", primary = false) { Prefs.setBoolean(context, "clear_learned", true) }
     Header("সংশোধন")
     ToggleItem("স্বয়ংক্রিয় বড় হাতের অক্ষর", "বাক্যের প্রথম অক্ষর বড় হাতের (ENGLISH)", "auto_cap", p.autoCapitalize, refresh)
     ToggleItem("দুবার স্পেসে দাঁড়ি/ফুলস্টপ", "বাংলায় ।  ENGLISH-এ .", "double_space", p.doubleSpacePeriod, refresh)
@@ -332,7 +336,7 @@ private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
 private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     ToggleItem("ক্লিপবোর্ড", "কপি করা লেখা কীবোর্ডে জমা রাখো", "clipboard", p.clipboardOn, refresh)
-    Note("কীবোর্ডের নিচের 📋 বোতামে ইতিহাস দেখা যায়। প্রতিটির পাশে 💡 চাপলে Google Keep-এ সেভ হয়। পাসওয়ার্ড ধরনের লেখা জমা হয় না।")
+    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে। ক্লিপবোর্ডের ✎ বোতাম চাপলে সব লেখা Google Keep-এ এক নোটে (এক পাতায়) সেভ হয় — Keep-এ শুধু 'Save' চাপতে হয়। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না।")
     ActionButton("Google Keep খুলুন") { ClipHistory.openKeep(context) }
     ActionButton("ইতিহাস মুছুন (পিন করা ছাড়া)", primary = false) {
         ClipHistory(context).clearUnpinned()
@@ -415,6 +419,7 @@ private fun PrivacyPage() {
     Note("• আপনি যা টাইপ করেন তা কোথাও জমা রাখা, লগ করা বা পাঠানো হয় না।")
     Note("• ক্লিপবোর্ডের ইতিহাস শুধু এই ফোনেই থাকে; পাসওয়ার্ড ধরনের লেখা রাখা হয় না।")
     Note("• অনুবাদ অফলাইনে ফোনেই হয়। শুধু আপনি নিজে API key দিলে, অনুবাদের বক্সের লেখাটুকু Google-এ যায়।")
+    Note("• \"আমার লেখা থেকে শেখো\" চালু থাকলে কোন শব্দের পর কোন শব্দ লেখেন তা শুধু এই ফোনে জমা থাকে (লেখা সংশোধন → শেখা শব্দ মুছুন)।")
     Note("• ইন্টারনেট লাগে শুধু অনুবাদের মডেল নামাতে (একবার)।")
 }
 
@@ -425,6 +430,7 @@ private fun AboutPage() {
     Item("JuJuKeys", "সংস্করণ $version")
     Item("তৈরি করেছেন", "রিগ্যান বড়ুয়া")
     Item("শব্দতালিকা", "FrequencyWords (CC BY-SA 4.0)")
+    Item("বাংলা ফন্ট", "Noto Sans Bengali (SIL OFL)")
     Item("অনুবাদ", "Google ML Kit")
 }
 
