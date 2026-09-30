@@ -222,7 +222,9 @@ internal fun MoreSuggestionsPanel(state: KeyboardState, actions: KeyboardActions
 @Composable
 internal fun TranslateBar(state: KeyboardState, actions: KeyboardActions) {
     val fromBangla = state.translateFrom == Language.BANGLA
-    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+    // Fixed height: the keyboard never grows/shrinks while translating (that made the app
+    // behind re-layout on every result and felt slow).
+    Column(Modifier.fillMaxWidth().height(102.dp).padding(horizontal = 10.dp, vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             LangPill(if (fromBangla) "বাংলা" else "ENGLISH")
             Icon(
@@ -230,7 +232,12 @@ internal fun TranslateBar(state: KeyboardState, actions: KeyboardActions) {
                 modifier = Modifier.padding(horizontal = 6.dp).size(30.dp).clickable { actions.onTranslateSwap() }
             )
             LangPill(if (fromBangla) "ENGLISH" else "বাংলা")
-            Spacer(Modifier.weight(1f))
+            // short status (downloading / error) sits here, so nothing changes size
+            Text(
+                state.translateStatus, color = Color(0xFFFDD663), fontSize = 11.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, fontFamily = fontOf(state.translateStatus),
+                modifier = Modifier.weight(1f).padding(horizontal = 6.dp)
+            )
             SmallIcon(Icons.AutoMirrored.Filled.OpenInNew, "Google Translate অ্যাপ") { actions.onOpenTranslateApp() }
             Spacer(Modifier.width(6.dp))
             SmallIcon(Icons.Filled.Close, "বন্ধ") { actions.onTranslateToggle() }
@@ -254,13 +261,6 @@ internal fun TranslateBar(state: KeyboardState, actions: KeyboardActions) {
             if (state.online) Status(Icons.Filled.CheckCircle, "ONLINE", Color(0xFF81C995))
             if (state.offlineReady) Status(null, "OFFLINE", IosColors.lightBlue)
             if (!state.online && !state.offlineReady) Status(Icons.Outlined.CloudOff, "NO MODEL", IosColors.dim)
-        }
-        if (state.translateStatus.isNotEmpty()) {
-            Text(
-                state.translateStatus, color = Color(0xFFFDD663), fontSize = 12.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, fontFamily = fontOf(state.translateStatus),
-                modifier = Modifier.padding(start = 12.dp, top = 2.dp)
-            )
         }
     }
 }

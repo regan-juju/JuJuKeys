@@ -908,7 +908,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     lastTranslation = result.text
                     markEdit()
                     currentInputConnection?.setComposingText(result.text, 1)
-                    state.translateStatus = if (result.online) "অনলাইন (Google Cloud)" else "অফলাইন (Google ML Kit)"
+                    if (state.translateStatus.isNotEmpty()) state.translateStatus = ""
                     if (!result.online) state.offlineReady = true
                 } else {
                     state.translateStatus = error ?: "অনুবাদ হয়নি"
