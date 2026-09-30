@@ -72,7 +72,7 @@ import com.reganbarua.jujukeys.clipboard.ClipItem
  * ⌃⌄ (a little in from the edge, away from ক) opens many more suggestions.
  */
 @Composable
-internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
+internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, forceSuggestions: Boolean = false) {
     val bangla = state.language == Language.BANGLA
     val showChip = state.prefs.showLanguageKey
     val expanded = state.panel == Panel.SUGGESTIONS
@@ -85,7 +85,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
 
         val clip = state.freshClip
         when {
-            clip != null -> Row(
+            clip != null && !forceSuggestions -> Row(
                 // Just copied → one tap pastes it (like Gboard)
                 Modifier.weight(1f).padding(horizontal = 8.dp).height(34.dp)
                     .clip(RoundedCornerShape(17.dp)).background(IosColors.key)
@@ -99,7 +99,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
                     overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip)
                 )
             }
-            !state.typing -> Row(
+            !state.typing && !forceSuggestions -> Row(
                 Modifier.weight(1f),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically

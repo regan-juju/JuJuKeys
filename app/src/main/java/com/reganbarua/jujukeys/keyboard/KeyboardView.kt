@@ -69,7 +69,10 @@ import kotlin.math.roundToInt
 
 internal object IosColors {
     // Liquid-glass look: see-through keys over a soft, dark, colour-tinted background.
-    val bg = Color(0xE01F211F)
+    val bg = Color(0xF0171917)             // a bit darker
+    val faded = Color(0x42AFAFAF)          // return / search key: plain, faded
+    val fadedPressed = Color(0x66AFAFAF)
+    val fadedIcon = Color(0x99FFFFFF)
     val key = Color(0x668C8C8C)
     val keyPressed = Color(0xA8B4B4B4)
     val fn = Color(0x38707070)            // number pad side columns
@@ -106,6 +109,9 @@ private val BaseRowHeight = 52.dp      // 42dp key + 10dp gap (a little bigger, 
 private val KeyHPad = 2.6.dp
 private val KeyVPad = 5.dp
 private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
+
+/** Thin light line along the keyboard's top edge — separates it from the app. */
+internal val TopEdge = Brush.verticalGradient(0f to Color(0x47FFFFFF), 0.04f to Color(0x00FFFFFF), 1f to Color(0x00FFFFFF))
 
 /** Thin bright top edge that makes a key look like glass. */
 internal val GlassEdge = Brush.verticalGradient(0f to Color(0x59FFFFFF), 0.35f to Color(0x10FFFFFF), 1f to Color(0x00FFFFFF))
@@ -151,20 +157,24 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     // soft colour glow behind the glass keys (drawn once per size)
                     val w = size.width; val h = size.height
                     val blobs = listOf(
-                        Triple(Offset(w * 0.18f, h * 0.80f), Color(0x4D286E3C), w * 0.55f),
-                        Triple(Offset(w * 0.62f, h * 0.72f), Color(0x38822D2D), w * 0.50f),
-                        Triple(Offset(w * 0.88f, h * 0.28f), Color(0x293C3C8C), w * 0.50f),
-                        Triple(Offset(w * 0.30f, h * 0.18f), Color(0x246E6432), w * 0.45f),
+                        Triple(Offset(w * 0.18f, h * 0.80f), Color(0x38286E3C), w * 0.55f),
+                        Triple(Offset(w * 0.62f, h * 0.72f), Color(0x29822D2D), w * 0.50f),
+                        Triple(Offset(w * 0.88f, h * 0.28f), Color(0x1F3C3C8C), w * 0.50f),
+                        Triple(Offset(w * 0.30f, h * 0.18f), Color(0x1A6E6432), w * 0.45f),
                     ).map { (c, col, r) -> Brush.radialGradient(listOf(col, Color.Transparent), c, r) }
                     onDrawBehind {
                         drawRect(IosColors.bg)
                         blobs.forEach { drawRect(it) }
                     }
                 }
+                .border(1.dp, TopEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                 .onGloballyPositioned { rootWidth = it.size.width.toFloat() }
         ) {
             Column(Modifier.fillMaxWidth()) {
-                if (state.translateOn) TranslateBar(state, actions) else SuggestionBar(state, actions)
+                if (state.translateOn) {
+                    TranslateBar(state, actions)
+                    SuggestionBar(state, actions, forceSuggestions = true)   // suggestions while translating too
+                } else SuggestionBar(state, actions)
 
                 Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp)) {
                     when (state.panel) {
@@ -227,23 +237,18 @@ private fun RowScope.BackspaceKey(actions: KeyboardActions, weight: Float = 1.29
 }
 
 @Composable
-private fun ReturnKey(modifier: Modifier, label: String, actions: KeyboardActions, pill: Boolean) {
-    val action = label.isNotEmpty()
-    val bg = when { pill -> IosColors.lightBlue; action -> IosColors.blue; else -> IosColors.key }
-    val fg = if (pill) IosColors.lightBlueText else if (action) Color.White else IosColors.returnIcon
+private fun ReturnKey(modifier: Modifier, label: String, actions: KeyboardActions, @Suppress("UNUSED_PARAMETER") pill: Boolean) {
+    // Always plain and faded (like iPhone): no colour, no text; 🔍 in search fields.
     PressBox(
         modifier.keyPadding(),
-        shape = if (pill) PillShape else KeyShape,
-        color = bg,
-        pressedColor = if (action || pill) IosColors.bluePressed else IosColors.keyPressed,
+        color = IosColors.faded, pressedColor = IosColors.fadedPressed,
         onTap = { actions.onEnter() },
         kind = KeyKind.RETURN
     ) {
-        if (action && !pill) {
-            Text(label, color = fg, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        } else {
-            Icon(Symbols.keyboardReturn, "Return", tint = fg, modifier = Modifier.size(26.dp))
-        }
+        Icon(
+            if (label == "search") Symbols.search else Symbols.keyboardReturn, "Return",
+            tint = IosColors.fadedIcon, modifier = Modifier.size(26.dp)
+        )
     }
 }
 
@@ -397,7 +402,7 @@ private fun SymbolPage(more: Boolean, bangla: Boolean, enterLabel: String, actio
                 fontWeight = FontWeight.Bold, lineHeight = 13.sp, fontFamily = if (bangla) BanglaFont else null
             )
         }
-        SpaceKey(Modifier.weight(4.2f), if (bangla) "বাংলা" else "English", actions, centered = true)
+        SpaceKey(Modifier.weight(4.2f), if (bangla) "ক" else "EN BN", actions)   // plain, like the letters page
         NumKey(".", actions, IosColors.fn, 20.sp, 0.8f)
         ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true)
     }
@@ -582,7 +587,7 @@ internal fun PressBox(
         }
     }
 
-    val glass = color.alpha > 0.1f && color != Color.Transparent
+    val glass = color.alpha > 0.1f && color != Color.Transparent && color != IosColors.faded
     Box(
         modifier
             .clip(shape)

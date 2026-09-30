@@ -561,7 +561,18 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onSuggestionWord(word: String) {
-        if (state.translateOn) return
+        if (state.translateOn) {
+            // put the chosen word into the translate box
+            if (roman.isNotEmpty()) roman.clear()
+            else if (enWord.isNotEmpty() && tCommitted.length >= enWord.length) {
+                tCommitted.setLength(tCommitted.length - enWord.length)
+            }
+            enWord.clear()
+            sinkCommit("$word ")
+            if (state.panel == Panel.SUGGESTIONS) state.panel = Panel.KEYS
+            refreshSuggestions()
+            return
+        }
         if (state.language == Language.BANGLA && !passwordField) {
             roman.clear()
             sinkCommit("$word ")                 // replaces the composing word
@@ -619,7 +630,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     private fun refreshSuggestions() {
-        if (passwordField || state.translateOn) {
+        if (passwordField) {
             state.suggestions = emptyList(); state.moreSuggestions = emptyList(); return
         }
         val seq = ++suggestionSeq
@@ -628,8 +639,6 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val typed = enWord.toString()
         val prev = lastWord
         val s = suggester
-
-        if (bangla && romanNow.isNotEmpty()) state.suggestions = listOf(AvroPhonetic.convert(romanNow))
 
         val p = state.prefs
         if ((romanNow.isNotEmpty() || typed.isNotEmpty()) && !p.wordSuggestions) {
@@ -814,7 +823,6 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.translateOn = true
         state.translateFrom = state.language
         state.translateStatus = ""
-        state.suggestions = emptyList()
         clearTranslateBox()
         state.online = translator.isOnline()
         translator.warmUp()          // load the model now, so the first translation is quick
@@ -871,7 +879,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private fun translateInputChanged() {
         state.translateInput = tCommitted.toString() + tComposing
         main.removeCallbacks(translateRunnable)
-        main.postDelayed(translateRunnable, 250)
+        main.postDelayed(translateRunnable, 400)   // translate once typing pauses — keeps typing smooth
     }
 
     private fun runTranslation() {
@@ -928,17 +936,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
     }
 
-    private fun enterLabelFor(info: EditorInfo): String {
-        if ((info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return ""
-        return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
-            EditorInfo.IME_ACTION_SEND -> "Send"
-            EditorInfo.IME_ACTION_GO -> "Go"
-            EditorInfo.IME_ACTION_SEARCH -> "Search"
-            EditorInfo.IME_ACTION_DONE -> "Done"
-            EditorInfo.IME_ACTION_NEXT -> "Next"
-            else -> ""
-        }
-    }
+    /** The return key is always plain; only search fields get a 🔍 icon. */
+    private fun enterLabelFor(info: EditorInfo): String =
+        if ((info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) == 0 &&
+            (info.imeOptions and EditorInfo.IME_MASK_ACTION) == EditorInfo.IME_ACTION_SEARCH
+        ) "search" else ""
 
     private fun toast(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show()

@@ -107,18 +107,21 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val labelStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 22.sp, fontWeight = weight) }
     val smallStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = weight) }
     val hintStyle = remember { TextStyle(color = IosColors.dim, fontSize = 10.5.sp) }
-    val actionStyle = remember { TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium) }
-    val layouts: Map<String, TextLayoutResult> = remember(flat, labelStyle, state.enterLabel) {
+    val bubbleStyle = remember(weight) { TextStyle(color = Color.White, fontSize = 32.sp, fontWeight = weight) }
+    val layouts: Map<String, TextLayoutResult> = remember(flat, labelStyle) {
         buildMap {
             flat.forEach { k ->
                 when (k.type) {
-                    KType.CHAR -> put("c:" + k.label, measurer.measure(k.label, labelStyle.copy(fontFamily = fontOf(k.label))))
+                    KType.CHAR -> {
+                        put("c:" + k.label, measurer.measure(k.label, labelStyle.copy(fontFamily = fontOf(k.label))))
+                        put("b:" + k.label, measurer.measure(k.label, bubbleStyle.copy(fontFamily = fontOf(k.label))))
+                        k.hint?.let { h -> put("b:$h", measurer.measure(h.toString(), bubbleStyle)) }
+                    }
                     KType.SYMBOLS -> put("s", measurer.measure(k.label, smallStyle.copy(fontFamily = fontOf(k.label))))
                     KType.SPACE -> put("space", measurer.measure(k.label, hintStyle.copy(fontFamily = fontOf(k.label))))
                     else -> {}
                 }
             }
-            if (state.enterLabel.isNotEmpty()) put("ret", measurer.measure(state.enterLabel, actionStyle))
         }
     }
     val shiftPainter = rememberVectorPainter(
@@ -131,6 +134,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val backPainter = rememberVectorPainter(Symbols.backspace)
     val emojiPainter = rememberVectorPainter(Symbols.emoji)
     val returnPainter = rememberVectorPainter(Symbols.keyboardReturn)
+    val searchPainter = rememberVectorPainter(Symbols.search)
+    // key-press bubble: drawn on this same canvas (no UI rebuild on each press = faster)
+    var bubble by remember { mutableStateOf<Pair<Int, String>?>(null) }
 
     // ---- geometry
     var size by remember { mutableStateOf(Size.Zero) }
@@ -209,12 +215,12 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     when (k.type) {
                                         KType.CHAR -> {
                                             act.onChar(k.ch)                     // types instantly on touch
-                                            if (popupOn) { preview.text = k.label; preview.bounds = keyRects[i].translate(origin) }
+                                            if (popupOn) bubble = i to k.label
                                             val h = k.hint
                                             if (h != null) t.job = scope.launch {
                                                 delay(longDelay)
                                                 act.onLongChar(h)
-                                                if (popupOn) preview.text = h.toString()
+                                                if (popupOn) bubble = t.key to h.toString()
                                             }
                                         }
                                         KType.SHIFT -> act.onShift()
@@ -234,7 +240,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     pressed.remove(t.key)
                                     val k = flat[t.key]
                                     when (k.type) {
-                                        KType.CHAR -> if (preview.text != null) preview.text = null
+                                        KType.CHAR -> if (bubble?.first == t.key) bubble = null
                                         KType.SYMBOLS -> act.onPage(Page.SYMBOLS)
                                         KType.EMOJI -> act.onPanel(Panel.EMOJI)
                                         KType.SPACE -> if (!t.dragging) act.onSpace()
@@ -268,38 +274,46 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             if (k.type == KType.GAP) continue
             val r = keyRects.getOrNull(i) ?: continue
             val down = i in pressed
-            val isAction = k.type == KType.RETURN && enterLabel.isNotEmpty()
-            val bg = when {
-                isAction && down -> IosColors.bluePressed
-                isAction -> IosColors.blue
-                down -> IosColors.keyPressed
-                else -> IosColors.key
-            }
-            // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
-            val kr = if (down) r.inflate(2.dp.toPx()) else r
             val cr = CornerRadius(corner, corner)
-            drawRoundRect(Color(0x2E000000), kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
-            drawRoundRect(bg, kr.topLeft, kr.size, cr)
-            drawRoundRect(
-                GlassEdge, kr.topLeft, kr.size, cr,
-                style = Stroke(width = 0.8.dp.toPx())
-            )
+            if (k.type == KType.RETURN) {
+                // return / search: always plain and faded (like iPhone), never coloured
+                drawRoundRect(if (down) IosColors.fadedPressed else IosColors.faded, r.topLeft, r.size, cr)
+            } else {
+                // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
+                val kr = if (down) r.inflate(2.dp.toPx()) else r
+                drawRoundRect(Color(0x2E000000), kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
+                drawRoundRect(if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
+                drawRoundRect(GlassEdge, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
+            }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
                 KType.SYMBOLS -> layouts["s"]?.let { drawCentered(it, r) }
                 KType.SPACE -> layouts["space"]?.let {
                     drawText(it, topLeft = Offset(r.right - it.size.width - 8.dp.toPx(), r.bottom - it.size.height - 2.dp.toPx()))
                 }
-                KType.RETURN -> {
-                    val l = layouts["ret"]
-                    if (isAction && l != null) drawCentered(l, r)
-                    else drawIcon(returnPainter, r, iconPx + 1.dp.toPx(), IosColors.returnIcon)
-                }
+                KType.RETURN -> drawIcon(
+                    if (enterLabel == "search") searchPainter else returnPainter,
+                    r, iconPx + 1.dp.toPx(), IosColors.fadedIcon
+                )
                 KType.SHIFT -> drawIcon(shiftPainter, r, iconPx, Color.White)
                 KType.BACKSPACE -> drawIcon(backPainter, r, iconPx, Color.White)
                 KType.EMOJI -> drawIcon(emojiPainter, r, iconPx + 1.dp.toPx(), Color.White)
                 KType.GAP -> {}
             }
+        }
+        // bubble above the pressed letter
+        bubble?.let { (i, label) ->
+            val r = keyRects.getOrNull(i) ?: return@let
+            val l = layouts["b:$label"] ?: return@let
+            val w = r.width + 14.dp.toPx()
+            val h = r.height * 1.35f
+            val x = (r.center.x - w / 2f).coerceIn(0f, size.width - w)
+            val y = r.bottom - h - r.height * 0.55f
+            val cr = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+            drawRoundRect(Color(0x66000000), Offset(x, y + 2.dp.toPx()), Size(w, h), cr)
+            drawRoundRect(Color(0xFF5E5E5E), Offset(x, y), Size(w, h), cr)
+            drawRoundRect(GlassEdge, Offset(x, y), Size(w, h), cr, style = Stroke(width = 0.8.dp.toPx()))
+            drawText(l, topLeft = Offset(x + w / 2f - l.size.width / 2f, y + h / 2f - l.size.height / 2f))
         }
     }
 }
