@@ -147,8 +147,15 @@ internal object IosColors {
     var glassEdge: Brush = glassBrush(theme); private set
 
     private fun edgeBrush(t: KbTheme) = Brush.verticalGradient(0f to t.edge, 0.04f to Color.Transparent, 1f to Color.Transparent)
-    private fun glassBrush(t: KbTheme) =
-        Brush.verticalGradient(0f to t.glassTop, 0.35f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.18f), 1f to Color.Transparent)
+    private fun glassBrush(t: KbTheme) = glassBrush(t, 0f, Float.POSITIVE_INFINITY)
+
+    /** Glass rim for ONE key from [top] to [bottom]: bright top edge, faint ring all round — same on every row. */
+    fun glassBrush(t: KbTheme, top: Float, bottom: Float): Brush = Brush.verticalGradient(
+        0f to t.glassTop,
+        0.4f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.4f),
+        1f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.22f),
+        startY = top, endY = bottom
+    )
 
     fun apply(t: KbTheme) {
         if (t === theme) return

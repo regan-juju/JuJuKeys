@@ -157,6 +157,13 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         }
         keyRects to hitRects
     }
+    // Glass rim made for each row's own height, so every row looks the same
+    // (one gradient over the whole keyboard made the top row bright and the bottom rows bare).
+    val rims = remember(geometry) {
+        val t = IosColors.theme
+        val grow = with(density) { 2.dp.toPx() }
+        geometry.first.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) }
+    }
 
     val pressed = remember { mutableStateListOf<Int>() }
     val act by rememberUpdatedState(actions)
@@ -274,7 +281,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 val kr = if (down) r.inflate(2.dp.toPx()) else r
                 drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 drawRoundRect(if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
-                drawRoundRect(IosColors.glassEdge, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
+                val rim = rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
+                drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
@@ -302,7 +310,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             val cr = CornerRadius(10.dp.toPx(), 10.dp.toPx())
             drawRoundRect(Color(0x66000000), Offset(x, y + 2.dp.toPx()), Size(w, h), cr)
             drawRoundRect(IosColors.bubble, Offset(x, y), Size(w, h), cr)
-            drawRoundRect(IosColors.glassEdge, Offset(x, y), Size(w, h), cr, style = Stroke(width = 0.8.dp.toPx()))
+            drawRoundRect(IosColors.glassBrush(IosColors.theme, y, y + h), Offset(x, y), Size(w, h), cr, style = Stroke(width = 0.8.dp.toPx()))
             drawText(l, topLeft = Offset(x + w / 2f - l.size.width / 2f, y + h / 2f - l.size.height / 2f))
         }
     }
