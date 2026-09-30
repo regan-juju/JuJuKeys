@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.PointerId
@@ -95,10 +96,10 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val weight = LocalKeyWeight.current
     val popupOn = LocalPopupEnabled.current
     val feedback = LocalKeyFeedback.current
-    val keyPadH = with(density) { 2.9.dp.toPx() }
+    val keyPadH = with(density) { 2.6.dp.toPx() }
     val keyPadV = with(density) { 5.dp.toPx() }
     val sidePad = with(density) { 3.dp.toPx() }
-    val corner = with(density) { 5.5.dp.toPx() }
+    val corner = with(density) { 8.dp.toPx() }
     val rowPx = with(density) { rowH.toPx() }
 
     // ---- text & icons prepared once
@@ -274,7 +275,15 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 down -> IosColors.keyPressed
                 else -> IosColors.key
             }
-            drawRoundRect(bg, r.topLeft, r.size, CornerRadius(corner, corner))
+            // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
+            val kr = if (down) r.inflate(2.dp.toPx()) else r
+            val cr = CornerRadius(corner, corner)
+            drawRoundRect(Color(0x2E000000), kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
+            drawRoundRect(bg, kr.topLeft, kr.size, cr)
+            drawRoundRect(
+                GlassEdge, kr.topLeft, kr.size, cr,
+                style = Stroke(width = 0.8.dp.toPx())
+            )
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
                 KType.SYMBOLS -> layouts["s"]?.let { drawCentered(it, r) }

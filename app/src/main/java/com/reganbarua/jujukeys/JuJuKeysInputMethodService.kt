@@ -78,7 +78,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private val state = KeyboardState()
     private val main = Handler(Looper.getMainLooper())
-    private val worker = Executors.newSingleThreadExecutor()
+    /** Background thread at low priority, so dictionary work never slows the keys. */
+    private val worker = Executors.newSingleThreadExecutor { r ->
+        Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            r.run()
+        }, "jujukeys-worker")
+    }
 
     private lateinit var clips: ClipHistory
     private lateinit var translator: TranslateEngine
@@ -109,7 +115,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { readClipboard(fresh = true) }
     private val clearFreshClip = Runnable { state.freshClip = null }
-    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> loadPrefs() }
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "clip_changed") clips.reload() else loadPrefs()
+    }
 
     private val audio by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private val vibrator by lazy { getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
@@ -221,8 +229,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             else -> Page.LETTERS
         }
         state.enterLabel = enterLabelFor(info)
-        loadPrefs()
-        clips.reload()
+        state.typing = false    // top bar shows clipboard & translate until the user writes
         readRecentFromApp()     // one read when the field opens, not on every key
         updateCaps()
         refreshSuggestions()
@@ -249,6 +256,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
         enWord.clear(); lastWord = null
         readRecentFromApp()
+        if (recent.isEmpty()) state.typing = false
         updateCaps()
         refreshSuggestions()
     }
@@ -303,6 +311,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onChar(c: Char) {
         state.freshClip = null
+        state.typing = true
         if (state.language == Language.ENGLISH || passwordField) {
             // Key labels are CAPITAL, but typing is normal: small letters, Shift = capital.
             val out = when {
@@ -354,6 +363,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onRawText(text: String) {
         state.freshClip = null
+        state.typing = true
         commitWord()
         endEnglishWord()
         sinkCommit(text)
@@ -373,6 +383,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
         } else {
             if (enWord.isNotEmpty()) enWord.setLength(enWord.length - 1)
             sinkDeleteBefore()
+            // Field emptied? Then show the clipboard / translate buttons again.
+            if (recent.isEmpty() && !state.translateOn) {
+                val before = currentInputConnection?.getTextBeforeCursor(1, 0)
+                if (before.isNullOrEmpty()) state.typing = false else recent.append(before)
+            }
             updateCaps()
         }
         refreshSuggestions()
@@ -430,6 +445,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val noEnterAction = info != null && (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
         if (!noEnterAction && action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
             ic.performEditorAction(action)
+            state.typing = false          // sent → buttons come back
+            recent.setLength(0)
         } else {
             sendKeyChar('\n')
             rememberTyped("\n")
@@ -732,6 +749,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onClipPaste(text: String) {
         state.freshClip = null
+        state.typing = true
         commitWord()
         endEnglishWord()
         sinkCommit(text)

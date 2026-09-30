@@ -64,21 +64,29 @@ import com.reganbarua.jujukeys.clipboard.ClipItem
 
 // ------------------------------------------------------------------ suggestion bar
 
-/** iPhone suggestion bar: A / ক switches language, three words, ⌃⌄ opens many more. */
+/**
+ * Top bar (iPhone style).
+ *  • Not typing: Google Keep clipboard and Translate buttons.
+ *  • Typing: three suggestions.
+ * The language button moves like on iPhone: "A" on the left in বাংলা, "ক" on the right in English.
+ * ⌃⌄ (a little in from the edge, away from ক) opens many more suggestions.
+ */
 @Composable
 internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
     val bangla = state.language == Language.BANGLA
     val showChip = state.prefs.showLanguageKey
     val expanded = state.panel == Panel.SUGGESTIONS
     Row(
-        Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 8.dp),
+        Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (bangla && showChip) LangChip("A") { actions.onToggleLanguage() }
+        if (bangla && showChip) { LangChip("A") { actions.onToggleLanguage() }; Spacer(Modifier.width(10.dp)) }
+        else Spacer(Modifier.width(6.dp))
+
         val clip = state.freshClip
-        if (clip != null) {
-            // Just copied → one tap pastes it (like Gboard)
-            Row(
+        when {
+            clip != null -> Row(
+                // Just copied → one tap pastes it (like Gboard)
                 Modifier.weight(1f).padding(horizontal = 8.dp).height(34.dp)
                     .clip(RoundedCornerShape(17.dp)).background(IosColors.key)
                     .clickable { actions.onClipPaste(clip) }.padding(horizontal = 12.dp),
@@ -91,49 +99,83 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
                     overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip)
                 )
             }
-        } else {
-            val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
-            for (i in 0 until 3) {
-                if (i > 0 && words.isNotEmpty()) Box(Modifier.width(1.dp).height(24.dp).background(IosColors.divider))
-                val w = words.getOrNull(i)
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .then(if (w != null) Modifier.clickable { actions.onSuggestion(i) } else Modifier),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (w != null) {
-                        Text(
-                            w, color = if (i == 0) IosColors.text else IosColors.suggestion,
-                            fontSize = 18.sp, fontWeight = if (i == 0) FontWeight.Bold else FontWeight.SemiBold,
-                            fontFamily = fontOf(w), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
+            !state.typing -> Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ToolButton(state.panel == Panel.CLIPBOARD, { actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD) }) {
+                    Box(Modifier.size(26.dp)) {
+                        Icon(Symbols.clipboard, "ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(26.dp))
+                        Box(
+                            Modifier.align(Alignment.BottomEnd).size(13.dp)
+                                .background(IosColors.keepYellow, RoundedCornerShape(3.5.dp)),
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(10.dp)) }
+                    }
+                }
+                Spacer(Modifier.width(20.dp))
+                ToolButton(state.translateOn, { actions.onTranslateToggle() }) {
+                    Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(24.dp))
+                }
+            }
+            else -> {
+                val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
+                for (i in 0 until 3) {
+                    if (i > 0 && words.isNotEmpty()) Box(Modifier.width(1.dp).height(24.dp).background(IosColors.divider))
+                    val w = words.getOrNull(i)
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(if (w != null) Modifier.clickable { actions.onSuggestion(i) } else Modifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (w != null) {
+                            Text(
+                                w, color = if (i == 0) IosColors.text else IosColors.suggestion,
+                                fontSize = 18.sp, fontWeight = if (i == 0) FontWeight.Bold else FontWeight.SemiBold,
+                                fontFamily = fontOf(w), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
                     }
                 }
             }
         }
-        // ⌃⌄ = more suggestions
+        // ⌃⌄ = more suggestions — moved in from the edge so it is not hit by mistake
         Column(
-            Modifier.width(30.dp).fillMaxHeight().clickable {
-                actions.onPanel(if (expanded) Panel.KEYS else Panel.SUGGESTIONS)
-            },
+            Modifier
+                .padding(start = 6.dp, end = if (bangla || !showChip) 18.dp else 8.dp)
+                .size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { actions.onPanel(if (expanded) Panel.KEYS else Panel.SUGGESTIONS) },
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(Icons.Filled.KeyboardArrowUp, null, tint = IosColors.dim, modifier = Modifier.size(20.dp).padding(0.dp))
+            Icon(Icons.Filled.KeyboardArrowUp, null, tint = IosColors.dim, modifier = Modifier.size(20.dp))
             Icon(Icons.Filled.KeyboardArrowDown, "আরও সাজেশন", tint = IosColors.dim, modifier = Modifier.size(20.dp))
         }
-        if (!bangla && showChip) LangChip("ক") { actions.onToggleLanguage() }
+        if (!bangla && showChip) { Spacer(Modifier.width(6.dp)); LangChip("ক") { actions.onToggleLanguage() } }
     }
+}
+
+@Composable
+private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
+    PressBox(
+        Modifier.size(width = 56.dp, height = 38.dp),
+        shape = RoundedCornerShape(19.dp),
+        color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
+        pressedColor = IosColors.keyPressed,
+        onTap = onTap
+    ) { content() }
 }
 
 @Composable
 private fun LangChip(text: String, onTap: () -> Unit) {
     PressBox(
-        Modifier.size(width = 26.dp, height = 28.dp),
-        shape = RoundedCornerShape(6.dp),
+        Modifier.size(width = 32.dp, height = 32.dp),
+        shape = RoundedCornerShape(8.dp),
         color = IosColors.chip, pressedColor = IosColors.keyPressed,
         onTap = onTap
     ) {

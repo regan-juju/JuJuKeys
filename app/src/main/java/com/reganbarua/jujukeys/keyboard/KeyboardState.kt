@@ -37,6 +37,10 @@ class KeyboardState {
     var suggestions by mutableStateOf<List<String>>(emptyList())
     var moreSuggestions by mutableStateOf<List<String>>(emptyList())
 
+    /** True once the user starts writing; the top bar then shows suggestions instead of
+     *  the clipboard / translate buttons. Back to false when the field is empty or sent. */
+    var typing by mutableStateOf(false)
+
     /** Just-copied text, shown as a chip in the suggestion bar (like Gboard). */
     var freshClip by mutableStateOf<String?>(null)
 

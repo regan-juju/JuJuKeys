@@ -1,6 +1,7 @@
 package com.reganbarua.jujukeys.keyboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,9 +33,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,22 +68,24 @@ import kotlin.math.roundToInt
 // Measured from an iPhone 16 Pro Max dark-mode screenshot.
 
 internal object IosColors {
-    val bg = Color(0xFF212121)
-    val key = Color(0xFF464646)
-    val keyPressed = Color(0xFF6B6B6B)
-    val fn = Color(0xFF2E2E2E)            // number pad side columns
+    // Liquid-glass look: see-through keys over a soft, dark, colour-tinted background.
+    val bg = Color(0xE01F211F)
+    val key = Color(0x668C8C8C)
+    val keyPressed = Color(0xA8B4B4B4)
+    val fn = Color(0x38707070)            // number pad side columns
     val text = Color.White
     val dim = Color(0xFF8A8A8A)
     val returnIcon = Color(0xFF8E8E8E)
     val suggestion = Color(0xFFC8C8C8)
-    val divider = Color(0xFF3D3D3D)
-    val chip = Color(0xFF5A5A5A)
+    val divider = Color(0x33FFFFFF)
+    val chip = Color(0x80909090)
     val blue = Color(0xFF0A84FF)
     val bluePressed = Color(0xFF409CFF)
     val lightBlue = Color(0xFF8AB4F8)
     val lightBlueText = Color(0xFF062E6F)
     val keepYellow = Color(0xFFFBBC04)
-    val card = Color(0xFF4A4A4A)
+    val card = Color(0x558A8A8A)
+    val glassTop = Color(0x59FFFFFF)      // light on the top edge of a key
 }
 
 /** Noto Sans Bengali, bundled with the app, for all Bangla text on the keyboard. */
@@ -95,12 +100,15 @@ internal val BanglaFont = FontFamily(
 internal fun fontOf(text: String): FontFamily? =
     if (text.any { it in 'ঀ'..'৿' }) BanglaFont else null
 
-internal val KeyShape = RoundedCornerShape(5.5.dp)
+internal val KeyShape = RoundedCornerShape(8.dp)
 private val PillShape = RoundedCornerShape(50)
-private val BaseRowHeight = 50.dp      // 40dp key + 10dp gap, like iPhone
-private val KeyHPad = 2.9.dp
+private val BaseRowHeight = 52.dp      // 42dp key + 10dp gap (a little bigger, like iPhone 26)
+private val KeyHPad = 2.6.dp
 private val KeyVPad = 5.dp
 private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
+
+/** Thin bright top edge that makes a key look like glass. */
+internal val GlassEdge = Brush.verticalGradient(0f to Color(0x59FFFFFF), 0.35f to Color(0x10FFFFFF), 1f to Color(0x00FFFFFF))
 
 /** Sound/vibration callback for every key press. */
 internal val LocalKeyFeedback = staticCompositionLocalOf<(KeyKind) -> Unit> { {} }
@@ -138,7 +146,21 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         Box(
             Modifier
                 .fillMaxWidth()
-                .background(IosColors.bg)
+                .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                .drawWithCache {
+                    // soft colour glow behind the glass keys (drawn once per size)
+                    val w = size.width; val h = size.height
+                    val blobs = listOf(
+                        Triple(Offset(w * 0.18f, h * 0.80f), Color(0x4D286E3C), w * 0.55f),
+                        Triple(Offset(w * 0.62f, h * 0.72f), Color(0x38822D2D), w * 0.50f),
+                        Triple(Offset(w * 0.88f, h * 0.28f), Color(0x293C3C8C), w * 0.50f),
+                        Triple(Offset(w * 0.30f, h * 0.18f), Color(0x246E6432), w * 0.45f),
+                    ).map { (c, col, r) -> Brush.radialGradient(listOf(col, Color.Transparent), c, r) }
+                    onDrawBehind {
+                        drawRect(IosColors.bg)
+                        blobs.forEach { drawRect(it) }
+                    }
+                }
                 .onGloballyPositioned { rootWidth = it.size.width.toFloat() }
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -440,27 +462,6 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         }
         Spacer(Modifier.weight(1f))
 
-        val clipOpen = state.panel == Panel.CLIPBOARD
-        StripButton(
-            active = clipOpen,
-            onTap = { actions.onPanel(if (clipOpen) Panel.KEYS else Panel.CLIPBOARD) }
-        ) {
-            Box(Modifier.size(30.dp)) {
-                Icon(Symbols.clipboard, "ক্লিপবোর্ড", tint = IosColors.text, modifier = Modifier.size(28.dp))
-                Box(
-                    Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 1.dp).size(14.dp)
-                        .background(IosColors.keepYellow, RoundedCornerShape(3.5.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Symbols.lightbulb, null, tint = Color.Black, modifier = Modifier.size(11.dp))
-                }
-            }
-        }
-        Spacer(Modifier.width(30.dp))
-        StripButton(active = state.translateOn, onTap = { actions.onTranslateToggle() }) {
-            Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(28.dp))
-        }
-
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
@@ -581,10 +582,12 @@ internal fun PressBox(
         }
     }
 
+    val glass = color.alpha > 0.1f && color != Color.Transparent
     Box(
         modifier
             .clip(shape)
             .background(if (pressed) pressedColor else color)
+            .then(if (glass) Modifier.border(0.7.dp, GlassEdge, shape) else Modifier)
             .then(gestures),
         contentAlignment = Alignment.Center,
         content = content

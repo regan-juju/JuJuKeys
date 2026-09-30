@@ -362,6 +362,7 @@ private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     }
     ActionButton("ইতিহাস মুছুন (পিন করা ছাড়া)", primary = false) {
         ClipHistory(context).clearUnpinned()
+        Prefs.sp(context).edit().putLong("clip_changed", System.currentTimeMillis()).apply()
     }
 }
 
