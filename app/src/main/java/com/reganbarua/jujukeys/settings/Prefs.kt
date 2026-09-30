@@ -23,7 +23,11 @@ data class KeyboardPrefs(
     val longPressSymbols: Boolean = true,
     val longPressDelay: Int = 300,          // ms
     // লেখা সংশোধন
-    val showSuggestions: Boolean = true,
+    val showSuggestions: Boolean = true,    // সাজেশন বার
+    val wordSuggestions: Boolean = true,    // লেখার সময় শব্দ
+    val nextWordSuggestions: Boolean = true,
+    val autoCorrect: Boolean = false,
+    val blockOffensive: Boolean = false,
     val autoCapitalize: Boolean = true,
     val doubleSpacePeriod: Boolean = true,
     val learnWords: Boolean = true,         // শিখে নেওয়া সাজেশন (ফোনেই থাকে)
@@ -56,6 +60,10 @@ object Prefs {
             longPressSymbols = p.getBoolean("long_press_symbols", d.longPressSymbols),
             longPressDelay = p.getInt("long_press_delay", d.longPressDelay),
             showSuggestions = p.getBoolean("suggestions", d.showSuggestions),
+            wordSuggestions = p.getBoolean("word_suggestions", d.wordSuggestions),
+            nextWordSuggestions = p.getBoolean("next_word", d.nextWordSuggestions),
+            autoCorrect = p.getBoolean("auto_correct", d.autoCorrect),
+            blockOffensive = p.getBoolean("block_offensive", d.blockOffensive),
             autoCapitalize = p.getBoolean("auto_cap", d.autoCapitalize),
             doubleSpacePeriod = p.getBoolean("double_space", d.doubleSpacePeriod),
             learnWords = p.getBoolean("learn_words", d.learnWords),
@@ -87,6 +95,14 @@ object Prefs {
     fun setUserWords(context: Context, words: List<String>) {
         sp(context).edit().putString("user_words", words.distinct().joinToString("\n")).apply()
     }
+
+    // ---- the one Google Keep note used for the clipboard
+    fun keepNoteCreated(context: Context) = sp(context).getBoolean("keep_note_created", false)
+    fun setKeepNoteCreated(context: Context, v: Boolean) = sp(context).edit().putBoolean("keep_note_created", v).apply()
+    fun keepSentIds(context: Context): Set<Long> =
+        (sp(context).getString("keep_sent", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }.toSet()
+    fun setKeepSentIds(context: Context, ids: Set<Long>) =
+        sp(context).edit().putString("keep_sent", ids.joinToString(",")).apply()
 
     // ---- recent emoji
     fun recentEmoji(context: Context): List<String> =

@@ -86,6 +86,7 @@ internal object IosColors {
 /** Noto Sans Bengali, bundled with the app, for all Bangla text on the keyboard. */
 internal val BanglaFont = FontFamily(
     Font(R.font.noto_bengali_regular, FontWeight.Normal),
+    Font(R.font.noto_bengali_medium, FontWeight.Medium),
     Font(R.font.noto_bengali_semibold, FontWeight.SemiBold),
     Font(R.font.noto_bengali_bold, FontWeight.Bold),
 )
@@ -105,7 +106,7 @@ private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
 internal val LocalKeyFeedback = staticCompositionLocalOf<(KeyKind) -> Unit> { {} }
 internal val LocalPopupEnabled = staticCompositionLocalOf { true }
 internal val LocalRowHeight = staticCompositionLocalOf { BaseRowHeight }
-internal val LocalKeyWeight = staticCompositionLocalOf { FontWeight.Bold }
+internal val LocalKeyWeight = staticCompositionLocalOf { FontWeight.Medium }
 
 /** Height of the area used by keys / clipboard / emoji / suggestions. */
 internal fun keyAreaHeight(prefs: KeyboardPrefs): Dp =
@@ -132,7 +133,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalPopupEnabled provides prefs.popup,
         LocalRowHeight provides BaseRowHeight * prefs.heightScale,
         LocalViewConfiguration provides viewConfig,
-        LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Bold else FontWeight.Normal,
+        LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
     ) {
         Box(
             Modifier
@@ -164,26 +165,7 @@ private fun KeysPanel(state: KeyboardState, actions: KeyboardActions, preview: K
     val prefs = state.prefs
     Column(Modifier.fillMaxWidth().padding(top = 2.dp)) {
         when (state.page) {
-            Page.LETTERS -> {
-                val lp = prefs.longPressSymbols
-                if (prefs.numberRow) {
-                    KeyRow { KeyboardLayouts.symbolsRow1.forEach { CharKeyView(it, bangla, false, actions, preview) } }
-                }
-                KeyRow { KeyboardLayouts.lettersRow1.forEach { CharKeyView(it, bangla, lp, actions, preview) } }
-                KeyRow {
-                    Spacer(Modifier.weight(0.5f))
-                    KeyboardLayouts.lettersRow2.forEach { CharKeyView(it, bangla, lp, actions, preview) }
-                    Spacer(Modifier.weight(0.5f))
-                }
-                KeyRow {
-                    ShiftKey(state.shift, actions)
-                    Spacer(Modifier.weight(0.21f))
-                    KeyboardLayouts.lettersRow3.forEach { CharKeyView(it, bangla, lp, actions, preview) }
-                    Spacer(Modifier.weight(0.21f))
-                    BackspaceKey(actions)
-                }
-                LettersBottomRow(state, actions)
-            }
+            Page.LETTERS -> LetterKeyboard(state, actions, preview)
             Page.NUMPAD -> {
                 if (prefs.numberRow) Spacer(Modifier.height(LocalRowHeight.current))
                 NumberPad(state.enterLabel, actions)
@@ -208,74 +190,6 @@ private fun KeyRow(content: @Composable RowScope.() -> Unit) {
 }
 
 private fun Modifier.keyPadding() = this.fillMaxHeight().padding(horizontal = KeyHPad, vertical = KeyVPad)
-
-/** iPhone bottom row: 123 · emoji · space · return. */
-@Composable
-private fun LettersBottomRow(state: KeyboardState, actions: KeyboardActions) {
-    val bangla = state.language == Language.BANGLA
-    val showEmoji = state.prefs.showEmojiKey
-    KeyRow {
-        FuncKey(Modifier.weight(1.24f), onTap = { actions.onPage(Page.NUMPAD) }) {
-            KeyLabel(if (bangla) "১২৩" else "123", 17.sp)
-        }
-        if (showEmoji) {
-            FuncKey(Modifier.weight(1.24f), onTap = { actions.onPanel(Panel.EMOJI) }) {
-                Icon(Symbols.emoji, "Emoji", tint = IosColors.text, modifier = Modifier.size(26.dp))
-            }
-        }
-        SpaceKey(Modifier.weight(if (showEmoji) 5.02f else 6.26f), if (bangla) "ক" else "EN BN", actions)
-        ReturnKey(Modifier.weight(2.5f), state.enterLabel, actions, pill = false)
-    }
-}
-
-@Composable
-private fun RowScope.CharKeyView(
-    key: CharKey,
-    bangla: Boolean,
-    longPress: Boolean,
-    actions: KeyboardActions,
-    preview: KeyPreview,
-    weight: Float = 1f,
-) {
-    var bounds by remember { mutableStateOf(Rect.Zero) }
-    val popup = LocalPopupEnabled.current
-    val shown = remember(key, bangla) {
-        key.label.let { c ->
-            if (bangla && c in '0'..'9') BengaliDigits[c - '0'].toString()
-            else c.uppercaseChar().toString()        // labels are always CAPITAL
-        }
-    }
-    PressBox(
-        Modifier
-            .weight(weight)
-            .keyPadding()
-            .onGloballyPositioned { bounds = it.boundsInRoot() },
-        color = IosColors.key, pressedColor = IosColors.keyPressed,
-        onTap = { actions.onChar(key.label) },
-        fireOnDown = true,
-        onLongPress = if (longPress) key.hint?.let { h -> { actions.onLongChar(h) } } else null,
-        onPressChange = { down ->
-            if (popup) {
-                if (down) { preview.text = shown; preview.bounds = bounds }
-                else if (preview.text == shown) preview.text = null
-            }
-        }
-    ) {
-        KeyLabel(shown, 22.sp)
-    }
-}
-
-@Composable
-private fun RowScope.ShiftKey(shift: ShiftState, actions: KeyboardActions) {
-    FuncKey(Modifier.weight(1.29f), onTap = { actions.onShift() }, fireOnDown = true) {
-        val icon = when (shift) {
-            ShiftState.OFF -> IosIcons.shiftOff
-            ShiftState.ONCE -> IosIcons.shiftOn
-            ShiftState.LOCK -> IosIcons.capsLock
-        }
-        Icon(icon, "Shift", tint = IosColors.text, modifier = Modifier.size(25.dp))
-    }
-}
 
 @Composable
 private fun RowScope.BackspaceKey(actions: KeyboardActions, weight: Float = 1.29f, color: Color = IosColors.key) {
@@ -596,7 +510,7 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
                 .background(IosColors.keyPressed, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fontOf(text))
+            Text(text, color = Color.White, fontSize = 32.sp, fontWeight = LocalKeyWeight.current, fontFamily = fontOf(text))
         }
     }
 }

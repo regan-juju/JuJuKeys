@@ -100,6 +100,41 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         return out.toList()
     }
 
+    /** Frequency of an English word, or 0 if it is not in the dictionary. */
+    fun englishFreq(word: String): Long {
+        val w = word.lowercase()
+        val r = range(english, w)
+        for (i in r) if (english[i].key == w) return english[i].freq
+        return 0
+    }
+
+    /**
+     * Auto-correction (English): the most common real word one small typing mistake away
+     * (a letter missing, extra, swapped or wrong). Null when [word] is fine or nothing fits.
+     */
+    fun correct(word: String): String? {
+        val w = word.lowercase()
+        if (w.length < 3 || userEnglish.any { it.equals(w, true) }) return null
+        val own = englishFreq(w)   // common misspellings are in the list too, but far rarer
+        val letters = "abcdefghijklmnopqrstuvwxyz"
+        val edits = HashSet<String>()
+        for (i in 0..w.length) {
+            if (i < w.length) edits.add(w.removeRange(i, i + 1))                       // delete
+            if (i < w.length - 1) edits.add(w.substring(0, i) + w[i + 1] + w[i] + w.substring(i + 2)) // swap
+            for (c in letters) {
+                if (i < w.length) edits.add(w.substring(0, i) + c + w.substring(i + 1))  // replace
+                edits.add(w.substring(0, i) + c + w.substring(i))                         // insert
+            }
+        }
+        var best: String? = null
+        var bestF = 0L
+        for (e in edits) {
+            val f = englishFreq(e)
+            if (f > bestF) { bestF = f; best = e }
+        }
+        return if (bestF >= 50 && bestF > own * 50) best else null
+    }
+
     /** Up to [n] Bangla words for the Avro conversion [converted]. */
     fun bangla(converted: String, n: Int = 3): List<String> {
         if (converted.isEmpty()) return emptyList()

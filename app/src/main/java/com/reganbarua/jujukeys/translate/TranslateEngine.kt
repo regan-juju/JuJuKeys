@@ -111,6 +111,13 @@ class TranslateEngine(private val context: Context) {
     ) {
         val t = if (toEnglish) translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH)
         else translator(TranslateLanguage.ENGLISH, TranslateLanguage.BENGALI)
+        // Model already on the phone → translate straight away (no extra checks = faster).
+        if (modelReady) {
+            t.translate(text)
+                .addOnSuccessListener { onResult(Result(it, false), null) }
+                .addOnFailureListener { onResult(null, "অনুবাদ হয়নি: ${it.message}") }
+            return
+        }
         checkOfflineModel { ready ->
             if (!ready) {
                 if (!isOnline()) {
@@ -121,6 +128,7 @@ class TranslateEngine(private val context: Context) {
             }
             t.downloadModelIfNeeded(DownloadConditions.Builder().build())
                 .addOnSuccessListener {
+                    modelReady = true
                     t.translate(text)
                         .addOnSuccessListener { onResult(Result(it, false), null) }
                         .addOnFailureListener { onResult(null, "অনুবাদ হয়নি: ${it.message}") }

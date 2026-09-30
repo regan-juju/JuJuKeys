@@ -1,5 +1,6 @@
 package com.reganbarua.jujukeys
 
+import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
@@ -95,11 +96,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var passwordField = false
     private var fieldWantsCaps = false
     private var suggestionSeq = 0
+    private var ignoreNextClip = false
 
     // ---- translate box
     private val tCommitted = StringBuilder()
     private var tComposing = ""
     private var translateSeq = 0
+    private var translating = false          // one translation at a time — no pile-up
+    private var translatePending = false
+    private var lastTranslation = ""
     private val translateRunnable = Runnable { runTranslation() }
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { readClipboard(fresh = true) }
@@ -206,9 +211,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
             (cls == InputType.TYPE_CLASS_NUMBER &&
                 variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
-        fieldWantsCaps = cls == InputType.TYPE_CLASS_TEXT && (info.inputType and
-            (InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_CAP_WORDS or
-                InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS)) != 0
+        // English: capital at the start of every sentence — except where it would be wrong.
+        fieldWantsCaps = cls == InputType.TYPE_CLASS_TEXT && !passwordField &&
+            variation != InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS &&
+            variation != InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS &&
+            variation != InputType.TYPE_TEXT_VARIATION_URI
         state.page = when (cls) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> Page.NUMPAD
             else -> Page.LETTERS
@@ -375,6 +382,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val now = SystemClock.uptimeMillis()
         val hadWord = roman.isNotEmpty() || enWord.isNotEmpty()
         commitWord()
+        autoCorrectWord()
         endEnglishWord()
         // Double space → full stop (। in Bangla), like iPhone.
         if (state.prefs.doubleSpacePeriod && !state.translateOn && !hadWord && now - lastSpaceTime < 700 &&
@@ -565,6 +573,18 @@ class JuJuKeysInputMethodService : InputMethodService(),
         lastWord = w
     }
 
+    /** Auto-correction (setting): fix an English typo when space is pressed. */
+    private fun autoCorrectWord() {
+        if (!state.prefs.autoCorrect || state.translateOn || passwordField || enWord.isEmpty()) return
+        val typed = enWord.toString()
+        val fix = suggester?.correct(typed) ?: return
+        val out = matchCase(fix, typed)
+        markEdit()
+        currentInputConnection?.deleteSurroundingText(typed.length, 0)
+        currentInputConnection?.commitText(out, 1)
+        enWord.setLength(0); enWord.append(out)
+    }
+
     private fun endEnglishWord() {
         if (enWord.isEmpty()) return
         learn(enWord.toString().lowercase())
@@ -594,14 +614,24 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
         if (bangla && romanNow.isNotEmpty()) state.suggestions = listOf(AvroPhonetic.convert(romanNow))
 
+        val p = state.prefs
+        if ((romanNow.isNotEmpty() || typed.isNotEmpty()) && !p.wordSuggestions) {
+            state.suggestions = if (bangla && romanNow.isNotEmpty()) listOf(AvroPhonetic.convert(romanNow)) else emptyList()
+            state.moreSuggestions = state.suggestions
+            return
+        }
+        if (romanNow.isEmpty() && typed.isEmpty() && !p.nextWordSuggestions) {
+            state.suggestions = emptyList(); state.moreSuggestions = emptyList(); return
+        }
         worker.execute {
-            val list: List<String> = when {
+            val raw: List<String> = when {
                 bangla && romanNow.isNotEmpty() ->
                     s?.bangla(AvroPhonetic.convert(romanNow), 18) ?: listOf(AvroPhonetic.convert(romanNow))
                 !bangla && typed.isNotEmpty() ->
                     (s?.english(typed, 18) ?: emptyList()).map { matchCase(it, typed) }
                 else -> nextWordList(bangla, prev, s)
             }
+            val list = if (p.blockOffensive) raw.filter { it.lowercase() !in OFFENSIVE } else raw
             main.post {
                 if (seq == suggestionSeq) {
                     state.suggestions = list.take(3)
@@ -632,6 +662,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
         typed.firstOrNull()?.isUpperCase() == true -> word.replaceFirstChar { it.uppercaseChar() }
         word == "i" || word.startsWith("i'") -> word.replaceFirstChar { it.uppercaseChar() }
         else -> word
+    }
+
+    companion object {
+        /** Small list hidden when "আপত্তিকর শব্দ সাজেস্ট করো না" is on. */
+        private val OFFENSIVE = setOf(
+            "fuck", "fucking", "fucked", "shit", "bitch", "bastard", "asshole", "dick", "pussy", "cunt",
+            "whore", "slut", "motherfucker", "damn", "crap", "fucker", "bullshit",
+            "মাগি", "খানকি", "চুদি", "চোদা", "বাল", "শালা", "হারামি", "কুত্তা", "শুয়োর",
+        )
     }
 
     // ================================================================== voice
@@ -672,6 +711,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     /** Called the moment something is copied — it shows up in the clipboard right away. */
     private fun readClipboard(fresh: Boolean) {
+        if (ignoreNextClip && fresh) { ignoreNextClip = false; return }
         if (!state.prefs.clipboardOn) return
         runCatching {
             val clip = clipboard().primaryClip ?: return
@@ -714,10 +754,32 @@ class JuJuKeysInputMethodService : InputMethodService(),
         else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
     }
 
+    /**
+     * ✎ = everything goes to ONE fixed Keep note ("JuJuKeys ক্লিপবোর্ড").
+     * First time: that note is created with everything in it.
+     * After that: only the NEW items are copied and Keep opens, so they can be pasted into
+     * the same note (Google does not let other apps edit a Keep note directly).
+     */
     override fun onClipAllToKeep() {
-        if (clips.items.isEmpty()) { toast("ক্লিপবোর্ড খালি"); return }
-        if (ClipHistory.sendAllToKeep(this, clips.items)) toast("সব লেখা এক নোটে — Keep-এ 'Save' চাপুন")
-        else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+        val items = clips.items.toList()
+        if (items.isEmpty()) { toast("ক্লিপবোর্ড খালি"); return }
+        val sent = Prefs.keepSentIds(this)
+        if (!Prefs.keepNoteCreated(this)) {
+            if (ClipHistory.sendAllToKeep(this, items)) {
+                Prefs.setKeepNoteCreated(this, true)
+                Prefs.setKeepSentIds(this, items.map { it.id }.toSet())
+                toast("Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোট তৈরি হচ্ছে — 'Save' চাপুন। এরপর সব এই নোটেই যাবে")
+            } else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+            return
+        }
+        val fresh = items.filter { it.id !in sent }
+        if (fresh.isEmpty()) { toast("নতুন কিছু নেই — সব আগেই Keep-এর নোটে আছে"); return }
+        ignoreNextClip = true
+        clipboard().setPrimaryClip(ClipData.newPlainText("JuJuKeys", fresh.joinToString("\n\n") { it.text }))
+        Prefs.setKeepSentIds(this, sent + fresh.map { it.id })
+        if (ClipHistory.openKeep(this)) {
+            toast("'JuJuKeys ক্লিপবোর্ড' নোট খুলে লম্বা চেপে 'Paste' করুন — ${fresh.size}টি নতুন লেখা")
+        } else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
     }
 
     override fun onOpenKeep() {
@@ -767,6 +829,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private fun stopTranslate() {
         main.removeCallbacks(translateRunnable)
+        lastTranslation = ""; translatePending = false
         roman.clear()
         tCommitted.setLength(0); tComposing = ""
         state.translateInput = ""
@@ -779,6 +842,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private fun clearTranslateBox() {
         main.removeCallbacks(translateRunnable)
+        lastTranslation = ""
         roman.clear()
         tCommitted.setLength(0); tComposing = ""
         state.translateInput = ""
@@ -793,20 +857,29 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     private fun runTranslation() {
+        if (translating) { translatePending = true; return }
         val raw = (tCommitted.toString() + tComposing).trim()
         val seq = ++translateSeq
         if (raw.isEmpty()) {
+            lastTranslation = ""
             markEdit()
             currentInputConnection?.setComposingText("", 1)
             return
         }
         val toEnglish = state.translateFrom == Language.BANGLA
+        translating = true
         translator.translate(
             raw, toEnglish,
             status = { state.translateStatus = it },
             onResult = { result, error ->
+                translating = false
+                if (translatePending) {          // text changed while we were busy → translate the latest once
+                    translatePending = false
+                    main.post(translateRunnable)
+                }
                 if (seq != translateSeq || !state.translateOn) return@translate
-                if (result != null) {
+                if (result != null && result.text != lastTranslation) {
+                    lastTranslation = result.text
                     markEdit()
                     currentInputConnection?.setComposingText(result.text, 1)
                     state.translateStatus = if (result.online) "অনলাইন (Google Cloud)" else "অফলাইন (Google ML Kit)"

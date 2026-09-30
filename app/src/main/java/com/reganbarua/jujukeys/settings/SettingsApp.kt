@@ -5,6 +5,7 @@ import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -54,6 +56,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.reganbarua.jujukeys.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -71,7 +76,7 @@ private val Accent = Color(0xFFA8C7FA)
 
 enum class Screen(val title: String) {
     MAIN("JuJuKeys"), LANGUAGES("ভাষা"), PREFERENCES("পছন্দসমূহ"), THEME("থিম"),
-    TEXT("লেখা সংশোধন"), VOICE("ভয়েস টাইপিং"), CLIPBOARD("ক্লিপবোর্ড"), TRANSLATE("অনুবাদ"),
+    TEXT("সংশোধন ও সাজেশন"), VOICE("ভয়েস টাইপিং"), CLIPBOARD("ক্লিপবোর্ড"), TRANSLATE("অনুবাদ"),
     DICTIONARY("অভিধান"), EMOJI("ইমোজি"), PRIVACY("গোপনীয়তা"), ABOUT("সম্পর্কে"), TEST("লিখে দেখুন"),
 }
 
@@ -220,6 +225,14 @@ private fun ActionButton(text: String, primary: Boolean = true, enabled: Boolean
 @Composable
 private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit) {
     val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(
+            painterResource(R.drawable.logo), "JuJuKeys",
+            modifier = Modifier.size(96.dp).clip(CircleShape)
+        )
+        Spacer(Modifier.height(8.dp))
+        Text("JuJuKeys", color = TextMain, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+    }
     if (!enabled || !selected) {
         Column(
             Modifier.padding(16.dp).fillMaxWidth()
@@ -244,7 +257,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     Item("ভাষা", "বাংলা (অভ্র), ENGLISH", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
     Item("পছন্দসমূহ", "কী, লেআউট, শব্দ ও কম্পন", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
     Item("থিম", "ডার্ক (সবসময়)", Icons.Outlined.Palette) { open(Screen.THEME) }
-    Item("লেখা সংশোধন", "সাজেশন, বড় হাতের অক্ষর, দুবার স্পেসে দাঁড়ি", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
+    Item("সংশোধন ও সাজেশন", "স্বয়ংক্রিয় সংশোধন, বড় হাতের অক্ষর, সাজেশন", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
     Item("ভয়েস টাইপিং", "Google ভয়েস টাইপিং", Icons.Outlined.Mic) { open(Screen.VOICE) }
     Item("ক্লিপবোর্ড", "ইতিহাস, পিন, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
     Item("অনুবাদ", "অফলাইন মডেল, অনলাইন API key", Icons.Outlined.Translate) { open(Screen.TRANSLATE) }
@@ -312,14 +325,19 @@ private fun ThemePage() {
 
 @Composable
 private fun TextPage(p: KeyboardPrefs, refresh: () -> Unit) {
-    Header("সাজেশন")
-    ToggleItem("সাজেশন বার দেখাও", "লেখার সময় উপরে শব্দ দেখাও", "suggestions", p.showSuggestions, refresh)
-    ToggleItem("আমার লেখা থেকে শেখো", "পরের শব্দ আন্দাজ ও ভালো সাজেশন — শুধু এই ফোনে থাকে", "learn_words", p.learnWords, refresh)
     val context = LocalContext.current
-    ActionButton("শেখা শব্দ মুছুন", primary = false) { Prefs.setBoolean(context, "clear_learned", true) }
-    Header("সংশোধন")
-    ToggleItem("স্বয়ংক্রিয় বড় হাতের অক্ষর", "বাক্যের প্রথম অক্ষর বড় হাতের (ENGLISH)", "auto_cap", p.autoCapitalize, refresh)
+    Header("স্বয়ংক্রিয় সংশোধন")
+    ToggleItem("স্বয়ংক্রিয় সংশোধন", "লেখার সময় ভুল ইংরেজি বানান ঠিক করো (স্পেস চাপলে)", "auto_correct", p.autoCorrect, refresh)
+    ToggleItem("স্বয়ংক্রিয় বড় হাতের অক্ষর", "ENGLISH-এ প্রতিটি বাক্যের প্রথম অক্ষর বড় হাতের", "auto_cap", p.autoCapitalize, refresh)
     ToggleItem("দুবার স্পেসে দাঁড়ি/ফুলস্টপ", "বাংলায় ।  ENGLISH-এ .", "double_space", p.doubleSpacePeriod, refresh)
+    Header("সাজেশন")
+    ToggleItem("আপত্তিকর শব্দ সাজেস্ট করো না", null, "block_offensive", p.blockOffensive, refresh)
+    ToggleItem("সাজেশন বার", "সাজেশন ও অন্যান্য বোতাম দেখাও", "suggestions", p.showSuggestions, refresh)
+    ToggleItem("শব্দের সাজেশন", "লেখার সময় সাজেশন বারে শব্দ দেখাও", "word_suggestions", p.wordSuggestions, refresh)
+    ToggleItem("পরের শব্দের সাজেশন", "আগের শব্দ দেখে পরের শব্দ আন্দাজ করো", "next_word", p.nextWordSuggestions, refresh)
+    ToggleItem("আমার লেখা থেকে শেখো", "ভালো সাজেশনের জন্য — শুধু এই ফোনে থাকে", "learn_words", p.learnWords, refresh)
+    ActionButton("শেখা শব্দ মুছুন", primary = false) { Prefs.setBoolean(context, "clear_learned", true) }
+    Note("বানান ও ব্যাকরণ যাচাই (লাল/নীল দাগ) Android-এর আলাদা \"spell checker\" সেবা — কীবোর্ড সেটি দেয় না। ফোনের Settings → Languages & input → Spell checker থেকে চালু করতে পারেন।")
 }
 
 @Composable
@@ -336,8 +354,12 @@ private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
 private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     ToggleItem("ক্লিপবোর্ড", "কপি করা লেখা কীবোর্ডে জমা রাখো", "clipboard", p.clipboardOn, refresh)
-    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে। ক্লিপবোর্ডের ✎ বোতাম চাপলে সব লেখা Google Keep-এ এক নোটে (এক পাতায়) সেভ হয় — Keep-এ শুধু 'Save' চাপতে হয়। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না।")
+    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না।")
     ActionButton("Google Keep খুলুন") { ClipHistory.openKeep(context) }
+    Note("Keep-এ শুধু একটি নোট ব্যবহার হয়: \"JuJuKeys ক্লিপবোর্ড\"। প্রথমবার ✎ চাপলে নোটটি তৈরি হয়। পরে ✎ চাপলে শুধু নতুন লেখাগুলো কপি হয়ে Keep খোলে — ওই নোটে লম্বা চেপে Paste করুন।")
+    ActionButton("Keep-এর নোট নতুন করে শুরু করুন", primary = false) {
+        Prefs.setKeepNoteCreated(context, false); Prefs.setKeepSentIds(context, emptySet())
+    }
     ActionButton("ইতিহাস মুছুন (পিন করা ছাড়া)", primary = false) {
         ClipHistory(context).clearUnpinned()
     }
@@ -427,6 +449,9 @@ private fun PrivacyPage() {
 private fun AboutPage() {
     val context = LocalContext.current
     val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+    Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+        Image(painterResource(R.drawable.logo), "JuJuKeys", modifier = Modifier.size(120.dp).clip(CircleShape))
+    }
     Item("JuJuKeys", "সংস্করণ $version")
     Item("তৈরি করেছেন", "রিগ্যান বড়ুয়া")
     Item("শব্দতালিকা", "FrequencyWords (CC BY-SA 4.0)")
