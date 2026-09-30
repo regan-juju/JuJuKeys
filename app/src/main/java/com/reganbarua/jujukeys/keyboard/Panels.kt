@@ -148,7 +148,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                     }
                 }
             }
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visibleState = toolsVisible,
                 enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
                 exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut()

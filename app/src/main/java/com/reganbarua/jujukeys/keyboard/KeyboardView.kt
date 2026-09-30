@@ -166,7 +166,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                         Panel.EMOJI -> if (searching) KeysPanel(state, actions, preview) else EmojiPanel(state, actions)
                     }
                     // more suggestions rise from the bottom (the faded arrow in the bottom strip)
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = state.panel == Panel.SUGGESTIONS,
                         enter = slideInVertically(tween(180)) { it } + fadeIn(tween(120)),
                         exit = slideOutVertically(tween(160)) { it } + fadeOut(tween(120))
