@@ -25,16 +25,26 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         return Entry(w, keyOf(w), f)
     }
 
+    /** The user's own words (settings → অভিধান); always suggested first. */
+    @Volatile private var userEnglish: List<String> = emptyList()
+    @Volatile private var userBangla: List<Pair<String, String>> = emptyList()
+
+    fun setUserWords(words: List<String>) {
+        userEnglish = words.filter { w -> w.all { it.code < 128 } }
+        userBangla = words.filter { w -> w.any { it in '\u0980'..'\u09FF' } }.map { it to skeleton(it) }
+    }
+
     /** Up to [n] English words (lowercase) completing [prefix]. */
     fun english(prefix: String, n: Int = 3): List<String> {
         val p = prefix.lowercase()
         if (p.isEmpty()) return emptyList()
         val out = ArrayList<String>(n)
+        userEnglish.filter { it.lowercase().startsWith(p) }.take(n).forEach { out.add(it) }
         // exact word first, then completions by frequency (list is already sorted by frequency)
-        english.firstOrNull { it.word == p }?.let { out.add(it.word) }
+        english.firstOrNull { it.word == p }?.let { if (out.size < n && it.word !in out) out.add(it.word) }
         for (e in english) {
             if (out.size >= n) break
-            if (e.word != p && e.word.startsWith(p)) out.add(e.word)
+            if (e.word != p && e.word.startsWith(p) && e.word !in out) out.add(e.word)
         }
         return out
     }
@@ -52,6 +62,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         }
         val out = LinkedHashSet<String>()
         out.add(converted)
+        userBangla.filter { it.second.startsWith(key) }.forEach { if (out.size < n) out.add(it.first) }
         (same.sortedByDescending { it.freq } + longer).forEach { if (out.size < n) out.add(it.word) }
         return out.toList()
     }

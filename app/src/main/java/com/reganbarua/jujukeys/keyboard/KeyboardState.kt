@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import com.reganbarua.jujukeys.settings.KeyboardPrefs
 
 enum class Language { BANGLA, ENGLISH }
 
@@ -15,12 +16,19 @@ enum class Page { LETTERS, SYMBOLS, MORE_SYMBOLS }
 /** What fills the key area: the keys, the clipboard list or the emoji grid. */
 enum class Panel { KEYS, CLIPBOARD, EMOJI }
 
+/** Which sound a key press makes. */
+enum class KeyKind { NORMAL, DELETE, SPACE, RETURN }
+
 /** Everything the keyboard UI draws. Compose re-draws automatically when these change. */
 class KeyboardState {
     var language by mutableStateOf(Language.BANGLA)
     var shift by mutableStateOf(ShiftState.OFF)
     var page by mutableStateOf(Page.LETTERS)
     var panel by mutableStateOf(Panel.KEYS)
+
+    /** Settings chosen in the app (Gboard-style settings screen). */
+    var prefs by mutableStateOf(KeyboardPrefs())
+    var recentEmoji by mutableStateOf<List<String>>(emptyList())
 
     /** Three words in the suggestion bar. */
     var suggestions by mutableStateOf<List<String>>(emptyList())
@@ -54,6 +62,9 @@ interface KeyboardActions {
     fun onShift()
     fun onToggleLanguage()
     fun onShowImePicker()
+    fun onOpenSettings()
+    /** Sound / vibration for a key press, following the settings. */
+    fun onKeyFeedback(kind: KeyKind)
     fun onPage(page: Page)
     fun onPanel(panel: Panel)
     fun onSuggestion(index: Int)

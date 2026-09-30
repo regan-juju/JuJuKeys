@@ -3,6 +3,12 @@ package com.reganbarua.jujukeys
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.media.AudioManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.view.HapticFeedbackConstants
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.Handler
@@ -29,6 +35,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.reganbarua.jujukeys.bengali.AvroPhonetic
 import com.reganbarua.jujukeys.clipboard.ClipHistory
+import com.reganbarua.jujukeys.keyboard.KeyKind
 import com.reganbarua.jujukeys.keyboard.KeyboardActions
 import com.reganbarua.jujukeys.keyboard.KeyboardState
 import com.reganbarua.jujukeys.keyboard.KeyboardView
@@ -44,7 +51,7 @@ import java.util.concurrent.Executors
 /**
  * The system keyboard (iPhone look, Gboard behaviour). Works in every app once enabled.
  *
- * ENGLISH: letters are typed as CAPITAL letters (except in password fields).
+ * ENGLISH: key labels are CAPITAL; typing is normal (small letters, Shift / auto-capital = capital).
  * বাংলা:   Avro phonetic (bhalo → ভালো). No Shift = small letter (t → ত), Shift = capital (T → ট).
  * Extras:  word suggestions, clipboard history + Google Keep, Google-quality translation
  *          (offline ML Kit / online Cloud API), emoji, voice typing, space-bar cursor slide.
@@ -84,6 +91,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private val translateRunnable = Runnable { runTranslation() }
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { readClipboard() }
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> loadPrefs() }
 
     // ================================================================== lifecycle
 
@@ -94,6 +102,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
+        loadPrefs()
+        Prefs.sp(this).registerOnSharedPreferenceChangeListener(prefListener)
         state.language = if (Prefs.lastLanguageBangla(this)) Language.BANGLA else Language.ENGLISH
         clips = ClipHistory(this)
         translator = TranslateEngine(this)
@@ -104,7 +114,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
             runCatching {
                 val en = assets.open("dict_en.txt").bufferedReader().readLines()
                 val bn = assets.open("dict_bn.txt").bufferedReader().readLines()
-                suggester = Suggester(en.asSequence(), bn.asSequence())
+                suggester = Suggester(en.asSequence(), bn.asSequence()).also {
+                    it.setUserWords(Prefs.userWords(this))
+                }
             }
             main.post { refreshSuggestions() }
         }
@@ -125,8 +137,31 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
     }
 
+    override fun onWindowShown() {
+        super.onWindowShown()
+        darkNavigationBar()
+    }
+
+    /** Always dark: paint the navigation bar under the keyboard dark too. */
+    @Suppress("DEPRECATION")
+    private fun darkNavigationBar() {
+        val w = window?.window ?: return
+        w.navigationBarColor = 0xFF212121.toInt()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val v = w.decorView
+            v.systemUiVisibility = v.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+        }
+    }
+
+    private fun loadPrefs() {
+        state.prefs = Prefs.load(this)
+        state.recentEmoji = Prefs.recentEmoji(this)
+        suggester?.setUserWords(Prefs.userWords(this))
+    }
+
     override fun onDestroy() {
         clipboard().removePrimaryClipChangedListener(clipListener)
+        Prefs.sp(this).unregisterOnSharedPreferenceChangeListener(prefListener)
         translator.close()
         worker.shutdown()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
@@ -153,6 +188,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
             else -> Page.LETTERS
         }
         state.enterLabel = enterLabelFor(info)
+        loadPrefs()
+        clips.reload()
+        updateAutoCaps()
         refreshSuggestions()
     }
 
@@ -174,7 +212,17 @@ class JuJuKeysInputMethodService : InputMethodService(),
             roman.clear()
             currentInputConnection?.finishComposingText()
         }
+        updateAutoCaps()
         refreshSuggestions()
+    }
+
+    /** ENGLISH: capital letter at the start of a sentence (like any normal keyboard). */
+    private fun updateAutoCaps() {
+        if (state.language != Language.ENGLISH || state.translateOn || state.shift == ShiftState.LOCK) return
+        val info = currentInputEditorInfo ?: return
+        val caps = state.prefs.autoCapitalize && info.inputType != InputType.TYPE_NULL &&
+            (currentInputConnection?.getCursorCapsMode(info.inputType) ?: 0) != 0
+        state.shift = if (caps) ShiftState.ONCE else ShiftState.OFF
     }
 
     // ================================================================== where text goes
@@ -211,12 +259,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onChar(c: Char) {
         if (state.language == Language.ENGLISH || passwordField) {
+            // Key labels are CAPITAL, but typing is normal: small letters, Shift = capital.
             val out = when {
                 !c.isLetter() -> c
-                passwordField -> if (state.shift == ShiftState.OFF) c.lowercaseChar() else c.uppercaseChar()
-                else -> c.uppercaseChar()                       // English: always CAPITAL
+                state.shift == ShiftState.OFF -> c.lowercaseChar()
+                else -> c.uppercaseChar()
             }
-            if (passwordField && state.shift == ShiftState.ONCE && c.isLetter()) state.shift = ShiftState.OFF
+            if (state.shift == ShiftState.ONCE && c.isLetter()) state.shift = ShiftState.OFF
             sinkCommit(out.toString())
             refreshSuggestions()
             return
@@ -238,6 +287,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onText(text: String) {
+        if (state.prefs.recentEmoji) {
+            Prefs.addRecentEmoji(this, text)
+            state.recentEmoji = Prefs.recentEmoji(this)
+        }
         commitWord()
         sinkCommit(text)
         refreshSuggestions()
@@ -264,7 +317,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         commitWord()
         val ic = currentInputConnection
         // Double space → full stop (। in Bangla), like iPhone.
-        if (!state.translateOn && !hadWord && ic != null && now - lastSpaceTime < 700) {
+        if (state.prefs.doubleSpacePeriod && !state.translateOn && !hadWord && ic != null && now - lastSpaceTime < 700) {
             val before = ic.getTextBeforeCursor(2, 0)
             if (before != null && before.length == 2 && before[1] == ' ' &&
                 !before[0].isWhitespace() && before[0] !in ".।,!?"
@@ -311,10 +364,6 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onShift() {
-        if (state.language == Language.ENGLISH && !passwordField) {
-            toast("ENGLISH সবসময় বড় হাতের অক্ষরে লেখে")
-            return
-        }
         val now = SystemClock.uptimeMillis()
         state.shift = when {
             state.shift == ShiftState.LOCK -> ShiftState.OFF
@@ -328,6 +377,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onToggleLanguage() {
         commitWord()
         setLanguage(if (state.language == Language.BANGLA) Language.ENGLISH else Language.BANGLA)
+        updateAutoCaps()
         if (state.translateOn) {
             state.translateFrom = state.language
             clearTranslateBox()
@@ -339,6 +389,47 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.shift = ShiftState.OFF
         Prefs.setLastLanguageBangla(this, lang == Language.BANGLA)
         refreshSuggestions()
+    }
+
+    override fun onOpenSettings() {
+        commitWord()
+        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    override fun onKeyFeedback(kind: KeyKind) {
+        val p = state.prefs
+        if (p.sound) {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val fx = when (kind) {
+                KeyKind.DELETE -> AudioManager.FX_KEYPRESS_DELETE
+                KeyKind.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
+                KeyKind.RETURN -> AudioManager.FX_KEYPRESS_RETURN
+                KeyKind.NORMAL -> AudioManager.FX_KEYPRESS_STANDARD
+            }
+            am.playSoundEffect(fx, -1f)
+        }
+        if (p.vibrate) {
+            if (p.vibrateStrength == 0) {
+                window?.window?.decorView?.performHapticFeedback(
+                    HapticFeedbackConstants.KEYBOARD_TAP,
+                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                )
+            } else {
+                vibrate(p.vibrateStrength)
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun vibrate(strength: Int) {
+        val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+        val ms = when (strength) { 1 -> 8L; 2 -> 15L; else -> 25L }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val amp = when (strength) { 1 -> 60; 2 -> 140; else -> 255 }
+            v.vibrate(VibrationEffect.createOneShot(ms, amp))
+        } else {
+            v.vibrate(ms)
+        }
     }
 
     override fun onShowImePicker() {
@@ -385,15 +476,23 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val s = suggester
 
         if (bangla && romanNow.isEmpty()) { state.suggestions = listOf("আমি", "সে", "আপনি"); return }
-        if (!bangla && englishWord.isEmpty()) { state.suggestions = listOf("I", "THE", "I'M"); return }
+        if (!bangla && englishWord.isEmpty()) { state.suggestions = listOf("I", "The", "I'm"); return }
         if (bangla) state.suggestions = listOf(AvroPhonetic.convert(romanNow))
         if (s == null) return
 
         worker.execute {
             val list = if (bangla) s.bangla(AvroPhonetic.convert(romanNow))
-            else s.english(englishWord).map { it.uppercase() }
+            else s.english(englishWord).map { matchCase(it, englishWord) }
             main.post { if (seq == suggestionSeq) state.suggestions = list }
         }
+    }
+
+    /** "hel" → hello, "Hel" → Hello, "HEL" → HELLO */
+    private fun matchCase(word: String, typed: String): String = when {
+        typed.length > 1 && typed.all { !it.isLetter() || it.isUpperCase() } -> word.uppercase()
+        typed.firstOrNull()?.isUpperCase() == true -> word.replaceFirstChar { it.uppercaseChar() }
+        word == "i" || word.startsWith("i'") -> word.replaceFirstChar { it.uppercaseChar() }
+        else -> word
     }
 
     // ================================================================== voice
@@ -432,6 +531,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private fun clipboard() = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     private fun readClipboard() {
+        if (!state.prefs.clipboardOn) return
         runCatching {
             val clip = clipboard().primaryClip ?: return
             if (clip.itemCount == 0) return

@@ -60,6 +60,12 @@ class ClipHistory(private val context: Context) {
         }
     }
 
+    /** Re-read from storage (the settings screen may have changed it). */
+    fun reload() {
+        items.clear()
+        load()
+    }
+
     private fun load() {
         val raw = prefs.getString("items", null) ?: return
         runCatching {

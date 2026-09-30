@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
@@ -57,14 +56,15 @@ import com.reganbarua.jujukeys.clipboard.ClipItem
 @Composable
 internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
     val bangla = state.language == Language.BANGLA
+    val showChip = state.prefs.showLanguageKey
     Row(
-        Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 10.dp),
+        Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (bangla) LangChip("A") { actions.onToggleLanguage() }
-        val words = state.suggestions
+        if (bangla && showChip) LangChip("A") { actions.onToggleLanguage() }
+        val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
         for (i in 0 until 3) {
-            if (i > 0) Box(Modifier.width(1.dp).height(26.dp).background(IosColors.divider))
+            if (i > 0 && words.isNotEmpty()) Box(Modifier.width(1.dp).height(24.dp).background(IosColors.divider))
             val w = words.getOrNull(i)
             Box(
                 Modifier
@@ -75,25 +75,25 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions) {
             ) {
                 if (w != null) {
                     Text(
-                        w, color = IosColors.suggestion, fontSize = 19.sp, maxLines = 1,
+                        w, color = IosColors.suggestion, fontSize = 17.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }
         }
-        if (!bangla) LangChip("ক") { actions.onToggleLanguage() }
+        if (!bangla && showChip) LangChip("ক") { actions.onToggleLanguage() }
     }
 }
 
 @Composable
 private fun LangChip(text: String, onTap: () -> Unit) {
     PressBox(
-        Modifier.size(34.dp),
-        shape = RoundedCornerShape(8.dp),
+        Modifier.size(width = 24.dp, height = 26.dp),
+        shape = RoundedCornerShape(5.dp),
         color = IosColors.chip, pressedColor = IosColors.keyPressed,
         onTap = onTap
     ) {
-        Text(text, color = IosColors.text, fontSize = 19.sp)
+        Text(text, color = IosColors.text, fontSize = 14.sp)
     }
 }
 
@@ -256,8 +256,11 @@ private fun TextButton(text: String, color: Color, onTap: () -> Unit) {
 // ------------------------------------------------------------------ emoji panel
 
 @Composable
-internal fun EmojiPanel(actions: KeyboardActions) {
+internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
+    val recent = if (state.prefs.recentEmoji) state.recentEmoji else emptyList()
+    val groups = if (recent.isNotEmpty()) listOf("🕘" to recent) + EmojiData.groups else EmojiData.groups
     var group by remember { mutableIntStateOf(0) }
+    if (group >= groups.size) group = 0
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 4.dp),
@@ -265,7 +268,7 @@ internal fun EmojiPanel(actions: KeyboardActions) {
         ) {
             TextButton("ABC", IosColors.text) { actions.onPanel(Panel.KEYS) }
             LazyRow(Modifier.weight(1f)) {
-                itemsIndexed(EmojiData.groups) { i, g ->
+                itemsIndexed(groups) { i, g ->
                     Box(
                         Modifier
                             .size(38.dp)
@@ -282,7 +285,7 @@ internal fun EmojiPanel(actions: KeyboardActions) {
                 Modifier.size(42.dp).clickable { actions.onBackspace() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.AutoMirrored.Outlined.Backspace, "Backspace", tint = IosColors.text, modifier = Modifier.size(24.dp))
+                Icon(Symbols.backspace, "Backspace", tint = IosColors.text, modifier = Modifier.size(24.dp))
             }
         }
         LazyVerticalGrid(
@@ -290,7 +293,7 @@ internal fun EmojiPanel(actions: KeyboardActions) {
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
-            items(EmojiData.groups[group].second) { e ->
+            items(groups[group].second) { e ->
                 Box(
                     Modifier.height(44.dp).clickable { actions.onText(e) },
                     contentAlignment = Alignment.Center
