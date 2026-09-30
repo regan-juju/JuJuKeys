@@ -35,6 +35,12 @@ jobs:
             echo "::error::${line}"
           done
 
+      - name: Verify APK (signature + manifest)
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk | head -12 | while IFS= read -r l; do echo "::notice::$l"; done
+          $BT/aapt2 dump badging app/build/outputs/apk/release/app-release.apk | grep -E "^(package|sdkVersion|targetSdkVersion|native-code|uses-permission)" | while IFS= read -r l; do echo "::notice::$l"; done
+
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk JuJuKeys-v1.0.${{ github.run_number }}.apk
 
