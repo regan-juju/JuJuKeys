@@ -163,26 +163,12 @@ class TranslateEngine(private val context: Context) {
             conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             if (conn.responseCode != 200) return null
             val json = conn.inputStream.bufferedReader().use { it.readText() }
-            return unescapeHtml(
+            return HtmlText.unescape(
                 JSONObject(json).getJSONObject("data").getJSONArray("translations")
                     .getJSONObject(0).getString("translatedText")
             )
         } finally {
             conn.disconnect()
-        }
-    }
-
-    /** Safety net: turn &amp; &#39; &quot; &lt; &gt; &#NN; back into normal characters. */
-    private fun unescapeHtml(s: String): String {
-        if ('&' !in s) return s
-        return Regex("&(#\\d+|#x[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);").replace(s) { m ->
-            when (val e = m.groupValues[1]) {
-                "amp" -> "&"; "lt" -> "<"; "gt" -> ">"; "quot" -> "\""; "apos" -> "'"; "nbsp" -> " "
-                else -> {
-                    val code = if (e.startsWith("#x")) e.substring(2).toIntOrNull(16) else e.substring(1).toIntOrNull()
-                    if (code != null && Character.isValidCodePoint(code)) String(Character.toChars(code)) else m.value
-                }
-            }
         }
     }
 

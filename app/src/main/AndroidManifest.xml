@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Fingerprint / face unlock for SENSITIVE clipboard items (Android checks it; nothing is sent anywhere) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Translation: downloading the offline model once, and optional online translation -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -32,6 +34,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Asks for the phone's lock before a sensitive clipboard item is opened -->
+        <activity
+            android:name=".security.AuthActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.JuJuKeys.Auth" />
 
         <!-- The system keyboard -->
         <service

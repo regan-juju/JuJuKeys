@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,6 +76,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reganbarua.jujukeys.clipboard.ClipItem
+import com.reganbarua.jujukeys.security.SensitiveAction
 
 // ------------------------------------------------------------------ top bar
 
@@ -381,17 +384,20 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
         if (sel != null) {
             // actions for the long-pressed item
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(40.dp),
+                Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                ActionChip("✕", null) { selected = null }
                 ActionChip(if (sel.pinned) "আনপিন" else "পিন", if (sel.pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin) {
                     actions.onClipPin(sel.id); selected = null
                 }
-                ActionChip("Keep", null, IosColors.keepYellow) { actions.onClipToKeep(sel.text); selected = null }
+                if (sel.sensitive && !state.sensitiveUnlocked) {
+                    ActionChip("দেখুন", null) { actions.onClipAction(sel.id, SensitiveAction.VIEW); selected = null }
+                }
+                ActionChip("কপি", null) { actions.onClipAction(sel.id, SensitiveAction.COPY); selected = null }
+                ActionChip("Keep", null, IosColors.keepYellow) { actions.onClipAction(sel.id, SensitiveAction.KEEP); selected = null }
                 ActionChip("মুছুন", Icons.Filled.Delete) { actions.onClipDelete(sel.id); selected = null }
-                Spacer(Modifier.weight(1f))
-                ActionChip("বাতিল", null) { selected = null }
             }
         }
 
@@ -407,13 +413,13 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 )
             }
         } else {
-            ClipGrid(clips, selected, actions) { selected = it }
+            ClipGrid(clips, selected, state.sensitiveUnlocked, actions) { selected = it }
         }
     }
 }
 
 @Composable
-private fun ClipGrid(clips: List<ClipItem>, selected: Long?, actions: KeyboardActions, onSelect: (Long) -> Unit) {
+private fun ClipGrid(clips: List<ClipItem>, selected: Long?, unlocked: Boolean, actions: KeyboardActions, onSelect: (Long) -> Unit) {
         val recent = clips.filter { !it.pinned }
         val pinned = clips.filter { it.pinned }
         LazyVerticalGrid(
@@ -425,11 +431,11 @@ private fun ClipGrid(clips: List<ClipItem>, selected: Long?, actions: KeyboardAc
         ) {
             if (recent.isNotEmpty()) {
                 item(span = { GridItemSpan(2) }) { SectionTitle("সাম্প্রতিক") }
-                items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, actions) { onSelect(c.id) } }
+                items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions) { onSelect(c.id) } }
             }
             if (pinned.isNotEmpty()) {
                 item(span = { GridItemSpan(2) }) { SectionTitle("পিন করা হয়েছে") }
-                items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, actions) { onSelect(c.id) } }
+                items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions) { onSelect(c.id) } }
             }
         }
 }
@@ -441,20 +447,28 @@ private fun SectionTitle(text: String) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ClipTile(clip: ClipItem, isSelected: Boolean, actions: KeyboardActions, onLongPress: () -> Unit) {
+private fun ClipTile(clip: ClipItem, isSelected: Boolean, unlocked: Boolean, actions: KeyboardActions, onLongPress: () -> Unit) {
     Box(
         Modifier
             .heightIn(min = 56.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) IosColors.keyPressed else IosColors.card)
-            .combinedClickable(onClick = { actions.onClipPaste(clip.text) }, onLongClick = onLongPress)
+            .combinedClickable(onClick = { actions.onClipTap(clip.id) }, onLongClick = onLongPress)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text(
-            clip.text, color = IosColors.text, fontSize = 15.sp, maxLines = 3,
-            overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip.text)
-        )
+        if (clip.sensitive && !unlocked) {
+            // private text: preview hidden until the phone lock is given
+            Text(
+                "🔒 ••••••••\nসংবেদনশীল লেখা", color = IosColors.dim, fontSize = 14.sp, maxLines = 2,
+                fontFamily = BanglaFont
+            )
+        } else {
+            Text(
+                clip.text, color = IosColors.text, fontSize = 15.sp, maxLines = 3,
+                overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip.text)
+            )
+        }
         if (clip.pinned) {
             Icon(
                 Icons.Filled.PushPin, null, tint = IosColors.dim,

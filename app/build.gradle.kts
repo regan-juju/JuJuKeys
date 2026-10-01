@@ -15,7 +15,12 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
         // Phones only (ARM) — keeps the APK small; ML Kit ships big native libraries.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            // CI only: the test emulator is x86_64
+            if (project.hasProperty("withX86")) abiFilters += "x86_64"
+        }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // A fixed signing key kept in the repo, so every new APK installs as an update
@@ -75,4 +80,7 @@ dependencies {
     implementation("com.google.mlkit:translate:17.0.3")
 
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }

@@ -5,4 +5,8 @@
         <item name="android:navigationBarColor">#FF1B1B1B</item>
         <item name="android:windowBackground">@android:color/black</item>
     </style>
+    <!-- see-through: only the system's PIN / fingerprint sheet is visible -->
+    <style name="Theme.JuJuKeys.Auth" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

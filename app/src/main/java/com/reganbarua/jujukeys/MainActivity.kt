@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import com.reganbarua.jujukeys.security.DataMigration
 import com.reganbarua.jujukeys.settings.SettingsApp
 
 /** The app = Gboard-style settings (opened from the launcher or the keyboard's 🌐 button). */
@@ -22,6 +23,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Thread { DataMigration.run(applicationContext) }.start()   // old plain data → encrypted
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(

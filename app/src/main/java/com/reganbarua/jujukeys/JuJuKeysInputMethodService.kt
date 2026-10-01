@@ -38,9 +38,15 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.reganbarua.jujukeys.bengali.AvroPhonetic
 import com.reganbarua.jujukeys.clipboard.ClipHistory
+import com.reganbarua.jujukeys.clipboard.KeepLedger
 import com.reganbarua.jujukeys.keyboard.EmojiRepo
 import com.reganbarua.jujukeys.keyboard.KeyKind
 import com.reganbarua.jujukeys.keyboard.Themes
+import com.reganbarua.jujukeys.security.AuthActivity
+import com.reganbarua.jujukeys.security.SensitiveAction
+import com.reganbarua.jujukeys.security.SensitiveGate
+import com.reganbarua.jujukeys.clipboard.ClipItem
+import android.os.PersistableBundle
 import com.reganbarua.jujukeys.keyboard.KeyboardActions
 import com.reganbarua.jujukeys.keyboard.KeyboardState
 import com.reganbarua.jujukeys.keyboard.KeyboardView
@@ -50,6 +56,7 @@ import com.reganbarua.jujukeys.keyboard.Panel
 import com.reganbarua.jujukeys.keyboard.ShiftState
 import com.reganbarua.jujukeys.settings.Prefs
 import com.reganbarua.jujukeys.suggest.Learner
+import com.reganbarua.jujukeys.suggest.RomanAliases
 import com.reganbarua.jujukeys.suggest.Suggester
 import com.reganbarua.jujukeys.translate.TranslateEngine
 import java.io.File
@@ -93,6 +100,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private lateinit var clips: ClipHistory
     private lateinit var translator: TranslateEngine
     @Volatile private var suggester: Suggester? = null
+    @Volatile private var aliases: RomanAliases? = null
     private val learner = Learner()
     private var learnedSinceSave = 0
 
@@ -145,15 +153,29 @@ class JuJuKeysInputMethodService : InputMethodService(),
         clipboard().addPrimaryClipChangedListener(clipListener)
 
         // Dictionaries and learned words load in the background.
+        worker.execute { runCatching { Prefs.migrateSecrets(this) } }   // plain API key → encrypted
         worker.execute {
             runCatching { learner.load(learnedFile().readText()) }
             runCatching {
+                val t0 = SystemClock.elapsedRealtime()
                 val en = assets.open("dict_en.txt").bufferedReader().readLines()
                 val bn = assets.open("dict_bn.txt").bufferedReader().readLines()
-                suggester = Suggester(en.asSequence(), bn.asSequence()).also {
+                // extra, correctly spelled Bangla words (Avro dictionary, MPL 2.0) — lowest priority
+                val bnAvro = runCatching { assets.open("dict_bn_avro.txt").bufferedReader().readLines() }.getOrDefault(emptyList())
+                suggester = Suggester(en.asSequence(), bn.asSequence() + bnAvro.asSequence()).also {
                     it.setUserWords(Prefs.userWords(this))
                     it.learnedCounts = learner.snapshotCounts()
                 }
+                aliases = runCatching {
+                    RomanAliases(assets.open("aliases_bn.txt").bufferedReader().readLines().asSequence())
+                }.getOrNull()
+                // measured on THIS phone — shown in settings → সম্পর্কে
+                val ms = SystemClock.elapsedRealtime() - t0
+                Prefs.sp(this).edit()
+                    .putLong("bench_dict_ms", ms)
+                    .putInt("bench_words_bn", bn.count { '\t' in it } + bnAvro.count { '\t' in it })
+                    .putInt("bench_words_en", en.count { '\t' in it })
+                    .apply()
             }
             main.post { refreshSuggestions() }
             // every emoji (like iPhone) — read after the dictionaries, still in the background
@@ -247,7 +269,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.shift = ShiftState.OFF
         state.panel = Panel.KEYS
         state.emojiSearch = null
-        state.keepConfirm = Prefs.keepPendingIds(this).size
+        state.keepConfirm = KeepLedger.pendingCount(this)
+        refreshSensitiveLock()
+        // came back from the phone-lock screen: do what the user asked for
+        SensitiveGate.takePending()?.let { (id, action) ->
+            clips.find(id)?.let { item ->
+                if (action == SensitiveAction.VIEW) state.panel = Panel.CLIPBOARD
+                else main.post { runClipAction(item, action) }
+            }
+        }
         bumpAutoHide()
         noLearn = (info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
@@ -596,6 +626,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onPanel(panel: Panel) {
+        if (panel == Panel.CLIPBOARD) refreshSensitiveLock()
         if (state.emojiSearch != null) { onEmojiSearch(false); if (panel == Panel.EMOJI) return }
         if (panel != Panel.SUGGESTIONS) { commitWord(); endEnglishWord() }
         if (panel == Panel.CLIPBOARD) readClipboard(fresh = false)
@@ -719,8 +750,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
         worker.execute {
             val raw: List<String> = when {
-                bangla && romanNow.isNotEmpty() ->
-                    s?.bangla(AvroPhonetic.convert(romanNow), 18) ?: listOf(AvroPhonetic.convert(romanNow))
+                bangla && romanNow.isNotEmpty() -> {
+                    val base = s?.bangla(AvroPhonetic.convert(romanNow), 18) ?: listOf(AvroPhonetic.convert(romanNow))
+                    // chottogram → চট্টগ্রাম … as an extra suggestion; the Avro result stays first
+                    RomanAliases.merge(base, aliases?.lookup(romanNow) ?: emptyList())
+                }
                 !bangla && typed.isNotEmpty() ->
                     (s?.english(typed, 18) ?: emptyList()).map { matchCase(it, typed) }
                 else -> nextWordList(bangla, prev, s)
@@ -760,6 +794,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     companion object {
         /** Small list hidden when "আপত্তিকর শব্দ সাজেস্ট করো না" is on. */
+        private const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
+        private const val NO_SENSITIVE_TRANSLATE = "সংবেদনশীল লেখা অনুবাদের বক্সে দেওয়া যায় না (অনলাইনে যেতে পারে)"
+
         private val OFFENSIVE = setOf(
             "fuck", "fucking", "fucked", "shit", "bitch", "bastard", "asshole", "dick", "pussy", "cunt",
             "whore", "slut", "motherfucker", "damn", "crap", "fucker", "bullshit",
@@ -810,14 +847,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
         runCatching {
             val clip = clipboard().primaryClip ?: return
             if (clip.itemCount == 0) return
-            if (Build.VERSION.SDK_INT >= 33 &&
-                clip.description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
-            ) return   // passwords etc. are not kept
+            // The copying app marked it private (passwords, OTPs …): kept only if the user turned
+            // that on in settings — then stored encrypted, preview hidden, phone lock needed.
+            val sensitive = clip.description.extras?.getBoolean(EXTRA_IS_SENSITIVE) == true
+            if (sensitive && !state.prefs.saveSensitive) return
             // kept exactly as copied — spaces, tabs and line breaks included
             val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: return
             if (text.isBlank()) return
-            clips.add(text)
-            if (fresh) {
+            clips.add(text, sensitive)
+            if (fresh && !sensitive) {
                 state.freshClip = text
                 main.removeCallbacks(clearFreshClip)
                 main.postDelayed(clearFreshClip, 60_000)
@@ -833,6 +871,46 @@ class JuJuKeysInputMethodService : InputMethodService(),
         sinkCommit(text)
         updateCaps()
         refreshSuggestions()
+    }
+
+    override fun onClipTap(id: Long) = clipAction(id, SensitiveAction.PASTE)
+    override fun onClipAction(id: Long, action: SensitiveAction) = clipAction(id, action)
+
+    private fun clipAction(id: Long, action: SensitiveAction) {
+        val item = clips.find(id) ?: return
+        if (item.sensitive && !SensitiveGate.isUnlocked()) {
+            if (action == SensitiveAction.PASTE && state.translateOn) { toast(NO_SENSITIVE_TRANSLATE); return }
+            SensitiveGate.setPending(id, action)
+            AuthActivity.start(this)          // phone PIN / fingerprint, then back here
+            return
+        }
+        runClipAction(item, action)
+    }
+
+    private fun runClipAction(item: ClipItem, action: SensitiveAction) {
+        when (action) {
+            SensitiveAction.PASTE -> {
+                // never into the translate box: that text may be sent online
+                if (item.sensitive && state.translateOn) { toast(NO_SENSITIVE_TRANSLATE); return }
+                onClipPaste(item.text)
+            }
+            SensitiveAction.COPY -> {
+                ignoreNextClip = true
+                val data = ClipData.newPlainText("JuJuKeys", item.text)
+                if (item.sensitive) data.description.extras = PersistableBundle().apply { putBoolean(EXTRA_IS_SENSITIVE, true) }
+                clipboard().setPrimaryClip(data)
+                toast("কপি হয়েছে")
+            }
+            SensitiveAction.KEEP -> onClipToKeep(item.text)          // only when the user picks it
+            SensitiveAction.VIEW -> state.panel = Panel.CLIPBOARD
+        }
+    }
+
+    private val relockRunnable = Runnable { state.sensitiveUnlocked = SensitiveGate.isUnlocked() }
+    private fun refreshSensitiveLock() {
+        state.sensitiveUnlocked = SensitiveGate.isUnlocked()
+        main.removeCallbacks(relockRunnable)
+        if (state.sensitiveUnlocked) main.postDelayed(relockRunnable, SensitiveGate.UNLOCK_MS + 200)
     }
 
     override fun onClipPin(id: Long) = clips.togglePin(id)
@@ -864,43 +942,38 @@ class JuJuKeysInputMethodService : InputMethodService(),
      * Nothing counts as "sent" until the user answers "হ্যাঁ" to "Keep-এ সেভ হয়েছে?".
      */
     override fun onClipAllToKeep() {
-        val items = clips.items.toList()
-        if (items.isEmpty()) { toast("ক্লিপবোর্ড খালি"); return }
+        // sensitive items never go along automatically — only one by one, after the phone lock
+        val items = clips.items.filter { !it.sensitive }
+        if (items.isEmpty()) { toast("পাঠানোর মতো লেখা নেই (সংবেদনশীল লেখা আলাদা করে পাঠাতে হয়)"); return }
         if (!ClipHistory.isKeepInstalled(this)) {
             ClipHistory.openKeep(this)          // opens the Play Store page
             toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো। কিছুই পাঠানো হয়নি")
             return
         }
-        val sent = Prefs.keepSentIds(this)
         if (!Prefs.keepNoteCreated(this)) {
             if (ClipHistory.sendAllToKeep(this, items)) {
-                Prefs.setKeepPending(this, items.map { it.id }.toSet(), creating = true)
+                KeepLedger.handOff(this, items.map { it.id }.toSet(), creatingNote = true)
                 state.keepConfirm = items.size
                 toast("Keep-এ নতুন নোট খুলেছে — 'Save' চাপুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
             } else toast("Google Keep খোলা যায়নি — কিছুই পাঠানো হয়নি")
             return
         }
-        val fresh = items.filter { it.id !in sent }
+        val fresh = KeepLedger.unsent(this, items)
         if (fresh.isEmpty()) {
             toast("নতুন লেখা নেই — আপনি 'হ্যাঁ' বলা সব লেখা আগেই পাঠানো। আবার পাঠাতে: সেটিংস → ক্লিপবোর্ড")
             return
         }
         ignoreNextClip = true
         clipboard().setPrimaryClip(ClipData.newPlainText("JuJuKeys", fresh.joinToString("\n\n") { it.text }))
-        Prefs.setKeepPending(this, fresh.map { it.id }.toSet(), creating = false)
+        KeepLedger.handOff(this, fresh.map { it.id }.toSet(), creatingNote = false)
         state.keepConfirm = fresh.size
         ClipHistory.openKeep(this)
         toast("${fresh.size}টি নতুন লেখা কপি হয়েছে — Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোটে লম্বা চেপে Paste করুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
     }
 
     override fun onKeepConfirm(saved: Boolean) {
-        if (saved) {
-            if (Prefs.keepPendingCreate(this)) Prefs.setKeepNoteCreated(this, true)
-            Prefs.setKeepSentIds(this, Prefs.keepSentIds(this) + Prefs.keepPendingIds(this))
-        } else {
-            toast("ঠিক আছে — লেখাগুলো পাঠানো হয়নি ধরা হলো, পরে ✎ চাপলে আবার যাবে")
-        }
-        Prefs.clearKeepPending(this)
+        KeepLedger.confirm(this, saved)
+        if (!saved) toast("ঠিক আছে — লেখাগুলো পাঠানো হয়নি ধরা হলো, পরে ✎ চাপলে আবার যাবে")
         state.keepConfirm = 0
     }
 

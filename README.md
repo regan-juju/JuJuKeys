@@ -23,10 +23,7 @@ https://github.com/regan-juju/JuJuKeys/releases/latest
 - নিচের ⌃ চাপলে অনেক সাজেশন; ফোনেই শিখে পরের শব্দ আন্দাজ
 - ক্লিপবোর্ডের ✎ চাপলে সব লেখা Google Keep-এ এক নোটে
 
-শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0) — ব্যবহারের ঘনত্ব অনুযায়ী মূল তালিকা;
-অতিরিক্ত বাংলা শব্দ: [Avro Phonetic অভিধান (ibus-avro, OmicronLab)](https://github.com/sarim/ibus-avro) (Mozilla Public License 2.0) — `assets/dict_bn.txt`-এর যে শব্দগুলোর ঘনত্ব ১, সেগুলো এই অভিধান থেকে;
-হাতে বাছাই করা স্থান, ব্যাংকিং ও দৈনন্দিন শব্দ: JuJuKeys।
-ইমোজি তালিকা: [Google emoji-metadata](https://github.com/googlefonts/emoji-metadata) (Apache 2.0)। বাংলা ফন্ট: Noto Sans Bengali (SIL OFL)।
+উৎস ও লাইসেন্স: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — FrequencyWords (CC BY-SA 4.0), Avro অভিধান (MPL 2.0, আলাদা ফাইল `dict_bn_avro.txt`), Google emoji-metadata (Apache 2.0), Noto Sans Bengali (SIL OFL)।
 
 ## কোডের গঠন
 - `bengali/AvroPhonetic.kt` — অভ্র ইঞ্জিন (Android ছাড়া বিশুদ্ধ Kotlin; `app/src/test`-এ টেস্ট)

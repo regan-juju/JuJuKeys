@@ -41,6 +41,9 @@ class KeyboardState {
      *  the clipboard / translate buttons. Back to false when the field is empty or sent. */
     var typing by mutableStateOf(false)
 
+    /** Sensitive clipboard items are readable right now (phone lock confirmed a moment ago). */
+    var sensitiveUnlocked by mutableStateOf(false)
+
     /** Number of clipboard items handed to Keep and waiting for "সেভ হয়েছে?" (0 = none). */
     var keepConfirm by mutableStateOf(0)
 
@@ -111,6 +114,10 @@ interface KeyboardActions {
     fun onClipPin(id: Long)
     fun onClipDelete(id: Long)
     fun onClipToKeep(text: String)
+    /** Tap on a clipboard tile = paste it (sensitive ones ask for the phone lock first). */
+    fun onClipTap(id: Long)
+    /** Copy / Keep / view a clipboard item (sensitive ones ask for the phone lock first). */
+    fun onClipAction(id: Long, action: com.reganbarua.jujukeys.security.SensitiveAction)
     fun onClipAllToKeep()
     /** The user's answer to "Keep-এ সেভ হয়েছে?". */
     fun onKeepConfirm(saved: Boolean)

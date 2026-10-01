@@ -440,7 +440,23 @@ private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
 private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     ToggleItem("ক্লিপবোর্ড", "কপি করা লেখা কীবোর্ডে জমা রাখো", "clipboard", p.clipboardOn, refresh)
-    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে, লেখা হুবহু (স্পেস ও লাইনসহ) থাকে। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না। ক্লিপবোর্ডের ইতিহাস ফোনের ব্যাকআপে যায় না।")
+    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে, লেখা হুবহু (স্পেস ও লাইনসহ) থাকে। কোনো লেখা লম্বা চাপলে পিন / কপি / Keep / মুছুন। ইতিহাস এনক্রিপ্ট করে শুধু এই ফোনে রাখা হয় (Android Keystore), ফোনের ব্যাকআপে যায় না।")
+    Header("সংবেদনশীল লেখা (পাসওয়ার্ড, OTP …)")
+    ToggleItem(
+        "সংবেদনশীল লেখাও রাখো",
+        "যে অ্যাপ থেকে কপি করছেন সেটি লেখাকে 'গোপন' চিহ্নিত করলে (পাসওয়ার্ড ম্যানেজার, ব্যাংক অ্যাপ) — চালু থাকলে সেটাও ইতিহাসে থাকবে",
+        "save_sensitive", p.saveSensitive, refresh
+    )
+    Note("• এনক্রিপ্ট করে রাখা হয়; ইতিহাসে লেখা ঢাকা থাকে (🔒 ••••)।\n" +
+        "• দেখা, বসানো, কপি বা Keep-এ পাঠানোর আগে ফোনের লক (PIN/প্যাটার্ন/আঙুলের ছাপ) চাইবে; একবার দিলে ১ মিনিট খোলা থাকে।\n" +
+        "• নিজে থেকে কখনো Keep, অনুবাদ বা অন্য কোথাও যায় না; শব্দ শেখায়ও ব্যবহার হয় না।\n" +
+        "• পাসওয়ার্ডের ঘরে আপনি যা টাইপ করেন তা কখনো জমা হয় না — শুধু আপনি নিজে কপি করলে এই নিয়মে রাখা হয়।\n" +
+        "• ফোনে স্ক্রিন লক না থাকলে এগুলো খোলা যাবে না।\n" +
+        "• সতর্কতা: কেউ আপনার ফোনের PIN জানলে এগুলো দেখতে পারবে।")
+    ActionButton("সব সংবেদনশীল লেখা মুছুন", primary = false) {
+        ClipHistory(context).clearSensitive()
+        Prefs.sp(context).edit().putLong("clip_changed", System.currentTimeMillis()).apply()
+    }
     ActionButton("Google Keep খুলুন") { ClipHistory.openKeep(context) }
     Header("Google Keep-এ পাঠানো (নিজে থেকে সিঙ্ক হয় না)")
     Note("Keep অন্য অ্যাপকে কোনো নোটে নিজে থেকে লেখা যোগ করতে দেয় না, আর সেভ হলো কিনা জানায়ও না। তাই এভাবে কাজ করে:\n" +
@@ -492,9 +508,11 @@ private fun TranslatePage() {
         visualTransformation = PasswordVisualTransformation(),     // key is never shown on screen
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
     )
-    ActionButton("Key সেভ করুন", primary = false) { Prefs.setCloudApiKey(context, key); message = "সেভ হয়েছে" }
+    ActionButton("Key সেভ করুন", primary = false) {
+        message = if (Prefs.setCloudApiKey(context, key)) "সেভ হয়েছে (এনক্রিপ্ট করে)" else "সেভ হয়নি — ফোনের নিরাপদ চাবিঘর (Keystore) কাজ করছে না"
+    }
     ActionButton("Key মুছুন", primary = false) { key = ""; Prefs.setCloudApiKey(context, ""); message = "Key মুছে ফেলা হয়েছে — এখন শুধু অফলাইন অনুবাদ" }
-    Note("Key শুধু এই ফোনে থাকে, ফোনের ব্যাকআপে যায় না।")
+    Note("Key এনক্রিপ্ট করে শুধু এই ফোনে রাখা হয় (Android Keystore), ফোনের ব্যাকআপে যায় না।")
 }
 
 @Composable
@@ -538,7 +556,7 @@ private fun EmojiPage(p: KeyboardPrefs, refresh: () -> Unit) {
 @Composable
 private fun PrivacyPage() {
     Note("• আপনি যা টাইপ করেন তা কোথাও জমা রাখা, লগ করা বা পাঠানো হয় না।")
-    Note("• ক্লিপবোর্ডের ইতিহাস শুধু এই ফোনেই থাকে; পাসওয়ার্ড ধরনের লেখা রাখা হয় না। ক্লিপবোর্ড, API key আর শেখা শব্দ ফোনের ব্যাকআপে যায় না।")
+    Note("• ক্লিপবোর্ডের ইতিহাস ও API key এনক্রিপ্ট করে শুধু এই ফোনে থাকে। অ্যাপ যে লেখাকে গোপন চিহ্নিত করে, তা শুধু আপনি সেটিংসে চালু করলে রাখা হয় (ঢাকা অবস্থায়, ফোনের লক দিয়ে খোলে)। ক্লিপবোর্ড, API key আর শেখা শব্দ ফোনের ব্যাকআপে যায় না।")
     Note("• কোনো অ্যাপ যে ঘরকে গোপন (Incognito) বলে চিহ্নিত করে, সেখানে লেখা শব্দ শেখা হয় না।")
     Note("• অনুবাদ অফলাইনে ফোনেই হয়। শুধু আপনি নিজে API key দিলে, অনুবাদের বক্সের লেখাটুকু Google-এ যায়।")
     Note("• \"আমার লেখা থেকে শেখো\" চালু থাকলে কোন শব্দের পর কোন শব্দ লেখেন তা শুধু এই ফোনে জমা থাকে (লেখা সংশোধন → শেখা শব্দ মুছুন)।")
@@ -554,10 +572,20 @@ private fun AboutPage() {
     }
     Item("JuJuKeys", "সংস্করণ $version")
     Item("তৈরি করেছেন", "রিগ্যান বড়ুয়া")
-    Item("শব্দতালিকা", "FrequencyWords (CC BY-SA 4.0) · Avro অভিধান — ibus-avro / OmicronLab (MPL 2.0)")
-    Item("ইমোজি তালিকা", "Google emoji-metadata (Apache 2.0)")
-    Item("বাংলা ফন্ট", "Noto Sans Bengali (SIL OFL)")
+    val sp = Prefs.sp(context)
+    val ms = sp.getLong("bench_dict_ms", -1)
+    Item(
+        "এই ফোনে অভিধান",
+        if (ms < 0) "কীবোর্ড একবার খুললে এখানে মাপা সময় দেখাবে"
+        else "লোড হতে ${ms} মি.সে. · বাংলা ${sp.getInt("bench_words_bn", 0)}টি · ইংরেজি ${sp.getInt("bench_words_en", 0)}টি শব্দ"
+    )
+    Header("উৎস ও লাইসেন্স")
+    Item("শব্দের ঘনত্বের তালিকা", "FrequencyWords — github.com/hermitdave/FrequencyWords (rev 525f9b5, content/2018) · CC BY-SA 4.0")
+    Item("অতিরিক্ত বাংলা শব্দ", "Avro Phonetic অভিধান — github.com/sarim/ibus-avro (rev dd521a1) · Mozilla Public License 2.0 · assets/dict_bn_avro.txt")
+    Item("ইমোজি তালিকা", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
+    Item("বাংলা ফন্ট", "Noto Sans Bengali · SIL Open Font License 1.1")
     Item("অনুবাদ", "Google ML Kit")
+    Note("বিস্তারিত: github.com/regan-juju/JuJuKeys → THIRD_PARTY_NOTICES.md")
 }
 
 @Composable

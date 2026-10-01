@@ -2,6 +2,7 @@ package com.reganbarua.jujukeys.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.reganbarua.jujukeys.security.CryptoBox
 
 /** All keyboard settings (Gboard-style), read by the keyboard every time it opens. */
 data class KeyboardPrefs(
@@ -33,6 +34,7 @@ data class KeyboardPrefs(
     val learnWords: Boolean = true,         // শিখে নেওয়া সাজেশন (ফোনেই থাকে)
     // ক্লিপবোর্ড
     val clipboardOn: Boolean = true,
+    val saveSensitive: Boolean = false,     // keep text the copying app marked private (locked)
     // ইমোজি
     val recentEmoji: Boolean = true,
     // থিম
@@ -73,6 +75,7 @@ object Prefs {
             doubleSpacePeriod = p.getBoolean("double_space", d.doubleSpacePeriod),
             learnWords = p.getBoolean("learn_words", d.learnWords),
             clipboardOn = p.getBoolean("clipboard", d.clipboardOn),
+            saveSensitive = p.getBoolean("save_sensitive", d.saveSensitive),
             recentEmoji = p.getBoolean("recent_emoji", d.recentEmoji),
             theme = p.getString("theme", d.theme) ?: d.theme,
             autoHide = p.getBoolean("auto_hide", d.autoHide),
@@ -86,27 +89,51 @@ object Prefs {
     fun setFloat(context: Context, key: String, value: Float) = sp(context).edit().putFloat(key, value).apply()
 
     /**
-     * Private things (the API key) live in their own file, "jujukeys_secret", which is left
-     * out of Google backup and phone-to-phone transfer (see res/xml backup rules).
+     * The API key lives ENCRYPTED (Android Keystore, see [CryptoBox]) in its own file,
+     * "jujukeys_secret", which is also left out of Google backup / phone transfer.
      */
     private fun secret(context: Context): SharedPreferences =
         context.getSharedPreferences("jujukeys_secret", Context.MODE_PRIVATE)
 
+    /**
+     * Moves an old plain-text key (v1.0.15 and earlier kept it in the settings file) into the
+     * encrypted form. Plain copies are removed only after the encrypted copy is written and
+     * reads back correctly; if anything fails, the old copy stays and this runs again later.
+     */
+    fun migrateSecrets(context: Context) {
+        val s = secret(context)
+        val plain = sp(context).getString("cloud_key", null) ?: s.getString("cloud_key", null) ?: return
+        if (s.getString("cloud_key_enc", null) == null) {
+            val e = CryptoBox.encryptVerified(plain) ?: return
+            if (!s.edit().putString("cloud_key_enc", e).commit()) return
+        }
+        if (CryptoBox.decrypt(s.getString("cloud_key_enc", "") ?: "") != null) {
+            sp(context).edit().remove("cloud_key").commit()
+            s.edit().remove("cloud_key").commit()
+        }
+    }
+
     /** Optional Google Cloud Translation API key for online translation. Empty = offline only. */
     fun cloudApiKey(context: Context): String {
+        migrateSecrets(context)
         val s = secret(context)
-        val old = sp(context).getString("cloud_key", null)
-        if (old != null) {
-            // move it out of the settings file (which is backed up); delete the old copy only
-            // after the new one is safely written
-            if (s.getString("cloud_key", null) == null) s.edit().putString("cloud_key", old).commit()
-            if (s.getString("cloud_key", null) == old) sp(context).edit().remove("cloud_key").commit()
-        }
-        return s.getString("cloud_key", "") ?: ""
+        s.getString("cloud_key_enc", null)?.let { return CryptoBox.decrypt(it) ?: "" }
+        return s.getString("cloud_key", null) ?: sp(context).getString("cloud_key", "") ?: ""
     }
-    fun setCloudApiKey(context: Context, key: String) {
-        secret(context).edit().putString("cloud_key", key.trim()).apply()
-        sp(context).edit().remove("cloud_key").apply()
+
+    /** Saves (encrypted) or, with an empty key, deletes. False = could not encrypt, nothing saved. */
+    fun setCloudApiKey(context: Context, key: String): Boolean {
+        val k = key.trim()
+        val s = secret(context)
+        if (k.isEmpty()) {
+            s.edit().remove("cloud_key_enc").remove("cloud_key").commit()
+            sp(context).edit().remove("cloud_key").commit()
+            return true
+        }
+        val e = CryptoBox.encryptVerified(k) ?: return false
+        s.edit().putString("cloud_key_enc", e).remove("cloud_key").commit()
+        sp(context).edit().remove("cloud_key").commit()
+        return true
     }
 
     /** Language used the last time (so the keyboard opens in it again). */
