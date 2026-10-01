@@ -74,18 +74,29 @@ fi
 # 7) Google backup (local test transport): what goes in, what stays out
 sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; sh am force-stop $PKG
 sh bmgr enable true >/dev/null
-TR=$(sh bmgr list transports | grep -o 'com.android.localtransport/[^ ]*' | head -1)
+sh bmgr list transports > transports.txt
+TR=$(grep -o '[^ *]*LocalTransport' transports.txt | head -1)
 if [ -n "$TR" ]; then
-  sh bmgr transport "$TR" >/dev/null
+  sh bmgr transport "$TR" > tr.txt
   sh bmgr backupnow $PKG > bmgr.txt 2>&1
-  F=$(sh "find /data/cache/backup -path '*_full*' -name $PKG 2>/dev/null | head -1")
+  sleep 5
+  sh "find /data -name '$PKG' -path '*backup*' 2>/dev/null; find /data -path '*_full*' 2>/dev/null | head -20" > found.txt
+  F=$(grep -m1 '_full.*'"$PKG"'$' found.txt)
   if [ -n "$F" ]; then
-    adb exec-out cat "$F" > fb.tar
-    L=$(tar -tf fb.tar 2>/dev/null || true)
-    echo "$L" | grep -q "jujukeys_settings.xml" && ok "backup includes settings" || info "settings not in backup listing"
-    if echo "$L" | grep -qE "jujukeys_clipboard.xml|jujukeys_secret.xml|learned_words.txt"; then bad "backup contains private files: $(echo "$L" | grep -E 'clipboard|secret|learned')"
-    else ok "backup leaves out clipboard, API key and learned words"; fi
-  else info "backup file not found (transport output: $(head -c 300 bmgr.txt))"; fi
-else info "no local backup transport on this image — backup not tested here"; fi
+    adb exec-out cat "$F" > fb.bin
+    # the local transport stores a tar stream; list the file names inside
+    L=$(tar -tf fb.bin 2>/dev/null || strings fb.bin | grep -E '^apps/|shared_prefs|learned' )
+    echo "$L" | grep -q "jujukeys_settings.xml" && ok "backup includes settings" || info "settings not seen in backup listing"
+    if echo "$L" | grep -qE "jujukeys_clipboard.xml|jujukeys_secret.xml|learned_words.txt"; then bad "backup contains private files: $(echo "$L" | grep -E 'clipboard|secret|learned' | tr '\n' ' ')"
+    else ok "backup leaves out clipboard, API key and learned words (files in backup: $(echo "$L" | grep -c .))"; fi
+  else info "backup file not found — transport=$TR; bmgr: $(tr '\n' ' ' < bmgr.txt | head -c 250); found: $(tr '\n' ' ' < found.txt | head -c 250)"; fi
+else info "no local backup transport — $(tr '\n' ' ' < transports.txt | head -c 200)"; fi
+
+# 8) speed on this EMULATOR (not a phone): turn the keyboard on so it loads the dictionaries
+sh ime enable $PKG/.JuJuKeysInputMethodService >/dev/null; sh ime set $PKG/.JuJuKeysInputMethodService >/dev/null
+sleep 25
+B=$(sh cat /data/data/$PKG/shared_prefs/jujukeys_settings.xml | grep -E 'bench_' | tr -s ' ' | tr '\n' ' ')
+M=$(sh dumpsys meminfo $PKG | grep -E 'TOTAL PSS|TOTAL:' | head -1 | tr -s ' ')
+info "EMULATOR benchmark (x86_64, not a real phone): $B | memory: $M"
 
 exit $FAILED
