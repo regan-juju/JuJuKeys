@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reganbarua.jujukeys.clipboard.ClipHistory
@@ -439,11 +440,20 @@ private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
 private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     ToggleItem("ক্লিপবোর্ড", "কপি করা লেখা কীবোর্ডে জমা রাখো", "clipboard", p.clipboardOn, refresh)
-    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না।")
+    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে, লেখা হুবহু (স্পেস ও লাইনসহ) থাকে। কোনো লেখা লম্বা চাপলে পিন / Keep / মুছুন। পাসওয়ার্ড ধরনের লেখা জমা হয় না। ক্লিপবোর্ডের ইতিহাস ফোনের ব্যাকআপে যায় না।")
     ActionButton("Google Keep খুলুন") { ClipHistory.openKeep(context) }
-    Note("Keep-এ শুধু একটি নোট ব্যবহার হয়: \"JuJuKeys ক্লিপবোর্ড\"। প্রথমবার ✎ চাপলে নোটটি তৈরি হয়। পরে ✎ চাপলে শুধু নতুন লেখাগুলো কপি হয়ে Keep খোলে — ওই নোটে লম্বা চেপে Paste করুন।")
+    Header("Google Keep-এ পাঠানো (নিজে থেকে সিঙ্ক হয় না)")
+    Note("Keep অন্য অ্যাপকে কোনো নোটে নিজে থেকে লেখা যোগ করতে দেয় না, আর সেভ হলো কিনা জানায়ও না। তাই এভাবে কাজ করে:\n" +
+        "১. প্রথমবার ✎ চাপলে Keep-এ \"JuJuKeys ক্লিপবোর্ড\" নোট সব লেখাসহ খোলে — Keep-এ 'Save' চাপুন।\n" +
+        "২. পরে ✎ চাপলে শুধু নতুন লেখাগুলো কপি হয় ও Keep খোলে — ওই নোট খুলে লম্বা চেপে 'Paste' করুন।\n" +
+        "৩. কীবোর্ডে ফিরে \"Keep-এ সেভ হয়েছে?\" প্রশ্নে 'হ্যাঁ' চাপুন। 'না' চাপলে লেখাগুলো পরে আবার পাঠানো যাবে।")
+    var sentCount by remember { mutableStateOf(Prefs.keepSentIds(context).size) }
+    Item("পাঠানো হয়েছে বলে চিহ্নিত", if (sentCount == 0) "কিছু নেই" else "${sentCount}টি লেখা")
+    ActionButton("সব লেখা আবার পাঠানোর জন্য চিহ্ন মুছুন", primary = false) {
+        Prefs.setKeepSentIds(context, emptySet()); Prefs.clearKeepPending(context); sentCount = 0
+    }
     ActionButton("Keep-এর নোট নতুন করে শুরু করুন", primary = false) {
-        Prefs.setKeepNoteCreated(context, false); Prefs.setKeepSentIds(context, emptySet())
+        Prefs.setKeepNoteCreated(context, false); Prefs.setKeepSentIds(context, emptySet()); Prefs.clearKeepPending(context); sentCount = 0
     }
     ActionButton("ইতিহাস মুছুন (পিন করা ছাড়া)", primary = false) {
         ClipHistory(context).clearUnpinned()
@@ -479,9 +489,12 @@ private fun TranslatePage() {
     OutlinedTextField(
         value = key, onValueChange = { key = it }, singleLine = true,
         placeholder = { Text("API key") },
+        visualTransformation = PasswordVisualTransformation(),     // key is never shown on screen
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
     )
     ActionButton("Key সেভ করুন", primary = false) { Prefs.setCloudApiKey(context, key); message = "সেভ হয়েছে" }
+    ActionButton("Key মুছুন", primary = false) { key = ""; Prefs.setCloudApiKey(context, ""); message = "Key মুছে ফেলা হয়েছে — এখন শুধু অফলাইন অনুবাদ" }
+    Note("Key শুধু এই ফোনে থাকে, ফোনের ব্যাকআপে যায় না।")
 }
 
 @Composable
@@ -525,7 +538,8 @@ private fun EmojiPage(p: KeyboardPrefs, refresh: () -> Unit) {
 @Composable
 private fun PrivacyPage() {
     Note("• আপনি যা টাইপ করেন তা কোথাও জমা রাখা, লগ করা বা পাঠানো হয় না।")
-    Note("• ক্লিপবোর্ডের ইতিহাস শুধু এই ফোনেই থাকে; পাসওয়ার্ড ধরনের লেখা রাখা হয় না।")
+    Note("• ক্লিপবোর্ডের ইতিহাস শুধু এই ফোনেই থাকে; পাসওয়ার্ড ধরনের লেখা রাখা হয় না। ক্লিপবোর্ড, API key আর শেখা শব্দ ফোনের ব্যাকআপে যায় না।")
+    Note("• কোনো অ্যাপ যে ঘরকে গোপন (Incognito) বলে চিহ্নিত করে, সেখানে লেখা শব্দ শেখা হয় না।")
     Note("• অনুবাদ অফলাইনে ফোনেই হয়। শুধু আপনি নিজে API key দিলে, অনুবাদের বক্সের লেখাটুকু Google-এ যায়।")
     Note("• \"আমার লেখা থেকে শেখো\" চালু থাকলে কোন শব্দের পর কোন শব্দ লেখেন তা শুধু এই ফোনে জমা থাকে (লেখা সংশোধন → শেখা শব্দ মুছুন)।")
     Note("• ইন্টারনেট লাগে শুধু অনুবাদের মডেল নামাতে (একবার)।")
@@ -540,7 +554,8 @@ private fun AboutPage() {
     }
     Item("JuJuKeys", "সংস্করণ $version")
     Item("তৈরি করেছেন", "রিগ্যান বড়ুয়া")
-    Item("শব্দতালিকা", "FrequencyWords (CC BY-SA 4.0)")
+    Item("শব্দতালিকা", "FrequencyWords (CC BY-SA 4.0) · Avro অভিধান — ibus-avro / OmicronLab (MPL 2.0)")
+    Item("ইমোজি তালিকা", "Google emoji-metadata (Apache 2.0)")
     Item("বাংলা ফন্ট", "Noto Sans Bengali (SIL OFL)")
     Item("অনুবাদ", "Google ML Kit")
 }

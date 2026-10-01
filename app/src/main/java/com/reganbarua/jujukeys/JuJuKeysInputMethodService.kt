@@ -105,6 +105,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var lastEditTime = 0L
     private var passwordField = false
     private var fieldWantsCaps = false
+    /** The app asked for no learning here (incognito / private fields). */
+    private var noLearn = false
     private var suggestionSeq = 0
     private var ignoreNextClip = false
 
@@ -245,7 +247,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.shift = ShiftState.OFF
         state.panel = Panel.KEYS
         state.emojiSearch = null
+        state.keepConfirm = Prefs.keepPendingIds(this).size
         bumpAutoHide()
+        noLearn = (info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val variation = info.inputType and InputType.TYPE_MASK_VARIATION
         passwordField = (cls == InputType.TYPE_CLASS_TEXT &&
@@ -394,7 +398,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onText(text: String) {
-        if (state.prefs.recentEmoji) {
+        if (state.prefs.recentEmoji && !noLearn) {
             Prefs.addRecentEmoji(this, text)
             state.recentEmoji = Prefs.recentEmoji(this)
         }
@@ -658,7 +662,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private fun learn(word: String) {
         val w = word.trim()
         if (w.isEmpty() || passwordField) return
-        if (state.prefs.learnWords) {
+        if (state.prefs.learnWords && !noLearn) {
             learner.learn(lastWord, w)
             if (++learnedSinceSave >= 15) saveLearned()
         }
@@ -809,8 +813,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
             if (Build.VERSION.SDK_INT >= 33 &&
                 clip.description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
             ) return   // passwords etc. are not kept
-            val text = clip.getItemAt(0).coerceToText(this)?.toString()?.trim() ?: return
-            if (text.isEmpty()) return
+            // kept exactly as copied — spaces, tabs and line breaks included
+            val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: return
+            if (text.isBlank()) return
             clips.add(text)
             if (fresh) {
                 state.freshClip = text
@@ -851,26 +856,52 @@ class JuJuKeysInputMethodService : InputMethodService(),
      * After that: only the NEW items are copied and Keep opens, so they can be pasted into
      * the same note (Google does not let other apps edit a Keep note directly).
      */
+    /**
+     * ✎ = hand the clipboard to ONE Keep note ("JuJuKeys ক্লিপবোর্ড"). This is NOT an automatic
+     * sync: Keep does not let other apps add to a note, nor tell them whether it was saved.
+     * First time: Keep's "new note" screen opens with everything in it.
+     * After that: only the NEW items are copied and Keep opens, to paste into that note.
+     * Nothing counts as "sent" until the user answers "হ্যাঁ" to "Keep-এ সেভ হয়েছে?".
+     */
     override fun onClipAllToKeep() {
         val items = clips.items.toList()
         if (items.isEmpty()) { toast("ক্লিপবোর্ড খালি"); return }
+        if (!ClipHistory.isKeepInstalled(this)) {
+            ClipHistory.openKeep(this)          // opens the Play Store page
+            toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো। কিছুই পাঠানো হয়নি")
+            return
+        }
         val sent = Prefs.keepSentIds(this)
         if (!Prefs.keepNoteCreated(this)) {
             if (ClipHistory.sendAllToKeep(this, items)) {
-                Prefs.setKeepNoteCreated(this, true)
-                Prefs.setKeepSentIds(this, items.map { it.id }.toSet())
-                toast("Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোট তৈরি হচ্ছে — 'Save' চাপুন। এরপর সব এই নোটেই যাবে")
-            } else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+                Prefs.setKeepPending(this, items.map { it.id }.toSet(), creating = true)
+                state.keepConfirm = items.size
+                toast("Keep-এ নতুন নোট খুলেছে — 'Save' চাপুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
+            } else toast("Google Keep খোলা যায়নি — কিছুই পাঠানো হয়নি")
             return
         }
         val fresh = items.filter { it.id !in sent }
-        if (fresh.isEmpty()) { toast("নতুন কিছু নেই — সব আগেই Keep-এর নোটে আছে"); return }
+        if (fresh.isEmpty()) {
+            toast("নতুন লেখা নেই — আপনি 'হ্যাঁ' বলা সব লেখা আগেই পাঠানো। আবার পাঠাতে: সেটিংস → ক্লিপবোর্ড")
+            return
+        }
         ignoreNextClip = true
         clipboard().setPrimaryClip(ClipData.newPlainText("JuJuKeys", fresh.joinToString("\n\n") { it.text }))
-        Prefs.setKeepSentIds(this, sent + fresh.map { it.id })
-        if (ClipHistory.openKeep(this)) {
-            toast("'JuJuKeys ক্লিপবোর্ড' নোট খুলে লম্বা চেপে 'Paste' করুন — ${fresh.size}টি নতুন লেখা")
-        } else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+        Prefs.setKeepPending(this, fresh.map { it.id }.toSet(), creating = false)
+        state.keepConfirm = fresh.size
+        ClipHistory.openKeep(this)
+        toast("${fresh.size}টি নতুন লেখা কপি হয়েছে — Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোটে লম্বা চেপে Paste করুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
+    }
+
+    override fun onKeepConfirm(saved: Boolean) {
+        if (saved) {
+            if (Prefs.keepPendingCreate(this)) Prefs.setKeepNoteCreated(this, true)
+            Prefs.setKeepSentIds(this, Prefs.keepSentIds(this) + Prefs.keepPendingIds(this))
+        } else {
+            toast("ঠিক আছে — লেখাগুলো পাঠানো হয়নি ধরা হলো, পরে ✎ চাপলে আবার যাবে")
+        }
+        Prefs.clearKeepPending(this)
+        state.keepConfirm = 0
     }
 
     override fun onOpenKeep() {

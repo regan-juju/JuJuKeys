@@ -21,16 +21,20 @@ class ClipHistory(private val context: Context) {
 
     init { load() }
 
+    /**
+     * Keeps the copied text EXACTLY as it was (leading/trailing spaces, tabs and line breaks
+     * included). A trimmed copy is used only to skip empty text and to spot duplicates.
+     */
     fun add(text: String) {
-        val t = text.trim()
-        if (t.isEmpty()) return
-        val existing = items.firstOrNull { it.text == t }
+        if (text.isBlank()) return
+        val norm = text.trim()
+        val existing = items.firstOrNull { it.text.trim() == norm }
         if (existing != null) {
-            if (items.indexOf(existing) == 0) return
+            if (items.indexOf(existing) == 0 && existing.text == text) return
             items.remove(existing)
-            items.add(0, existing)
+            items.add(0, existing.copy(text = text))     // newest copy wins, same id
         } else {
-            items.add(0, ClipItem(System.currentTimeMillis(), t, false))
+            items.add(0, ClipItem(System.currentTimeMillis(), text, false))
         }
         trim()
         save()
@@ -123,6 +127,9 @@ class ClipHistory(private val context: Context) {
                 openKeepInStore(context); false
             }
         }
+
+        fun isKeepInstalled(context: Context): Boolean =
+            context.packageManager.getLaunchIntentForPackage(KEEP_PACKAGE) != null
 
         /** Opens the Google Keep app. */
         fun openKeep(context: Context): Boolean {

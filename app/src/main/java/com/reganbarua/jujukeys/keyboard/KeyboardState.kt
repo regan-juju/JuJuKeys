@@ -41,6 +41,9 @@ class KeyboardState {
      *  the clipboard / translate buttons. Back to false when the field is empty or sent. */
     var typing by mutableStateOf(false)
 
+    /** Number of clipboard items handed to Keep and waiting for "সেভ হয়েছে?" (0 = none). */
+    var keepConfirm by mutableStateOf(0)
+
     /** Just-copied text, shown as a chip in the suggestion bar (like Gboard). */
     var freshClip by mutableStateOf<String?>(null)
 
@@ -109,6 +112,8 @@ interface KeyboardActions {
     fun onClipDelete(id: Long)
     fun onClipToKeep(text: String)
     fun onClipAllToKeep()
+    /** The user's answer to "Keep-এ সেভ হয়েছে?". */
+    fun onKeepConfirm(saved: Boolean)
     fun onClipEnabled(on: Boolean)
     fun onOpenKeep()
     fun onClipClear()

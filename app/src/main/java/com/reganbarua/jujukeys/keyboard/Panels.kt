@@ -112,7 +112,22 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
         Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
             if (!toolsOpen) {
                 val clip = state.freshClip
-                if (clip != null && !forceSuggestions) {
+                if (state.keepConfirm > 0 && !forceSuggestions) {
+                    // Keep cannot tell us whether the note was saved — so we ask.
+                    Row(
+                        Modifier.fillMaxSize().padding(start = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Keep-এ সেভ হয়েছে?", color = IosColors.text, fontSize = 14.sp,
+                            fontFamily = BanglaFont, maxLines = 1, modifier = Modifier.weight(1f)
+                        )
+                        ConfirmChip("হ্যাঁ", IosColors.keepYellow, Color.Black) { actions.onKeepConfirm(true) }
+                        Spacer(Modifier.width(6.dp))
+                        ConfirmChip("না", IosColors.key, IosColors.text) { actions.onKeepConfirm(false) }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                } else if (clip != null && !forceSuggestions) {
                     // Just copied → one tap pastes it (like Gboard)
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(34.dp)
@@ -168,6 +183,16 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
         }
         BackKey(actions)
     }
+}
+
+@Composable
+private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
+    PressBox(
+        Modifier.size(width = 52.dp, height = 32.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = bg, pressedColor = IosColors.keyPressed,
+        onTap = onTap
+    ) { Text(text, color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = BanglaFont) }
 }
 
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */

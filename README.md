@@ -20,10 +20,13 @@ https://github.com/regan-juju/JuJuKeys/releases/latest
 - ইমোজি, ভয়েস টাইপিং (Google ভয়েস), স্পেসে আঙুল টেনে কার্সর সরানো, দুবার স্পেসে দাঁড়ি
 
 - ?123 → নম্বর প্যাড, !?# → চিহ্ন, ১২ ৩৪ → আবার নম্বর প্যাড
-- ⌃⌄ চাপলে অনেক সাজেশন; ফোনেই শিখে পরের শব্দ আন্দাজ
+- নিচের ⌃ চাপলে অনেক সাজেশন; ফোনেই শিখে পরের শব্দ আন্দাজ
 - ক্লিপবোর্ডের ✎ চাপলে সব লেখা Google Keep-এ এক নোটে
 
-শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0)। বাংলা ফন্ট: Noto Sans Bengali (SIL OFL)।
+শব্দতালিকা: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0) — ব্যবহারের ঘনত্ব অনুযায়ী মূল তালিকা;
+অতিরিক্ত বাংলা শব্দ: [Avro Phonetic অভিধান (ibus-avro, OmicronLab)](https://github.com/sarim/ibus-avro) (Mozilla Public License 2.0) — `assets/dict_bn.txt`-এর যে শব্দগুলোর ঘনত্ব ১, সেগুলো এই অভিধান থেকে;
+হাতে বাছাই করা স্থান, ব্যাংকিং ও দৈনন্দিন শব্দ: JuJuKeys।
+ইমোজি তালিকা: [Google emoji-metadata](https://github.com/googlefonts/emoji-metadata) (Apache 2.0)। বাংলা ফন্ট: Noto Sans Bengali (SIL OFL)।
 
 ## কোডের গঠন
 - `bengali/AvroPhonetic.kt` — অভ্র ইঞ্জিন (Android ছাড়া বিশুদ্ধ Kotlin; `app/src/test`-এ টেস্ট)

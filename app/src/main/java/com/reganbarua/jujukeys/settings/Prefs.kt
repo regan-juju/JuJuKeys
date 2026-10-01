@@ -85,10 +85,28 @@ object Prefs {
     fun setString(context: Context, key: String, value: String) = sp(context).edit().putString(key, value).apply()
     fun setFloat(context: Context, key: String, value: Float) = sp(context).edit().putFloat(key, value).apply()
 
+    /**
+     * Private things (the API key) live in their own file, "jujukeys_secret", which is left
+     * out of Google backup and phone-to-phone transfer (see res/xml backup rules).
+     */
+    private fun secret(context: Context): SharedPreferences =
+        context.getSharedPreferences("jujukeys_secret", Context.MODE_PRIVATE)
+
     /** Optional Google Cloud Translation API key for online translation. Empty = offline only. */
-    fun cloudApiKey(context: Context): String = sp(context).getString("cloud_key", "") ?: ""
+    fun cloudApiKey(context: Context): String {
+        val s = secret(context)
+        val old = sp(context).getString("cloud_key", null)
+        if (old != null) {
+            // move it out of the settings file (which is backed up); delete the old copy only
+            // after the new one is safely written
+            if (s.getString("cloud_key", null) == null) s.edit().putString("cloud_key", old).commit()
+            if (s.getString("cloud_key", null) == old) sp(context).edit().remove("cloud_key").commit()
+        }
+        return s.getString("cloud_key", "") ?: ""
+    }
     fun setCloudApiKey(context: Context, key: String) {
-        sp(context).edit().putString("cloud_key", key.trim()).apply()
+        secret(context).edit().putString("cloud_key", key.trim()).apply()
+        sp(context).edit().remove("cloud_key").apply()
     }
 
     /** Language used the last time (so the keyboard opens in it again). */
@@ -112,6 +130,18 @@ object Prefs {
         (sp(context).getString("keep_sent", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }.toSet()
     fun setKeepSentIds(context: Context, ids: Set<Long>) =
         sp(context).edit().putString("keep_sent", ids.joinToString(",")).apply()
+
+    /**
+     * Items handed to Keep but NOT yet confirmed by the user. They count as "sent" only after
+     * the user taps "হ্যাঁ, সেভ হয়েছে" — Keep cannot tell another app whether a note was saved.
+     */
+    fun keepPendingIds(context: Context): Set<Long> =
+        (sp(context).getString("keep_pending", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }.toSet()
+    fun keepPendingCreate(context: Context) = sp(context).getBoolean("keep_pending_create", false)
+    fun setKeepPending(context: Context, ids: Set<Long>, creating: Boolean) = sp(context).edit()
+        .putString("keep_pending", ids.joinToString(",")).putBoolean("keep_pending_create", creating).apply()
+    fun clearKeepPending(context: Context) =
+        sp(context).edit().remove("keep_pending").remove("keep_pending_create").apply()
 
     // ---- recent emoji
     fun recentEmoji(context: Context): List<String> =

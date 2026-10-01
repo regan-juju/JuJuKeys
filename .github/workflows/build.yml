@@ -35,6 +35,34 @@ jobs:
             echo "::error::${line}"
           done
 
+      # Security: the old key (keystore/jujukeys.jks) was public in this repo. If the new private
+      # key is stored in GitHub Secrets, the APK is re-signed with KEY ROTATION: phones on
+      # Android 9+ move to the new key without uninstalling, and after that they refuse any
+      # "update" signed only with the old (public) key.
+      - name: Sign with the new private key (key rotation)
+        env:
+          NEW_KS_B64: ${{ secrets.JUJU_KEYSTORE_B64 }}
+          NEW_KS_PASS: ${{ secrets.JUJU_KEYSTORE_PASS }}
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          if [ -z "$NEW_KS_B64" ] || [ -z "$NEW_KS_PASS" ]; then
+            echo "::warning::New signing key not set in GitHub Secrets (JUJU_KEYSTORE_B64 / JUJU_KEYSTORE_PASS) — APK signed with the OLD public key only."
+            exit 0
+          fi
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          echo "$NEW_KS_B64" | base64 -d > "$RUNNER_TEMP/new.jks"
+          $BT/apksigner rotate --out "$RUNNER_TEMP/lineage.bin" \
+            --old-signer --ks keystore/jujukeys.jks --ks-key-alias jujukeys --ks-pass pass:jujukeys --key-pass pass:jujukeys \
+            --new-signer --ks "$RUNNER_TEMP/new.jks" --ks-key-alias jujukeys2 --ks-pass env:NEW_KS_PASS --key-pass env:NEW_KS_PASS
+          $BT/apksigner sign \
+            --ks keystore/jujukeys.jks --ks-key-alias jujukeys --ks-pass pass:jujukeys --key-pass pass:jujukeys \
+            --next-signer --ks "$RUNNER_TEMP/new.jks" --ks-key-alias jujukeys2 --ks-pass env:NEW_KS_PASS --key-pass env:NEW_KS_PASS \
+            --lineage "$RUNNER_TEMP/lineage.bin" --rotation-min-sdk-version 28 \
+            --out "$RUNNER_TEMP/signed.apk" "$APK"
+          mv "$RUNNER_TEMP/signed.apk" "$APK"
+          rm -f "$RUNNER_TEMP/new.jks"
+          $BT/apksigner lineage --in "$APK" --print-certs | while IFS= read -r l; do echo "::notice::lineage: $l"; done
+
       - name: Verify APK (signature + manifest)
         run: |
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
