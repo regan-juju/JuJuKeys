@@ -6,9 +6,9 @@ set -u
 PKG=com.reganbarua.jujukeys
 D=signed
 FAILED=0
-ok()   { echo "::notice title=API $API ✓::$*"; echo "PASS $*" >> "results-$API.txt"; }
+ok()   { echo "PASS $*" | tee -a "results-$API.txt"; }
 bad()  { echo "::error title=API $API ✗::$*";  echo "FAIL $*" >> "results-$API.txt"; FAILED=1; }
-info() { echo "::notice title=API $API::$*";   echo "INFO $*" >> "results-$API.txt"; }
+info() { echo "INFO $*" | tee -a "results-$API.txt"; }
 sh()   { adb shell "$@" 2>&1 | tr -d '\r'; }
 
 adb root >/dev/null 2>&1; sleep 4; adb wait-for-device
