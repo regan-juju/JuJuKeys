@@ -72,7 +72,8 @@ else
 fi
 
 # 7) Google backup (local test transport): what goes in, what stays out
-sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; sh am force-stop $PKG
+# (the app must not be in the "stopped" state, or Android skips it — so start it and leave it)
+sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; sh input keyevent KEYCODE_HOME
 sh bmgr enable true >/dev/null
 sh bmgr list transports > transports.txt
 TR=$(grep -o '[^ *]*LocalTransport' transports.txt | head -1)
@@ -99,4 +100,6 @@ B=$(sh cat /data/data/$PKG/shared_prefs/jujukeys_settings.xml | grep -E 'bench_'
 M=$(sh dumpsys meminfo $PKG | grep -E 'TOTAL PSS|TOTAL:' | head -1 | tr -s ' ')
 info "EMULATOR benchmark (x86_64, not a real phone): $B | memory: $M"
 
+# GitHub shows only a few notes per step — so also put everything into ONE note
+echo "::notice title=API $API all results::$(tr '\n' '‖' < "results-$API.txt")"
 exit $FAILED

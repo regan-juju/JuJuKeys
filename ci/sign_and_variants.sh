@@ -45,8 +45,10 @@ sign_old "$RUNNER_TEMP/new.zip" "$OUT/t-new-oldkey-only.apk"     # what someone 
 rm -f "$RUNNER_TEMP/new.jks"
 
 # ---- report what the signatures look like (certificate fingerprints only)
-note() { while IFS= read -r l; do echo "::notice title=$1::$l"; done; }
-"$BT/apksigner" verify --verbose "$OUT/app-release.apk" | grep -E "Verified using|Number of signers" | note "verify"
-"$BT/apksigner" verify --print-certs --min-sdk-version 24 --max-sdk-version 27 "$OUT/app-release.apk" | grep -E "SHA-256" | note "Android 7-8 sees"
-"$BT/apksigner" verify --print-certs --min-sdk-version 28 "$OUT/app-release.apk" | grep -E "SHA-256" | note "Android 9+ sees"
-"$BT/apksigner" lineage --in "$OUT/app-release.apk" --print-certs -v 2>&1 | grep -E "Signer #|SHA-256|rollback|Has " | note "lineage"
+SUM=""
+note() { while IFS= read -r l; do SUM="$SUM [$1] $l ‖"; done; }
+note "verify" < <("$BT/apksigner" verify --verbose "$OUT/app-release.apk" | grep -E "Verified using v[23] |Verified using v1|Number of signers")
+note "Android 7-8 sees" < <("$BT/apksigner" verify --print-certs --min-sdk-version 24 --max-sdk-version 27 "$OUT/app-release.apk" | grep -E "SHA-256")
+note "Android 9+ sees" < <("$BT/apksigner" verify --print-certs --min-sdk-version 28 "$OUT/app-release.apk" | grep -E "SHA-256")
+note "lineage" < <("$BT/apksigner" lineage --in "$OUT/app-release.apk" --print-certs -v 2>&1 | grep -E "Signer #|SHA-256|rollback|Has ")
+echo "::notice title=signing summary ($KIND key)::$SUM"
