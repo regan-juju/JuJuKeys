@@ -16,7 +16,13 @@ ROW2_Y=$(( H - $(dp 48) - $(dp 62) - $(dp 52) - $(dp 52) - $(dp 26) ))   # nav, 
 measure() {   # $1 = label
   sh am force-stop $PKG; sleep 1
   sh ime enable $IME >/dev/null; sh ime set $IME >/dev/null
-  sh am start -a android.settings.APP_SEARCH_SETTINGS >/dev/null; sleep 20     # keyboard opens, dictionaries load
+  # a real text field: "new contact" (the name field gets the keyboard)
+  sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >/dev/null; sleep 8
+  for tryy in 25 30 20 35; do
+    sh dumpsys input_method | grep -q 'mInputShown=true' && break
+    sh input tap $(( W / 2 )) $(( H * tryy / 100 )); sleep 3
+  done
+  sleep 12                                                                         # dictionaries load
   local start; start=$(ticks)
   sleep 60; local idle; idle=$(( $(ticks) - start ))
   local t0; t0=$(ticks)
@@ -26,7 +32,8 @@ measure() {   # $1 = label
   local typing; typing=$(( $(ticks) - t0 ))
   local mem; mem=$(sh dumpsys meminfo $PKG | grep -E 'TOTAL PSS' | awk '{print $3}')
   local shown; shown=$(sh dumpsys input_method | grep -m1 -o 'mInputShown=[a-z]*')
-  echo "$1: start=${start}0ms idle60s=${idle}0ms typing150=${typing}0ms (~$(( typing * 10 / 150 ))ms/key) PSS=${mem}KB $shown" | tee -a perf.txt
+  local typed; typed=$(sh uiautomator dump /sdcard/u.xml >/dev/null; sh cat /sdcard/u.xml | grep -o 'text="[^"]\{3,40\}"' | head -3 | tr '\n' ' ')
+  echo "$1: start=${start}0ms idle60s=${idle}0ms typing150=${typing}0ms (~$(( typing * 10 / 150 ))ms/key) PSS=${mem}KB $shown typed:[$typed]" | tee -a perf.txt
 }
 
 adb uninstall $PKG >/dev/null 2>&1
