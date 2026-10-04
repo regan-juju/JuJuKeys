@@ -44,7 +44,8 @@ object EmojiRepo {
                     val parts = line.split('\t')
                     val e = parts[0]
                     if (!paint.hasGlyph(e)) continue
-                    val alts = parts.getOrNull(2)?.split(' ')?.filter { it.isNotEmpty() && paint.hasGlyph(it) } ?: emptyList()
+                    // skin tones are checked only when someone holds the emoji (see [alternates])
+                    val alts = parts.getOrNull(2)?.split(' ')?.filter { it.isNotEmpty() } ?: emptyList()
                     items.add(EmojiItem(e, parts.getOrNull(1) ?: "", if (alts.size > 1) alts else emptyList()))
                 }
             }
@@ -52,6 +53,11 @@ object EmojiRepo {
         }
         groups = out
     }
+
+    private val glyphPaint by lazy { Paint() }
+
+    /** Skin tones / variants this phone can draw (checked on demand). */
+    fun alternates(item: EmojiItem): List<String> = item.alternates.filter { glyphPaint.hasGlyph(it) }
 
     /** English search: "smile", "heart", "cat" … */
     fun search(query: String): List<String> {

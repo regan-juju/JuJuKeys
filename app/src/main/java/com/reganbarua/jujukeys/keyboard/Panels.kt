@@ -656,7 +656,7 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
                     .clip(RoundedCornerShape(14.dp)).background(IosColors.panel)
                     .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(14.dp)).padding(4.dp)
             ) {
-                items(item.alternates) { alt ->
+                items(EmojiRepo.alternates(item)) { alt ->
                     Box(
                         Modifier.size(46.dp).clip(RoundedCornerShape(10.dp))
                             .clickable { actions.onText(alt); tonePick = null },

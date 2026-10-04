@@ -18,8 +18,24 @@ class DictionaryFilesTest {
 
     private fun nfc(s: String) = Normalizer.normalize(s, Normalizer.Form.NFC)
 
+    /** The extra list: word, 1, key — key must equal Suggester.skeleton(word), sorted by key. */
+    private fun extraRows(): List<Triple<String, Long, String>> =
+        File("src/main/assets/dict_bn_avro.txt").readLines(Charsets.UTF_8)
+            .filter { !it.startsWith("#") }
+            .map { line ->
+                val p = line.split('\t')
+                assertEquals("bad line: $line", 3, p.size)
+                Triple(p[0], p[1].toLong(), p[2])
+            }
+
+    @Test fun extraListIsKeyedAndSorted() {
+        val ex = extraRows()
+        ex.forEach { (w, _, k) -> assertEquals("key out of date for $w", Suggester.skeleton(Suggester.nfc(w)), k) }
+        assertTrue("not sorted by key", ex.zipWithNext().all { (a, b) -> a.third <= b.third })
+    }
+
     @Test fun formatDuplicatesAndOrder() {
-        val bn = rows("dict_bn.txt"); val av = rows("dict_bn_avro.txt"); val en = rows("dict_en.txt")
+        val bn = rows("dict_bn.txt"); val av = extraRows().map { it.first to it.second }; val en = rows("dict_en.txt")
         val bnWords = (bn + av).map { nfc(it.first) }
         assertEquals("duplicate Bangla words", bnWords.size, bnWords.toSet().size)
         assertEquals("duplicate English words", en.size, en.map { it.first }.toSet().size)
@@ -32,8 +48,10 @@ class DictionaryFilesTest {
     @Test fun suggestionsFindNewWords() {
         val s = Suggester(
             File("src/main/assets/dict_en.txt").readLines().asSequence(),
-            File("src/main/assets/dict_bn.txt").readLines().asSequence() + File("src/main/assets/dict_bn_avro.txt").readLines().asSequence()
+            File("src/main/assets/dict_bn.txt").readLines().asSequence()
         )
+        s.loadExtra(File("src/main/assets/dict_bn_avro.txt").readLines().asSequence())
+        assertEquals(141041, s.extraSize)
         assertTrue("জামানত" in s.bangla("জামানত", 6))
         assertTrue("ফুচকা" in s.bangla("ফুছকা", 6))
         assertTrue("bkash" in s.english("bka", 5))

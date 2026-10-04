@@ -160,9 +160,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 val t0 = SystemClock.elapsedRealtime()
                 val en = assets.open("dict_en.txt").bufferedReader().readLines()
                 val bn = assets.open("dict_bn.txt").bufferedReader().readLines()
-                // extra, correctly spelled Bangla words (Avro dictionary, MPL 2.0) — lowest priority
-                val bnAvro = runCatching { assets.open("dict_bn_avro.txt").bufferedReader().readLines() }.getOrDefault(emptyList())
-                suggester = Suggester(en.asSequence(), bn.asSequence() + bnAvro.asSequence()).also {
+                suggester = Suggester(en.asSequence(), bn.asSequence()).also {
                     it.setUserWords(Prefs.userWords(this))
                     it.learnedCounts = learner.snapshotCounts()
                 }
@@ -173,14 +171,14 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 val ms = SystemClock.elapsedRealtime() - t0
                 Prefs.sp(this).edit()
                     .putLong("bench_dict_ms", ms)
-                    .putInt("bench_words_bn", bn.count { '\t' in it } + bnAvro.count { '\t' in it })
+                    .putInt("bench_words_bn", bn.count { '\t' in it })
                     .putInt("bench_words_en", en.count { '\t' in it })
                     .apply()
             }
+            // The 141k rare Bangla words come a few seconds later, at the lowest priority, so
+            // opening the keyboard does not cause a burst of work (less heat).
+            main.postDelayed({ worker.execute { loadExtraWords() } }, 5000)
             main.post { refreshSuggestions() }
-            // every emoji (like iPhone) — read after the dictionaries, still in the background
-            EmojiRepo.load(this)
-            main.post { state.emojiLoaded = true }
         }
     }
 
@@ -625,7 +623,30 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.page = page
     }
 
+    private fun loadExtraWords() {
+        val s = suggester ?: return
+        if (s.extraSize > 0) return
+        runCatching {
+            val t0 = SystemClock.elapsedRealtime()
+            assets.open("dict_bn_avro.txt").bufferedReader().useLines { s.loadExtra(it) }
+            Prefs.sp(this).edit()
+                .putLong("bench_extra_ms", SystemClock.elapsedRealtime() - t0)
+                .putInt("bench_words_bn", Prefs.sp(this).getInt("bench_words_bn", 0) + s.extraSize)
+                .apply()
+        }
+    }
+
+    /** Emoji list is read only the first time the emoji panel opens (not at every start). */
+    private fun ensureEmoji() {
+        if (state.emojiLoaded) return
+        worker.execute {
+            EmojiRepo.load(this)
+            main.post { state.emojiLoaded = true }
+        }
+    }
+
     override fun onPanel(panel: Panel) {
+        if (panel == Panel.EMOJI) ensureEmoji()
         if (panel == Panel.CLIPBOARD) refreshSensitiveLock()
         if (state.emojiSearch != null) { onEmojiSearch(false); if (panel == Panel.EMOJI) return }
         if (panel != Panel.SUGGESTIONS) { commitWord(); endEnglishWord() }

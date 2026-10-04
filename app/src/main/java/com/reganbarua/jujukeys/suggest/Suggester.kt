@@ -30,6 +30,38 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     private val cache = HashMap<String, List<Entry>>()
 
+    // ------------------------------------------------------------------ extra (rare) Bangla words
+    // 141k correctly spelled but rare words (Avro dictionary). Stored lean — two plain arrays,
+    // ALREADY sorted by sound-alike key in the asset file (no work at load time), and used only
+    // to fill the list when the common words are not enough. Loaded a few seconds after start.
+
+    @Volatile private var extraKeys: Array<String> = emptyArray()
+    @Volatile private var extraWords: Array<String> = emptyArray()
+    val extraSize: Int get() = extraWords.size
+
+    /** Lines "word<TAB>freq<TAB>key", sorted by key (made by the build, see DictionaryFilesTest). */
+    fun loadExtra(lines: Sequence<String>) {
+        val keys = ArrayList<String>(150_000); val words = ArrayList<String>(150_000)
+        for (line in lines) {
+            if (line.isEmpty() || line[0] == '#') continue
+            val a = line.indexOf('\t'); if (a <= 0) continue
+            val b = line.indexOf('\t', a + 1); if (b <= 0) continue
+            words.add(line.substring(0, a)); keys.add(line.substring(b + 1))
+        }
+        extraWords = words.toTypedArray(); extraKeys = keys.toTypedArray()
+    }
+
+    private fun extraMatches(key: String, max: Int): List<String> {
+        val ks = extraKeys; val ws = extraWords
+        if (ks.isEmpty() || max <= 0) return emptyList()
+        var lo = 0; var hi = ks.size
+        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ks[mid] < key) lo = mid + 1 else hi = mid }
+        val out = ArrayList<String>(max)
+        var i = lo
+        while (i < ks.size && out.size < max && ks[i].startsWith(key)) { out.add(ws[i]); i++ }
+        return out
+    }
+
     private inline fun parse(line: String, keyOf: (String) -> String): Entry? {
         val tab = line.indexOf('\t')
         if (tab <= 0) return null
@@ -149,6 +181,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         out.add(nfc(converted))
         userBangla.filter { it.second.startsWith(key) }.forEach { if (out.size < n) out.add(it.first) }
         (same.sortedByDescending(rank) + longer.sortedByDescending(rank)).forEach { if (out.size < n) out.add(it.word) }
+        if (out.size < n) extraMatches(key, n - out.size + 4).forEach { if (out.size < n) out.add(it) }
         return out.toList()
     }
 
