@@ -95,7 +95,9 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash ci/device_test.sh
+          script: |
+            bash ci/device_test.sh
+            bash ci/perf_test.sh
       - name: Results
         if: always()
         run: cat results-${{ matrix.api }}.txt 2>/dev/null || true
