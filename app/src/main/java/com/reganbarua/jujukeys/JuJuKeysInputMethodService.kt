@@ -56,6 +56,7 @@ import com.reganbarua.jujukeys.keyboard.Panel
 import com.reganbarua.jujukeys.keyboard.ShiftState
 import com.reganbarua.jujukeys.settings.Prefs
 import com.reganbarua.jujukeys.suggest.Learner
+import com.reganbarua.jujukeys.text.TextBuf
 import com.reganbarua.jujukeys.suggest.RomanAliases
 import com.reganbarua.jujukeys.suggest.Suggester
 import com.reganbarua.jujukeys.translate.TranslateEngine
@@ -340,7 +341,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     private fun rememberTyped(text: String) {
         recent.append(text)
-        if (recent.length > 8) recent.delete(0, recent.length - 8)
+        TextBuf.keepLast(recent, 8)          // last 8 characters (an emoji counts as one)
     }
 
     private fun readRecentFromApp() {
@@ -376,7 +377,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         } else {
             markEdit()
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
-            if (recent.isNotEmpty()) recent.setLength(recent.length - 1)
+            TextBuf.dropLast(recent)            // a whole emoji, not half of it
         }
     }
 
@@ -484,7 +485,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         ) {
             markEdit()
             currentInputConnection?.deleteSurroundingText(1, 0)
-            recent.setLength(recent.length - 1)
+            TextBuf.dropLast(recent)
             sinkCommit(if (state.language == Language.BANGLA) "। " else ". ")
             lastSpaceTime = 0L
             updateCaps()

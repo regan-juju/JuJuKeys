@@ -1,28 +1,26 @@
 #!/usr/bin/env bash
 # Signs the release APK with KEY ROTATION (old public key → new private key) and makes the
 # test variants used on the emulators. Never prints keys or passwords.
-#   main branch : the real new key from GitHub Secrets is REQUIRED (build fails without it)
-#   test branch : without Secrets, a throw-away test key is used (APK is NOT published)
+# The keys come only from GitHub Secrets; without them the build stops.
 set -euo pipefail
 BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-APK=app/build/outputs/apk/release/app-release.apk
+APK=$(ls app/build/outputs/apk/release/app-release*.apk | head -1)      # unsigned from Gradle
 OUT=signed; mkdir -p "$OUT"
-OLD=(--ks keystore/jujukeys.jks --ks-key-alias jujukeys --ks-pass pass:jujukeys --key-pass pass:jujukeys)
 
-if [ -n "${NEW_KS_B64:-}" ] && [ -n "${NEW_KS_PASS:-}" ]; then
-  echo "$NEW_KS_B64" | base64 -d > "$RUNNER_TEMP/new.jks"
-  ALIAS=jujukeys2; KIND=real
-elif [ "${GITHUB_REF:-}" = "refs/heads/main" ]; then
-  echo "::error title=Signing::The new signing key is not set. Add GitHub Secrets JUJU_KEYSTORE_B64 and JUJU_KEYSTORE_PASS. Release stopped — it will NOT fall back to the old public key."
+# Both keys come ONLY from GitHub Secrets (nothing in the repository):
+#   JUJU_KEYSTORE_B64      new private key  (alias jujukeys2)
+#   JUJU_OLD_KEYSTORE_B64  old key, re-wrapped with the same password (alias jujukeys)
+#   JUJU_KEYSTORE_PASS     password for both
+if [ -z "${NEW_KS_B64:-}" ] || [ -z "${NEW_KS_PASS:-}" ] || [ -z "${OLD_KS_B64:-}" ]; then
+  echo "::error title=Signing::Signing keys are not set. Add GitHub Secrets JUJU_KEYSTORE_B64, JUJU_OLD_KEYSTORE_B64 and JUJU_KEYSTORE_PASS. Build stopped — no APK is signed without them."
   exit 1
-else
-  NEW_KS_PASS=$(openssl rand -hex 16); export NEW_KS_PASS
-  keytool -genkeypair -keystore "$RUNNER_TEMP/new.jks" -storetype PKCS12 -storepass "$NEW_KS_PASS" -keypass "$NEW_KS_PASS" \
-    -alias jujukeys2 -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=JuJuKeys CI TEST ONLY" >/dev/null 2>&1
-  ALIAS=jujukeys2; KIND=test
-  echo "::warning title=Signing::Test branch without Secrets — signed with a THROW-AWAY test key (for checking only, not published)."
 fi
-NEW=(--ks "$RUNNER_TEMP/new.jks" --ks-key-alias "$ALIAS" --ks-pass env:NEW_KS_PASS --key-pass env:NEW_KS_PASS)
+echo "$NEW_KS_B64" | base64 -d > "$RUNNER_TEMP/new.jks"
+echo "$OLD_KS_B64" | base64 -d > "$RUNNER_TEMP/old.p12"
+KIND=real
+"$BT/zipalign" -f -p 4 "$APK" "$RUNNER_TEMP/aligned.apk"; APK="$RUNNER_TEMP/aligned.apk"
+OLD=(--ks "$RUNNER_TEMP/old.p12" --ks-key-alias jujukeys --ks-pass env:NEW_KS_PASS --key-pass env:NEW_KS_PASS)
+NEW=(--ks "$RUNNER_TEMP/new.jks" --ks-key-alias jujukeys2 --ks-pass env:NEW_KS_PASS --key-pass env:NEW_KS_PASS)
 
 "$BT/apksigner" rotate --out "$RUNNER_TEMP/lineage.bin" --old-signer "${OLD[@]}" --new-signer "${NEW[@]}"
 
@@ -42,7 +40,7 @@ nolib "$RUNNER_TEMP/v15.apk" "$RUNNER_TEMP/v15.zip";  sign_old "$RUNNER_TEMP/v15
 nolib "$APK" "$RUNNER_TEMP/new.zip";                   sign_rotated "$RUNNER_TEMP/new.zip" "$OUT/t-new-rotated.apk"
 sign_old "$RUNNER_TEMP/new.zip" "$OUT/t-new-oldkey-only.apk"     # what someone with only the OLD public key could make
 
-rm -f "$RUNNER_TEMP/new.jks"
+rm -f "$RUNNER_TEMP/new.jks" "$RUNNER_TEMP/old.p12"
 
 # ---- report what the signatures look like (certificate fingerprints only)
 SUM=""

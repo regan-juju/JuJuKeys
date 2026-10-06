@@ -12,8 +12,12 @@ android {
         applicationId = "com.reganbarua.jujukeys"
         minSdk = 24
         targetSdk = 34
-        versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
-        versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+        // CI: the GitHub run number. Local builds: VERSION_CODE in gradle.properties (never lower
+        // than the newest release, so an install over it is an update, not a "downgrade").
+        val code = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+            ?: (project.findProperty("VERSION_CODE") as String?)?.toIntOrNull() ?: 28
+        versionCode = code
+        versionName = "1.0.$code"
         // Phones only (ARM) — keeps the APK small; ML Kit ships big native libraries.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -23,26 +27,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // A fixed signing key kept in the repo, so every new APK installs as an update
-    // over the previous one (no uninstall needed).
+    // No key in the repository. Releases are signed by CI (ci/sign_and_variants.sh) with the
+    // private key from GitHub Secrets (key rotation). For a local signed build, put
+    // JUJU_STORE_FILE / JUJU_STORE_PASSWORD / JUJU_KEY_ALIAS / JUJU_KEY_PASSWORD in
+    // local.properties or the environment; otherwise the release APK is left UNSIGNED.
+    val localProps = java.util.Properties().apply {
+        val f = rootProject.file("local.properties"); if (f.exists()) f.inputStream().use { load(it) }
+    }
+    fun secret(name: String): String? = System.getenv(name) ?: localProps.getProperty(name)
+    val storePath = secret("JUJU_STORE_FILE")
     signingConfigs {
-        create("jujukeys") {
-            storeFile = rootProject.file("keystore/jujukeys.jks")
-            storePassword = "jujukeys"
-            keyAlias = "jujukeys"
-            keyPassword = "jujukeys"
+        if (storePath != null) create("jujukeys") {
+            storeFile = file(storePath)
+            storePassword = secret("JUJU_STORE_PASSWORD")
+            keyAlias = secret("JUJU_KEY_ALIAS")
+            keyPassword = secret("JUJU_KEY_PASSWORD")
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("jujukeys")
+            // Android's own debug key (never the release key)
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("jujukeys")
+            signingConfig = signingConfigs.findByName("jujukeys")   // null → unsigned (CI signs)
         }
     }
 

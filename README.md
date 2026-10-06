@@ -6,7 +6,9 @@ Android সিস্টেম কীবোর্ড (InputMethodService, Kotlin 
 প্রতিবার `main`-এ পুশ হলে GitHub Actions নিজে APK বানায় এবং **Releases**-এ রাখে:
 https://github.com/regan-juju/JuJuKeys/releases/latest
 
-সব APK একই কী দিয়ে সাইন করা, তাই নতুন ভার্সন পুরনোটার উপর আপডেট হিসেবে ইনস্টল হয়।
+রিলিজ APK শুধু GitHub Secrets-এ রাখা গোপন নতুন চাবি দিয়ে সাইন হয় (key rotation, Android 9+ নতুন চাবি মানে)। repo-তে কোনো চাবি বা পাসওয়ার্ড নেই; পুরনো চাবি (আগে পাবলিক ছিল) শুধু Secret থেকে CI-তে আসে, পুরনো ফোনের সামঞ্জস্য ও rotation-এর প্রমাণের জন্য। তাই নতুন ভার্সন পুরনোটার উপর আপডেট হিসেবে ইনস্টল হয়।
+
+Play Store-এ নয় — সরাসরি ইনস্টল (sideload) করার অ্যাপ; compileSdk/targetSdk 34।
 
 ## যা আছে
 - iPhone 16 Pro Max-এর মতো লেআউট: সাজেশন বার (ক/A বোতাম), 123 · ইমোজি · স্পেস · রিটার্ন, নিচে 🌐 ও 🎤

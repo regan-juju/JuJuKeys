@@ -47,13 +47,14 @@ jobs:
           done
           grep -h "DICT " app/build/test-results/testDebugUnitTest/*.xml | head -3 | while IFS= read -r l; do echo "::notice title=dictionary::$l"; done
 
-      # Security: the old key (keystore/jujukeys.jks) was public in this repo. The APK is signed
+      # Security: the old key was public in this repo (now removed; it comes from a Secret). The APK is signed
       # with KEY ROTATION to the new private key from GitHub Secrets. On main, a missing key
       # stops the release — it never falls back to the old public key.
       - name: Sign (key rotation) and make emulator test variants
         env:
           NEW_KS_B64: ${{ secrets.JUJU_KEYSTORE_B64 }}
           NEW_KS_PASS: ${{ secrets.JUJU_KEYSTORE_PASS }}
+          OLD_KS_B64: ${{ secrets.JUJU_OLD_KEYSTORE_B64 }}
         run: bash ci/sign_and_variants.sh
 
       - name: APK contents

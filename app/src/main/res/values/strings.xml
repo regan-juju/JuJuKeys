@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">JuJuKeys</string>
-    <string name="subtype_label">বাংলা ও ENGLISH</string>
+    <string name="subtype_label">বাংলা (অভ্র)</string>
+    <string name="subtype_label_en">English</string>
 </resources>
