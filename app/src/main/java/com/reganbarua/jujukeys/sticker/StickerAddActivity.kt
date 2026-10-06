@@ -49,6 +49,7 @@ class StickerAddActivity : ComponentActivity() {
 
     private var cutOut by mutableStateOf(true)
     private var border by mutableStateOf(true)
+    private var split by mutableStateOf(true)
     private var busy by mutableStateOf(false)
     private var done by mutableIntStateOf(0)
     private var total by mutableIntStateOf(0)
@@ -61,6 +62,7 @@ class StickerAddActivity : ComponentActivity() {
         val sp = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         cutOut = sp.getBoolean(KEY_CUT, true)
         border = sp.getBoolean(KEY_BORDER, true)
+        split = sp.getBoolean(KEY_SPLIT, true)
         Thread { StickerStore.seed(this); val n = StickerStore.count(this); runOnUiThread { count = n } }.start()
 
         setContent {
@@ -96,34 +98,33 @@ class StickerAddActivity : ComponentActivity() {
         if (busy) return
         busy = true; done = 0; total = uris.size; summary = ""
         status = "শুরু হচ্ছে…"
-        val wantCut = cutOut; val wantBorder = border
+        val wantCut = cutOut; val wantBorder = border; val wantSplit = split
         Thread {
             val maker = StickerMaker(applicationContext)
-            var modelOk = true
-            if (wantCut) {
-                runOnUiThread { status = "পটভূমি সরানোর অংশ তৈরি হচ্ছে (প্রথমবার Google থেকে নামতে পারে)…" }
-                modelOk = maker.ensureModel()
-            }
-            var cut = 0; var kept = 0; var failed = 0; var bad = 0
+            var cut = 0; var kept = 0; var failed = 0; var bad = 0; var sheets = 0; var fromSheets = 0
             uris.forEachIndexed { i, u ->
-                runOnUiThread { status = "${bn(i + 1)} / ${bn(uris.size)} তৈরি হচ্ছে…" }
-                val (r, _) = runCatching { maker.make(u, wantCut && modelOk, wantBorder) }.getOrElse { StickerMaker.Result.BAD_IMAGE to null }
-                when (r) {
+                runOnUiThread { status = "${bn(i + 1)} / ${bn(uris.size)} তৈরি হচ্ছে…" + if (wantCut && maker.modelOk == null) " (প্রথমবার পটভূমি সরানোর অংশ নামতে পারে)" else "" }
+                val made = runCatching { maker.make(u, wantCut, wantBorder, wantSplit) }
+                    .getOrElse { StickerMaker.Made(StickerMaker.Result.BAD_IMAGE, emptyList()) }
+                when (made.result) {
                     StickerMaker.Result.CUT_OUT -> cut++
+                    StickerMaker.Result.SPLIT -> { sheets++; fromSheets += made.names.size }
                     StickerMaker.Result.KEPT_TRANSPARENT, StickerMaker.Result.KEPT_AS_IS -> kept++
                     StickerMaker.Result.CUT_FAILED -> failed++
                     StickerMaker.Result.BAD_IMAGE -> bad++
                 }
                 runOnUiThread { done = i + 1 }
             }
+            val modelFailed = wantCut && maker.modelOk == false
             maker.close()
             val n = StickerStore.count(applicationContext)
-            val made = cut + kept + failed
+            val made = cut + kept + failed + fromSheets
             val parts = buildList {
                 add("${bn(made)}টি স্টিকার যোগ হয়েছে")
+                if (sheets > 0) add("${bn(sheets)}টি স্টিকার-শিট ভাগ করে ${bn(fromSheets)}টি আলাদা স্টিকার")
                 if (cut > 0) add("${bn(cut)}টির পটভূমি সরানো হয়েছে")
                 if (failed > 0) add("${bn(failed)}টির পটভূমি সরানো যায়নি — মূল ছবি রাখা হলো (কীবোর্ডে চেপে ধরে মুছতে পারবেন)")
-                if (wantCut && !modelOk) add("পটভূমি সরানোর অংশ নামানো যায়নি — ইন্টারনেট চালু করে আবার চেষ্টা করুন")
+                if (modelFailed) add("পটভূমি সরানোর অংশ নামানো যায়নি — ইন্টারনেট চালু করে আবার চেষ্টা করুন")
                 if (bad > 0) add("${bn(bad)}টি ছবি খোলা যায়নি")
             }
             runOnUiThread { busy = false; status = ""; summary = parts.joinToString("\n• ", prefix = "• "); count = n }
@@ -144,8 +145,11 @@ class StickerAddActivity : ComponentActivity() {
             Toggle("সাদা বর্ডার", "কেটে নেওয়া ছবির চারপাশে স্টিকারের মতো সাদা রেখা ও হালকা ছায়া", border) {
                 border = it; save(KEY_BORDER, it)
             }
+            Toggle("স্টিকার-শিট ভাগ করুন", "একটা ছবিতে অনেক স্টিকার (যেমন ৩×৩) থাকলে আলাদা আলাদা স্টিকার হবে — কালো বা স্বচ্ছ পটভূমি", split) {
+                split = it; save(KEY_SPLIT, it)
+            }
             Text(
-                "স্বচ্ছ PNG (আগে থেকে বানানো স্টিকার) দিলে সেটা যেমন আছে তেমনই থাকে — কাটা বা বর্ডার হয় না।",
+                "স্বচ্ছ PNG বা কালো পটভূমির স্টিকার (আগে থেকে বানানো) দিলে কালো অংশ সরে যায়, স্টিকার যেমন আছে তেমন থাকে — বাড়তি কাটা বা বর্ডার হয় না।",
                 color = Sub, fontSize = 13.sp
             )
             Button(
@@ -194,6 +198,7 @@ class StickerAddActivity : ComponentActivity() {
         const val PREFS = "jujukeys_stickers"
         const val KEY_CUT = "cut_out"
         const val KEY_BORDER = "border"
+        const val KEY_SPLIT = "split_sheet"
         private val Accent = Color(0xFFA8C7FA)
         private val Bg = Color(0xFF1B1B1B)
         private val Sub = Color(0xFFB0B0B0)

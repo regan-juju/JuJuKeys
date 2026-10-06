@@ -25,7 +25,8 @@ import kotlin.math.sin
 
 /**
  * Turns a picture from the gallery into a sticker, on the phone (nothing is uploaded):
- * 1. already transparent (a ready sticker PNG) → kept as it is;
+ * 1. already transparent (a ready sticker PNG), or a sticker sheet on a black background →
+ *    kept as it is; a sheet of several stickers (e.g. 3×3) is cut into separate stickers;
  * 2. otherwise, if "পটভূমি সরান" is on → Google ML Kit cuts out the people / main subject,
  *    and a white sticker border is added (if "সাদা বর্ডার" is on);
  * 3. trimmed and fitted into 512×512.
@@ -33,7 +34,7 @@ import kotlin.math.sin
  */
 class StickerMaker(private val ctx: Context) {
 
-    enum class Result { CUT_OUT, KEPT_TRANSPARENT, KEPT_AS_IS, CUT_FAILED, BAD_IMAGE }
+    enum class Result { CUT_OUT, KEPT_TRANSPARENT, SPLIT, KEPT_AS_IS, CUT_FAILED, BAD_IMAGE }
 
     private var seg: SubjectSegmenter? = null
     private val segmenter: SubjectSegmenter
@@ -53,13 +54,28 @@ class StickerMaker(private val ctx: Context) {
         }
     }
 
-    fun make(uri: Uri, cutOut: Boolean, border: Boolean): Pair<Result, String?> {
-        val src = decode(uri) ?: return Result.BAD_IMAGE to null
+    /** What one picked picture became. [names] = the stickers saved (several for a sticker sheet). */
+    class Made(val result: Result, val names: List<String>)
+
+    /** False once the cut-out model could not be fetched (asked once per [StickerMaker]). */
+    var modelOk: Boolean? = null; private set
+
+    fun make(uri: Uri, cutOut: Boolean, border: Boolean, split: Boolean): Made {
+        val src = decode(uri) ?: return Made(Result.BAD_IMAGE, emptyList())
+        // 1) sticker sheet / ready-made sticker: see-through already, or on a black background
+        var sheet: IntArray? = null
+        if (hasTransparency(src)) sheet = pixels(src)
+        else if (split) pixels(src).let { if (StickerSplit.darkBackgroundToAlpha(it, src.width, src.height)) sheet = it }
+        sheet?.let { px ->
+            val pieces = if (split) StickerSplit.split(px, src.width, src.height)
+            else listOf(Piece(src.width, src.height, px))
+            val names = pieces.map { p -> StickerStore.add(ctx, fit(Bitmap.createBitmap(p.px, p.w, p.h, Bitmap.Config.ARGB_8888))) }
+            return Made(if (names.size > 1) Result.SPLIT else Result.KEPT_TRANSPARENT, names)
+        }
+        // 2) ordinary photo
         val result: Result
         val art: Bitmap
-        if (hasTransparency(src)) {
-            result = Result.KEPT_TRANSPARENT; art = src
-        } else if (cutOut) {
+        if (cutOut && (modelOk ?: ensureModel().also { modelOk = it })) {
             val fg = runCatching {
                 Tasks.await(segmenter.process(InputImage.fromBitmap(src, 0)), 60, TimeUnit.SECONDS).foregroundBitmap
             }.getOrNull()
@@ -70,17 +86,18 @@ class StickerMaker(private val ctx: Context) {
                 result = Result.CUT_FAILED; art = src
             }
         } else {
-            result = Result.KEPT_AS_IS; art = src
+            result = if (cutOut) Result.CUT_FAILED else Result.KEPT_AS_IS; art = src
         }
-        val name = StickerStore.add(ctx, fit(art))
-        return result to name
+        return Made(result, listOf(StickerStore.add(ctx, fit(art))))
     }
+
+    private fun pixels(b: Bitmap): IntArray = IntArray(b.width * b.height).also { b.getPixels(it, 0, b.width, 0, 0, b.width, b.height) }
 
     fun close() { runCatching { seg?.close() }; seg = null }
 
     // ---------------------------------------------------------------- helpers
 
-    /** Reads the picture at most ~1280 px, turned the right way up. */
+    /** Reads the picture at most ~2048 px, turned the right way up. */
     private fun decode(uri: Uri): Bitmap? = try { decodeOrNull(uri) } catch (e: Exception) { null } catch (e: OutOfMemoryError) { null }
 
     private fun decodeOrNull(uri: Uri): Bitmap? {
@@ -89,7 +106,7 @@ class StickerMaker(private val ctx: Context) {
         r.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0) return null
         var sample = 1
-        while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1280) sample *= 2
+        while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 2048) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 }
         var b = r.openInputStream(uri)!!.use { BitmapFactory.decodeStream(it, null, opts) } ?: return null
         val rot = runCatching {
