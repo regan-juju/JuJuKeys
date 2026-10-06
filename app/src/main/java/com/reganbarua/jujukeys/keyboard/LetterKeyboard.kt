@@ -15,7 +15,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
@@ -54,6 +56,7 @@ private class GKey(
     val label: String = "",
     val ch: Char = ' ',
     val hint: Char? = null,
+    val col: Int = -1,          // column, for the rainbow theme's colours
 )
 
 @Composable
@@ -65,10 +68,10 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
 
     // ---- layout (rebuilt only when language / settings change, not on key presses)
     val rows: List<List<GKey>> = remember(bangla, showEmoji, prefs.numberRow, longPressOn) {
-        fun chars(list: List<CharKey>, lp: Boolean) = list.map { k ->
+        fun chars(list: List<CharKey>, lp: Boolean, colOffset: Int = 0) = list.mapIndexed { i, k ->
             val shown = if (bangla && k.label in '0'..'9') "০১২৩৪৫৬৭৮৯"[k.label - '0'].toString()
             else k.label.uppercaseChar().toString()
-            GKey(KType.CHAR, 1f, shown, k.label, if (lp) k.hint else null)
+            GKey(KType.CHAR, 1f, shown, k.label, if (lp) k.hint else null, i + colOffset)
         }
         buildList {
             if (prefs.numberRow) add(chars(KeyboardLayouts.symbolsRow1, false))
@@ -76,7 +79,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             add(listOf(GKey(KType.GAP, 0.5f)) + chars(KeyboardLayouts.lettersRow2, longPressOn) + GKey(KType.GAP, 0.5f))
             add(
                 listOf(GKey(KType.SHIFT, 1.29f), GKey(KType.GAP, 0.21f)) +
-                    chars(KeyboardLayouts.lettersRow3, longPressOn) +
+                    chars(KeyboardLayouts.lettersRow3, longPressOn, colOffset = 1) +
                     listOf(GKey(KType.GAP, 0.21f), GKey(KType.SHIFT, 1.29f))   // Shift on both sides (backspace is in the top bar)
             )
             add(
@@ -163,6 +166,23 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         val t = IosColors.theme
         val grow = with(density) { 2.dp.toPx() }
         geometry.first.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) }
+    }
+    // Rainbow theme: each letter column has its own glass colour (+ a soft light sheen on top)
+    val tint: List<Pair<Color, Color>?> = remember(flat) {
+        val t = IosColors.theme
+        val rb = t.rainbow
+        flat.map { k ->
+            val c = when {
+                rb != null && k.type == KType.CHAR && k.col >= 0 -> rb[k.col % rb.size]
+                t.accent != null && k.type == KType.SYMBOLS -> t.accent
+                else -> null
+            }
+            c?.let { it to lerp(it, Color.White, 0.30f).copy(alpha = 0.95f) }
+        }
+    }
+    val sheens = remember(geometry) {
+        if (IosColors.theme.rainbow == null) emptyList()
+        else geometry.first.map { r -> Brush.verticalGradient(0f to Color(0x38FFFFFF), 0.55f to Color.Transparent, startY = r.top, endY = r.bottom) }
     }
 
     val pressed = remember { mutableStateListOf<Int>() }
@@ -280,7 +300,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(2.dp.toPx()) else r
                 drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
-                drawRoundRect(if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
+                val tc = tint.getOrNull(i)
+                drawRoundRect(if (tc != null) (if (down) tc.second else tc.first) else if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
+                if (tc != null) sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
                 val rim = rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
             }

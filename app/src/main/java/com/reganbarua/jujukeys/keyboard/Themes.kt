@@ -34,6 +34,10 @@ internal class KbTheme(
     val panel: Color = Color(0xF21C1E1C),
     val nav: Int = 0xFF212121.toInt(),
     val light: Boolean = false,
+    /** Rainbow theme: one colour per key column (letters); null = all keys use [key]. */
+    val rainbow: List<Color>? = null,
+    /** Colour for the 123 key in the rainbow theme. */
+    val accent: Color? = null,
 )
 
 internal object Themes {
@@ -99,6 +103,19 @@ internal object Themes {
             key = Color(0x21FFFFFF), keyPressed = Color(0x55FFFFFF), fn = Color(0x14FFFFFF),
             dim = Color(0xFF9A9A9A), card = Color(0x33FFFFFF), bubble = Color(0xFF3A3A3A),
             glassTop = Color(0x66FFFFFF), panel = Color(0xFF000000), nav = 0xFF000000.toInt(),
+        ),
+        KbTheme(
+            "rainbow", "রংধনু গ্লাস",
+            bg = Color(0xF716161C),
+            blobs = listOf(Blob(0.15f, 0.85f, Color(0x1FF03C3C), 0.55f), Blob(0.85f, 0.20f, Color(0x1F505ADC), 0.55f)),
+            key = Color(0x59605F68), keyPressed = Color(0x998A8A92), fn = Color(0x33505058),
+            dim = Color(0xFFA0A0A8), glassTop = Color(0x8CFFFFFF), card = Color(0x55605F68),
+            bubble = Color(0xFF4A4A52), panel = Color(0xF71C1C22), nav = 0xFF16161C.toInt(),
+            rainbow = listOf(
+                Color(0xC8F03A3A), Color(0xC8F2603A), Color(0xC8F28A1E), Color(0xC8E6B414), Color(0xC82DB84D),
+                Color(0xC817B5AE), Color(0xC82E9BE0), Color(0xC81E6FF0), Color(0xC85059D6), Color(0xC89B4DE0),
+            ),
+            accent = Color(0xC8E0606A),
         ),
         KbTheme(
             "white", "সাদা গ্লাস",

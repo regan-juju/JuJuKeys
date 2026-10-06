@@ -266,7 +266,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     }
     Item("ভাষা", "বাংলা (অভ্র), ENGLISH", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
     Item("পছন্দসমূহ", "কী, লেআউট, শব্দ ও কম্পন", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
-    Item("থিম", "৭টি লিকুইড গ্লাস থিম", Icons.Outlined.Palette) { open(Screen.THEME) }
+    Item("থিম", "৮টি লিকুইড গ্লাস থিম", Icons.Outlined.Palette) { open(Screen.THEME) }
     Item("সংশোধন ও সাজেশন", "স্বয়ংক্রিয় সংশোধন, বড় হাতের অক্ষর, সাজেশন", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
     Item("ভয়েস টাইপিং", "Google ভয়েস টাইপিং", Icons.Outlined.Mic) { open(Screen.VOICE) }
     Item("ক্লিপবোর্ড", "ইতিহাস, পিন, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
@@ -398,12 +398,12 @@ private fun ThemePreview(t: KbTheme, selected: Boolean) {
             val n = 10 - r
             val kw = (w - gap * 2 - gap * 10) / 10f
             val start = gap + (10 - n) * (kw + gap) / 2f
-            for (i in 0 until n) key(start + i * (kw + gap), gap + (r + 1) * (kh + gap), kw, t.key)
+            for (i in 0 until n) key(start + i * (kw + gap), gap + (r + 1) * (kh + gap), kw, t.rainbow?.let { it[i % it.size] } ?: t.key)
         }
         // bottom: 123 · space · return (faded)
         val y3 = gap + 3 * (kh + gap)
         val unit = (w - gap * 4) / 10f
-        key(gap, y3, unit * 1.5f, t.key)
+        key(gap, y3, unit * 1.5f, t.accent ?: t.key)
         key(gap * 2 + unit * 1.5f, y3, unit * 5.5f, t.key)
         key(gap * 3 + unit * 7f, y3, unit * 3f, t.faded)
     }
