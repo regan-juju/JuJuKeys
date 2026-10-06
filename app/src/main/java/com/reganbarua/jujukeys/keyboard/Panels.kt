@@ -76,6 +76,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reganbarua.jujukeys.clipboard.ClipItem
+import com.reganbarua.jujukeys.sticker.StickerStore
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.reganbarua.jujukeys.security.SensitiveAction
 
 // ------------------------------------------------------------------ top bar
@@ -591,7 +603,9 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            if (sections.isEmpty()) {
+            if (state.stickerTab) {
+                StickerGrid(state, actions, Modifier.weight(1f).fillMaxWidth())
+            } else if (sections.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("ইমোজি লোড হচ্ছে…", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
                 }
@@ -634,15 +648,19 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    StickerTabButton(state.stickerTab, state.stickers.firstOrNull()) { actions.onStickerTab(true) }
                     sections.forEachIndexed { i, sec ->
-                        val on = i == current
+                        val on = !state.stickerTab && i == current
                         Box(
-                            Modifier.size(28.dp).clip(CircleShape)
+                            Modifier.size(26.dp).clip(CircleShape)
                                 .background(if (on) IosColors.key else Color.Transparent)
-                                .clickable { scope.launch { grid.scrollToItem(headerIndex[i]) } },
+                                .clickable {
+                                    if (state.stickerTab) actions.onStickerTab(false)
+                                    scope.launch { runCatching { grid.scrollToItem(headerIndex[i]) } }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(sec.icon, sec.title, tint = if (on) IosColors.text else IosColors.dim, modifier = Modifier.size(19.dp))
+                            Icon(sec.icon, sec.title, tint = if (on) IosColors.text else IosColors.dim, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -667,3 +685,154 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
         }
     }
 }
+
+// ------------------------------------------------------------------ stickers
+
+/** Sticker picture, decoded small in the background (only for stickers on screen). */
+@Composable
+private fun stickerBitmap(name: String?): ImageBitmap? {
+    val ctx = LocalContext.current
+    val bmp by produceState<ImageBitmap?>(null, name) {
+        value = if (name == null) null else withContext(Dispatchers.IO) {
+            runCatching { StickerStore.thumb(ctx, name)?.asImageBitmap() }.getOrNull()
+        }
+    }
+    return bmp
+}
+
+/** First button of the emoji bottom row: the user's first sticker as the icon. */
+@Composable
+private fun StickerTabButton(on: Boolean, first: String?, onClick: () -> Unit) {
+    val bmp = stickerBitmap(first)
+    Box(
+        Modifier.size(26.dp).clip(CircleShape).background(if (on) IosColors.key else Color.Transparent).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (bmp != null) Image(bmp, "স্টিকার", Modifier.size(21.dp), contentScale = ContentScale.Fit)
+        else Text("🖼", fontSize = 16.sp)
+    }
+}
+
+/**
+ * The user's stickers, 4 per row. First tile = "＋ যোগ করুন". Tap = send, hold = menu
+ * (শেয়ার / গ্যালারিতে সেভ / উপরে রাখুন / মুছুন). No limit on how many.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier: Modifier) {
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    Box(modifier) {
+        Column(Modifier.fillMaxSize()) {
+            Text(
+                "আমার স্টিকার (${bnNum(state.stickers.size)})", color = IosColors.dim, fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold, fontFamily = BanglaFont, modifier = Modifier.padding(start = 10.dp, top = 2.dp)
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                item(key = "+add") {
+                    Column(
+                        Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, IosColors.dim.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .clickable { actions.onStickerAdd() },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("＋", color = IosColors.text, fontSize = 26.sp)
+                        Text("যোগ করুন", color = IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont)
+                    }
+                }
+                items(state.stickers, key = { it }) { name ->
+                    val bmp = stickerBitmap(name)
+                    Box(
+                        Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                            .background(if (menuFor == name || state.stickerSheet == name) IosColors.key else Color.Transparent)
+                            .combinedClickable(
+                                onClick = { menuFor = null; actions.onKeyFeedback(KeyKind.NORMAL); actions.onSticker(name) },
+                                onLongClick = { confirmDelete = false; menuFor = name }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().padding(3.dp), contentScale = ContentScale.Fit)
+                    }
+                }
+            }
+        }
+        // hold → menu
+        menuFor?.let { name ->
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).clickable { menuFor = null })
+            Column(
+                Modifier.align(Alignment.Center).width(230.dp).clip(RoundedCornerShape(14.dp)).background(IosColors.panel)
+                    .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(14.dp)).padding(vertical = 4.dp)
+            ) {
+                StickerMenuRow(Icons.Filled.Share, "শেয়ার") { menuFor = null; actions.onStickerShare(name) }
+                StickerMenuRow(Icons.Filled.Download, "গ্যালারিতে সেভ") { menuFor = null; actions.onStickerSave(name) }
+                StickerMenuRow(Icons.Filled.PushPin, "উপরে রাখুন") { menuFor = null; actions.onStickerTop(name) }
+                StickerMenuRow(Icons.Filled.Delete, if (confirmDelete) "নিশ্চিত? আবার চাপুন" else "মুছুন", danger = confirmDelete) {
+                    if (confirmDelete) { menuFor = null; confirmDelete = false; actions.onStickerDelete(name) } else confirmDelete = true
+                }
+            }
+        }
+        // the app's box takes no pictures → share / save
+        state.stickerSheet?.let { name ->
+            val bmp = stickerBitmap(name)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { actions.onStickerSheetClose() })
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(8.dp).clip(RoundedCornerShape(16.dp))
+                    .background(IosColors.panel).border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(16.dp)).padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (bmp != null) Image(bmp, null, Modifier.size(44.dp), contentScale = ContentScale.Fit)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "এই ঘরে কীবোর্ড থেকে সরাসরি ছবি যায় না", color = IosColors.text, fontSize = 13.5.sp,
+                        fontFamily = BanglaFont, modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        Modifier.size(30.dp).clip(CircleShape).clickable { actions.onStickerSheetClose() },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Symbols.close, "বন্ধ", tint = IosColors.dim, modifier = Modifier.size(18.dp)) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StickerSheetButton(Icons.Filled.Share, "শেয়ার করে পোস্ট", Modifier.weight(1f)) { actions.onStickerShare(name) }
+                    StickerSheetButton(Icons.Filled.Download, "গ্যালারিতে সেভ", Modifier.weight(1f)) { actions.onStickerSave(name) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StickerMenuRow(icon: ImageVector, text: String, danger: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val c = if (danger) Color(0xFFFF6B6B) else IosColors.text
+        Icon(icon, null, tint = c, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(text, color = c, fontSize = 15.sp, fontFamily = BanglaFont)
+    }
+}
+
+@Composable
+private fun StickerSheetButton(icon: ImageVector, text: String, modifier: Modifier, onClick: () -> Unit) {
+    Row(
+        modifier.height(44.dp).clip(RoundedCornerShape(12.dp)).background(IosColors.key).clickable(onClick = onClick)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, null, tint = IosColors.text, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(text, color = IosColors.text, fontSize = 13.5.sp, fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private fun bnNum(n: Int): String = n.toString().map { if (it in '0'..'9') '০' + (it - '0') else it }.joinToString("")

@@ -7,6 +7,10 @@
 -keep class com.google.android.gms.internal.mlkit_common.** { *; }
 -keep class com.google.android.gms.internal.mlkit_language_id_common.** { *; }
 -keep class com.google.android.gms.common.internal.** { *; }
+# Stickers: background removal (subject segmentation) + Play services module download
+-keep class com.google.android.gms.internal.mlkit_vision_subject_segmentation.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_common.** { *; }
+-keep class com.google.android.gms.common.moduleinstall.** { *; }
 -keepclassmembers class * { @com.google.android.gms.common.annotation.KeepForSdk *; }
 -keepclasseswithmembernames class * { native <methods>; }
 -dontwarn com.google.mlkit.**

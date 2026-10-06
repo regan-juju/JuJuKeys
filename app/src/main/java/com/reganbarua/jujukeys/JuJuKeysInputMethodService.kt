@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.inputmethodservice.InputMethodService
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +25,11 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
+import com.reganbarua.jujukeys.sticker.StickerAddActivity
+import com.reganbarua.jujukeys.sticker.StickerStore
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -271,6 +277,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.shift = ShiftState.OFF
         state.panel = Panel.KEYS
         state.emojiSearch = null
+        state.stickerSheet = null
         state.keepConfirm = KeepLedger.pendingCount(this)
         refreshSensitiveLock()
         // came back from the phone-lock screen: do what the user asked for
@@ -650,13 +657,118 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onPanel(panel: Panel) {
-        if (panel == Panel.EMOJI) ensureEmoji()
+        if (panel == Panel.EMOJI) { ensureEmoji(); if (state.stickerTab) refreshStickers() }
+        state.stickerSheet = null
         if (panel == Panel.CLIPBOARD) refreshSensitiveLock()
         if (state.emojiSearch != null) { onEmojiSearch(false); if (panel == Panel.EMOJI) return }
         if (panel != Panel.SUGGESTIONS) { commitWord(); endEnglishWord() }
         if (panel == Panel.CLIPBOARD) readClipboard(fresh = false)
         state.panel = panel
     }
+
+    // ================================================================== stickers
+
+    private fun refreshStickers() {
+        worker.execute {
+            val list = runCatching { StickerStore.seed(this); StickerStore.list(this) }.getOrDefault(emptyList())
+            main.post { state.stickers = list }
+        }
+    }
+
+    override fun onStickerTab(on: Boolean) {
+        state.stickerTab = on
+        state.stickerSheet = null
+        if (on) refreshStickers()
+    }
+
+    /**
+     * Tap on a sticker: handed to the app as a picture (Android's keyboard-image feature, the
+     * same one Gboard uses). WebP if the app takes it, else a transparent PNG. Apps whose box
+     * takes no pictures (e.g. some post boxes) get the "শেয়ার / সেভ" sheet instead.
+     */
+    override fun onSticker(name: String) {
+        val info = currentInputEditorInfo
+        if (info == null || currentInputConnection == null || state.translateOn || passwordField) {
+            state.stickerSheet = name; return
+        }
+        val types = EditorInfoCompat.getContentMimeTypes(info)
+        fun accepts(mime: String) = types.any { ClipDescription.compareMimeTypes(mime, it) }
+        val webp = accepts("image/webp")
+        val png = accepts("image/png")
+        if (!webp && !png) { state.stickerSheet = name; return }
+        worker.execute {
+            val pick: Pair<Uri, String>? = runCatching {
+                if (webp) StickerStore.webpUri(this, name) to "image/webp"
+                else StickerStore.pngUri(this, name)?.let { it to "image/png" }
+            }.getOrNull()
+            main.post {
+                if (pick == null) { toast("স্টিকার খোলা যায়নি"); return@post }
+                commitWord(); endEnglishWord()
+                if (!commitImage(pick.first, pick.second)) state.stickerSheet = name
+            }
+        }
+    }
+
+    private fun commitImage(uri: Uri, mime: String): Boolean {
+        val ic = currentInputConnection ?: return false
+        val info = currentInputEditorInfo ?: return false
+        var flags = 0
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) flags = flags or InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
+        else runCatching { grantUriPermission(info.packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val content = InputContentInfoCompat(uri, ClipDescription("JuJuKeys sticker", arrayOf(mime)), null)
+        return runCatching { InputConnectionCompat.commitContent(ic, info, content, flags, null) }.getOrDefault(false)
+    }
+
+    override fun onStickerAdd() {
+        state.stickerSheet = null
+        runCatching { StickerAddActivity.start(this) }.onFailure { toast("খোলা যায়নি") }
+    }
+
+    /** Android's share sheet with the sticker as a PNG — e.g. Facebook → new post with the picture. */
+    override fun onStickerShare(name: String) {
+        state.stickerSheet = null
+        worker.execute {
+            val uri = runCatching { StickerStore.pngUri(this, name) }.getOrNull()
+            main.post {
+                if (uri == null) { toast("স্টিকার খোলা যায়নি"); return@post }
+                val send = Intent(Intent.ACTION_SEND).setType("image/png")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                send.clipData = ClipData.newRawUri("sticker", uri)
+                runCatching {
+                    startActivity(Intent.createChooser(send, "স্টিকার পাঠান").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.onFailure { toast("শেয়ার করা যায়নি") }
+            }
+        }
+    }
+
+    override fun onStickerSave(name: String) {
+        state.stickerSheet = null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) { toast("এই Android-এ সরাসরি সেভ হয় না — 'শেয়ার' দিয়ে পাঠান"); return }
+        worker.execute {
+            val ok = runCatching { StickerStore.saveToGallery(this, name) }.getOrDefault(false)
+            main.post { toast(if (ok) "গ্যালারিতে সেভ হয়েছে: Pictures › JuJuKeys Stickers" else "সেভ করা যায়নি") }
+        }
+    }
+
+    override fun onStickerTop(name: String) {
+        worker.execute {
+            runCatching { StickerStore.moveTop(this, name) }
+            val list = runCatching { StickerStore.list(this) }.getOrDefault(state.stickers)
+            main.post { state.stickers = list }
+        }
+    }
+
+    override fun onStickerDelete(name: String) {
+        state.stickerSheet = null
+        worker.execute {
+            runCatching { StickerStore.delete(this, name) }
+            val list = runCatching { StickerStore.list(this) }.getOrDefault(state.stickers)
+            main.post { state.stickers = list; toast("স্টিকার মুছে ফেলা হয়েছে") }
+        }
+    }
+
+    override fun onStickerSheetClose() { state.stickerSheet = null }
 
     // ================================================================== emoji search
 

@@ -87,7 +87,7 @@ private val Accent = Color(0xFFA8C7FA)
 enum class Screen(val title: String) {
     MAIN("JuJuKeys"), LANGUAGES("ভাষা"), PREFERENCES("পছন্দসমূহ"), THEME("থিম"),
     TEXT("সংশোধন ও সাজেশন"), VOICE("ভয়েস টাইপিং"), CLIPBOARD("ক্লিপবোর্ড"), TRANSLATE("অনুবাদ"),
-    DICTIONARY("অভিধান"), EMOJI("ইমোজি"), PRIVACY("গোপনীয়তা"), ABOUT("সম্পর্কে"), TEST("লিখে দেখুন"),
+    DICTIONARY("অভিধান"), EMOJI("ইমোজি ও স্টিকার"), PRIVACY("গোপনীয়তা"), ABOUT("সম্পর্কে"), TEST("লিখে দেখুন"),
 }
 
 /** Gboard-style settings. [enabled]/[selected] show the setup banner until the keyboard is on. */
@@ -272,7 +272,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     Item("ক্লিপবোর্ড", "ইতিহাস, পিন, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
     Item("অনুবাদ", "অফলাইন মডেল, অনলাইন API key", Icons.Outlined.Translate) { open(Screen.TRANSLATE) }
     Item("অভিধান", "নিজের শব্দ যোগ করুন", Icons.AutoMirrored.Outlined.MenuBook) { open(Screen.DICTIONARY) }
-    Item("ইমোজি", "সাম্প্রতিক ইমোজি", Icons.Outlined.EmojiEmotions) { open(Screen.EMOJI) }
+    Item("ইমোজি ও স্টিকার", "সাম্প্রতিক ইমোজি, নিজের স্টিকার যোগ", Icons.Outlined.EmojiEmotions) { open(Screen.EMOJI) }
     Item("গোপনীয়তা", "কী ডেটা কোথাও পাঠানো হয় না", Icons.Outlined.Shield) { open(Screen.PRIVACY) }
     Item("লিখে দেখুন", "কীবোর্ড পরীক্ষা করুন", Icons.Outlined.Keyboard) { open(Screen.TEST) }
     Item("সম্পর্কে", "JuJuKeys সংস্করণ", Icons.Outlined.Info) { open(Screen.ABOUT) }
@@ -551,6 +551,10 @@ private fun EmojiPage(p: KeyboardPrefs, refresh: () -> Unit) {
     ToggleItem("ইমোজি বোতাম দেখাও", null, "emoji_key", p.showEmojiKey, refresh)
     ToggleItem("সাম্প্রতিক ইমোজি", "সম্প্রতি ব্যবহার করা ইমোজি আগে দেখাও", "recent_emoji", p.recentEmoji, refresh)
     ActionButton("সাম্প্রতিক ইমোজি মুছুন", primary = false) { Prefs.clearRecentEmoji(context) }
+    Header("স্টিকার")
+    Note("কীবোর্ডে 😊 → নিচের সারির প্রথম বোতাম। চাপলে স্টিকার পাঠায়; চেপে ধরলে শেয়ার / গ্যালারিতে সেভ / উপরে রাখুন / মুছুন। যত খুশি স্টিকার রাখা যায়।")
+    ActionButton("স্টিকার যোগ করুন (গ্যালারি থেকে)") { com.reganbarua.jujukeys.sticker.StickerAddActivity.start(context) }
+    Note("সাধারণ ছবি দিলে পটভূমি সরিয়ে সাদা বর্ডার দেওয়া যায় (ফোনেই, Google ML Kit)। গ্যালারিতে ছবি Share → JuJuKeys স্টিকার করেও যোগ হয়।")
 }
 
 @Composable
@@ -560,7 +564,8 @@ private fun PrivacyPage() {
     Note("• কোনো অ্যাপ যে ঘরকে গোপন (Incognito) বলে চিহ্নিত করে, সেখানে লেখা শব্দ শেখা হয় না।")
     Note("• অনুবাদ অফলাইনে ফোনেই হয়। শুধু আপনি নিজে API key দিলে, অনুবাদের বক্সের লেখাটুকু Google-এ যায়।")
     Note("• \"আমার লেখা থেকে শেখো\" চালু থাকলে কোন শব্দের পর কোন শব্দ লেখেন তা শুধু এই ফোনে জমা থাকে (লেখা সংশোধন → শেখা শব্দ মুছুন)।")
-    Note("• ইন্টারনেট লাগে শুধু অনুবাদের মডেল নামাতে (একবার)।")
+    Note("• স্টিকার শুধু এই ফোনে থাকে; পটভূমি সরানোও ফোনেই হয়, ছবি কোথাও যায় না। স্টিকার Google ব্যাকআপে যায় না।")
+    Note("• ইন্টারনেট লাগে শুধু অনুবাদের মডেল আর স্টিকারের পটভূমি সরানোর মডেল নামাতে (একবার)।")
 }
 
 @Composable
@@ -585,6 +590,7 @@ private fun AboutPage() {
     Item("ইমোজি তালিকা", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
     Item("বাংলা ফন্ট", "Noto Sans Bengali · SIL Open Font License 1.1")
     Item("অনুবাদ", "Google ML Kit")
+    Item("স্টিকারের পটভূমি সরানো", "Google ML Kit Subject Segmentation (beta) — ফোনেই চলে")
     Note("বিস্তারিত: github.com/regan-juju/JuJuKeys → THIRD_PARTY_NOTICES.md")
 }
 

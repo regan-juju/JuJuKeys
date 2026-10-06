@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12 and newer: same exclusions for cloud backup and phone-to-phone transfer. -->
+<!-- Android 12 and newer: same exclusions for cloud backup and phone-to-phone transfer.
+     Stickers stay out of cloud backup (25 MB limit) but DO move to a new phone by cable/transfer. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="jujukeys_clipboard.xml" />
         <exclude domain="sharedpref" path="jujukeys_secret.xml" />
         <exclude domain="file" path="learned_words.txt" />
+        <exclude domain="file" path="stickers/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="jujukeys_clipboard.xml" />

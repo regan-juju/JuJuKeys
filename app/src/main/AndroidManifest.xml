@@ -43,6 +43,41 @@
             android:taskAffinity=""
             android:theme="@style/Theme.JuJuKeys.Auth" />
 
+        <!-- Make stickers from gallery pictures (also: gallery → Share → JuJuKeys) -->
+        <activity
+            android:name=".sticker.StickerAddActivity"
+            android:exported="true"
+            android:label="JuJuKeys স্টিকার"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.reganbarua.jujukeys.stickers">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Hands a sticker picture to the app being typed in (read-only, one sticker at a time) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.stickers"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/sticker_paths" />
+        </provider>
+
+        <!-- Google's background-removal model is fetched by Play services when the app is installed -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="subject_segment" />
+
         <!-- The system keyboard -->
         <service
             android:name=".JuJuKeysInputMethodService"

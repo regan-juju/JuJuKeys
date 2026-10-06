@@ -67,6 +67,14 @@ class KeyboardState {
     /** Non-null while searching emoji: the letters typed so far. */
     var emojiSearch by mutableStateOf<String?>(null)
     var emojiResults by mutableStateOf<List<String>>(emptyList())
+
+    // ---- Stickers (inside the emoji panel)
+    /** The sticker tab is showing instead of the emoji. */
+    var stickerTab by mutableStateOf(false)
+    /** Sticker file names, in order (first = top-left). */
+    var stickers by mutableStateOf<List<String>>(emptyList())
+    /** Sticker the app could not take directly → "শেয়ার / সেভ" sheet; null = closed. */
+    var stickerSheet by mutableStateOf<String?>(null)
 }
 
 /** Key-press bubble shown above a letter key (like iPhone). */
@@ -103,6 +111,17 @@ interface KeyboardActions {
     fun onVoice()
     /** Open (true) / close (false) emoji search: the letter keys then type into the search. */
     fun onEmojiSearch(open: Boolean)
+
+    // stickers
+    fun onStickerTab(on: Boolean)
+    /** Tap: put the sticker into the app (or show the share / save sheet if it can't take pictures). */
+    fun onSticker(name: String)
+    fun onStickerAdd()
+    fun onStickerShare(name: String)
+    fun onStickerSave(name: String)
+    fun onStickerTop(name: String)
+    fun onStickerDelete(name: String)
+    fun onStickerSheetClose()
 
     // translate
     fun onTranslateToggle()

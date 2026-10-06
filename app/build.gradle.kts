@@ -91,6 +91,9 @@ dependencies {
 
     // Offline translation (Google ML Kit — Google Translate's on-device models)
     implementation("com.google.mlkit:translate:17.0.3")
+    // Stickers: cut people out of a photo, on the phone (model comes through Google Play services)
+    implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
+    implementation("com.google.android.gms:play-services-base:18.5.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")

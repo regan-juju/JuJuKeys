@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the sticker pictures can be shared — nothing else in the app's storage. -->
+<paths>
+    <files-path name="stickers" path="stickers/" />
+    <cache-path name="sticker_out" path="sticker_out/" />
+</paths>

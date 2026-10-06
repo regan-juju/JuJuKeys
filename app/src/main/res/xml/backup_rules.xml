@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 11 and older: Google backup keeps settings, theme and the user's own words,
-     but NOT the clipboard history, the API key or words learned from typing. -->
+     but NOT the clipboard history, the API key, words learned from typing or the stickers
+     (pictures can be many MB; Google backup stops completely above 25 MB). -->
 <full-backup-content>
     <exclude domain="sharedpref" path="jujukeys_clipboard.xml" />
     <exclude domain="sharedpref" path="jujukeys_secret.xml" />
     <exclude domain="file" path="learned_words.txt" />
+    <exclude domain="file" path="stickers/" />
 </full-backup-content>

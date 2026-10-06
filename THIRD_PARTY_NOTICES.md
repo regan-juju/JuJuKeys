@@ -8,6 +8,7 @@
 | Bangla font | `app/src/main/res/font/noto_bengali_*.ttf` | Noto Sans Bengali (Google Fonts) | SIL Open Font License 1.1 (`assets/NotoSansBengali-OFL.txt`) |
 | Icons | `keyboard/Symbols.kt` | Material Symbols (Google) | Apache License 2.0 |
 | Offline translation | Google ML Kit Translate | https://developers.google.com/ml-kit | Google APIs Terms |
+| Sticker background removal | Google ML Kit Subject Segmentation (beta, via Google Play services) | https://developers.google.com/ml-kit/vision/subject-segmentation | Google APIs Terms |
 
 Changes made by JuJuKeys: words normalised to Unicode NFC; duplicates removed (1,053 duplicate
 lines in the original Bangla list); Avro words that were already in the frequency list were left
