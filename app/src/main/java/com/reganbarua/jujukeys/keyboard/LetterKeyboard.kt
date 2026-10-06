@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.changedToDown
@@ -134,7 +137,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             ShiftState.LOCK -> IosIcons.capsLock
         }
     )
-    val emojiPainter = rememberVectorPainter(Symbols.emoji)
     val returnPainter = rememberVectorPainter(Symbols.keyboardReturn)
     val searchPainter = rememberVectorPainter(Symbols.search)
     // key-press bubble: drawn on this same canvas (no UI rebuild on each press = faster)
@@ -167,23 +169,45 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         val grow = with(density) { 2.dp.toPx() }
         geometry.first.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) }
     }
-    // Rainbow theme: each letter column has its own glass colour (+ a soft light sheen on top)
+    // Rainbow theme: every key has its own glass colour — letters by column, the others
+    // (Shift, 123, photo key, return) from the same rainbow; the space bar shows the whole rainbow.
     val tint: List<Pair<Color, Color>?> = remember(flat) {
         val t = IosColors.theme
         val rb = t.rainbow
+        var shifts = 0
         flat.map { k ->
             val c = when {
-                rb != null && k.type == KType.CHAR && k.col >= 0 -> rb[k.col % rb.size]
-                t.accent != null && k.type == KType.SYMBOLS -> t.accent
+                rb == null -> if (t.accent != null && k.type == KType.SYMBOLS) t.accent else null
+                k.type == KType.CHAR && k.col >= 0 -> rb[k.col % rb.size]
+                k.type == KType.SHIFT -> if (shifts++ == 0) rb[0] else rb[rb.size - 1]
+                k.type == KType.SYMBOLS -> t.accent ?: rb[2]
+                k.type == KType.EMOJI -> rb[3 % rb.size]
+                k.type == KType.RETURN -> rb[7 % rb.size]
                 else -> null
             }
-            c?.let { it to lerp(it, Color.White, 0.30f).copy(alpha = 0.95f) }
+            c?.let { it to IosColors.pressedOf(it) }
+        }
+    }
+    val rainbowSpace = remember(flat) { IosColors.rainbowBrush() }
+    // Liquid glass on every key: body a little lighter at the top, a diagonal light sheen.
+    val bodies = remember(geometry, tint) {
+        geometry.first.mapIndexed { i, r ->
+            val base = tint.getOrNull(i)?.first ?: IosColors.key
+            Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
         }
     }
     val sheens = remember(geometry) {
-        if (IosColors.theme.rainbow == null) emptyList()
-        else geometry.first.map { r -> Brush.verticalGradient(0f to Color(0x38FFFFFF), 0.55f to Color.Transparent, startY = r.top, endY = r.bottom) }
+        val strong = IosColors.theme.rainbow != null
+        geometry.first.map { r ->
+            Brush.linearGradient(
+                0f to Color.White.copy(alpha = if (strong) 0.24f else 0.17f),
+                0.42f to Color.Transparent,
+                1f to Color.White.copy(alpha = 0.05f),
+                start = r.topLeft, end = Offset(r.right, r.bottom)
+            )
+        }
     }
+    val photo = ImageBitmap.imageResource(com.reganbarua.jujukeys.R.drawable.photo_mini)
 
     val pressed = remember { mutableStateListOf<Int>() }
     val act by rememberUpdatedState(actions)
@@ -248,7 +272,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                                 if (popupOn) bubble = t.key to h.toString()
                                             }
                                         }
-                                        KType.SHIFT -> act.onShift()
+                                        KType.SHIFT -> { act.onShift(); act.onShiftHeld(true) }
                                         else -> {}
                                     }
                                 } else if (c.changedToUp()) {
@@ -260,7 +284,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     when (k.type) {
                                         KType.CHAR -> if (bubble?.first == t.key) bubble = null
                                         KType.SYMBOLS -> act.onPage(Page.SYMBOLS)
-                                        KType.EMOJI -> act.onPanel(Panel.EMOJI)
+                                        KType.EMOJI -> { act.onStickerTab(true); act.onPanel(Panel.EMOJI) }
+                                        KType.SHIFT -> act.onShiftHeld(false)
                                         KType.SPACE -> if (!t.dragging) act.onSpace()
                                         KType.RETURN -> act.onEnter()
                                         else -> {}
@@ -293,18 +318,24 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             val r = keyRects.getOrNull(i) ?: continue
             val down = i in pressed
             val cr = CornerRadius(corner, corner)
-            if (k.type == KType.RETURN) {
-                // return / search: always plain and faded (like iPhone), never coloured
+            val tc = tint.getOrNull(i)
+            if (k.type == KType.RETURN && tc == null) {
+                // return / search: plain and faded (like iPhone) — coloured only in the rainbow theme
                 drawRoundRect(if (down) IosColors.fadedPressed else IosColors.faded, r.topLeft, r.size, cr)
             } else {
-                // glass key: soft shadow, see-through body, bright top edge; pressed keys swell a little
+                // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
+                // bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(2.dp.toPx()) else r
                 drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
-                val tc = tint.getOrNull(i)
-                drawRoundRect(if (tc != null) (if (down) tc.second else tc.first) else if (down) IosColors.keyPressed else IosColors.key, kr.topLeft, kr.size, cr)
-                if (tc != null) sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
+                when {
+                    down -> drawRoundRect(tc?.second ?: IosColors.keyPressed, kr.topLeft, kr.size, cr)
+                    k.type == KType.SPACE && rainbowSpace != null -> drawRoundRect(rainbowSpace, kr.topLeft, kr.size, cr, alpha = 0.80f)
+                    else -> bodies.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
+                        ?: drawRoundRect(tc?.first ?: IosColors.key, kr.topLeft, kr.size, cr)
+                }
+                sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
                 val rim = rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
-                drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
+                drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.9.dp.toPx()))
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
@@ -314,10 +345,23 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 }
                 KType.RETURN -> drawIcon(
                     if (enterLabel == "search") searchPainter else returnPainter,
-                    r, iconPx + 1.dp.toPx(), IosColors.fadedIcon
+                    r, iconPx + 1.dp.toPx(), if (tint.getOrNull(i) != null) IosColors.text else IosColors.fadedIcon
                 )
                 KType.SHIFT -> drawIcon(shiftPainter, r, iconPx, IosColors.text)
-                KType.EMOJI -> drawIcon(emojiPainter, r, iconPx + 1.dp.toPx(), IosColors.text)
+                KType.EMOJI -> {
+                    // the son's photo, round — tap opens the stickers
+                    val d = minOf(r.width, r.height) - 8.dp.toPx()
+                    val left = r.center.x - d / 2f; val top = r.center.y - d / 2f
+                    val circle = androidx.compose.ui.graphics.Path().apply { addOval(Rect(left, top, left + d, top + d)) }
+                    clipPath(circle) {
+                        drawImage(
+                            photo,
+                            dstOffset = androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()),
+                            dstSize = androidx.compose.ui.unit.IntSize(d.toInt(), d.toInt())
+                        )
+                    }
+                    drawCircle(Color.White.copy(alpha = 0.35f), d / 2f, r.center, style = Stroke(width = 1.dp.toPx()))
+                }
                 KType.GAP -> {}
             }
         }

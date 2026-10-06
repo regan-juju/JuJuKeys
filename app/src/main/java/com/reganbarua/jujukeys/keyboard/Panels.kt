@@ -20,6 +20,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -114,7 +116,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             Modifier.size(width = 44.dp, height = 38.dp)
                 .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier),
             shape = RoundedCornerShape(10.dp),
-            color = IosColors.key, pressedColor = IosColors.keyPressed,
+            color = IosColors.keyOr(0, IosColors.key), pressedColor = IosColors.rainbowAt(0)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
             onTap = { toolsOpen = false; actions.onToggleLanguage() },
             onLongPress = { toolsOpen = !toolsOpen }
         ) {
@@ -216,7 +218,7 @@ internal fun BackKey(actions: KeyboardActions) {
     PressBox(
         Modifier.size(width = 62.dp, height = 38.dp),
         shape = RoundedCornerShape(10.dp),
-        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },
         repeating = true,
         kind = KeyKind.DELETE
@@ -287,57 +289,127 @@ internal fun MoreSuggestionsPanel(state: KeyboardState, actions: KeyboardActions
 
 // ------------------------------------------------------------------ translate bar
 
-/** Gboard-style translate: type here, the translation is written into the app. */
+/**
+ * Translate: write everything in the box first, then tap the photo button (top right, shaped
+ * like the ক/A key) — the whole text is translated at once into the app.
+ * [বাংলা] ⇄ [target ▾]  status  [photo] [⧉] [✕]
+ */
 @Composable
 internal fun TranslateBar(state: KeyboardState, actions: KeyboardActions) {
     val fromBangla = state.translateFrom == Language.BANGLA
-    // Fixed height: the keyboard never grows/shrinks while translating (that made the app
-    // behind re-layout on every result and felt slow).
-    Column(Modifier.fillMaxWidth().height(102.dp).padding(horizontal = 10.dp, vertical = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             LangPill(if (fromBangla) "বাংলা" else "ENGLISH")
             Icon(
                 Icons.Filled.SwapHoriz, "উল্টাও", tint = IosColors.text,
-                modifier = Modifier.padding(horizontal = 6.dp).size(30.dp).clickable { actions.onTranslateSwap() }
+                modifier = Modifier.padding(horizontal = 4.dp).size(28.dp).clickable { actions.onTranslateSwap() }
             )
-            LangPill(if (fromBangla) "ENGLISH" else "বাংলা")
-            // short status (downloading / error) sits here, so nothing changes size
+            LangPill(com.reganbarua.jujukeys.translate.TranslateLangs.label(state.translateTo) + " ▾") {
+                actions.onTranslatePicker(!state.translatePicker)
+            }
             Text(
-                state.translateStatus, color = Color(0xFFFDD663), fontSize = 11.sp, maxLines = 1,
+                state.translateStatus,
+                color = if (state.translateStatus.startsWith("✓")) Color(0xFF81C995) else Color(0xFFFDD663),
+                fontSize = 11.sp, maxLines = 2, lineHeight = 13.sp,
                 overflow = TextOverflow.Ellipsis, fontFamily = fontOf(state.translateStatus),
                 modifier = Modifier.weight(1f).padding(horizontal = 6.dp)
             )
+            TranslatePhotoKey(state.translateDirty) { actions.onTranslateNow() }
+            Spacer(Modifier.width(6.dp))
             SmallIcon(Icons.AutoMirrored.Filled.OpenInNew, "Google Translate অ্যাপ") { actions.onOpenTranslateApp() }
             Spacer(Modifier.width(6.dp))
             SmallIcon(Icons.Filled.Close, "বন্ধ") { actions.onTranslateToggle() }
         }
         Spacer(Modifier.height(6.dp))
+        // grows with the text (up to 4 lines), then scrolls so the end + cursor stay in view
+        val scroll = rememberScrollState()
+        LaunchedEffect(state.translateInput) { scroll.scrollTo(scroll.maxValue) }
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(44.dp)
-                .border(1.dp, IosColors.lightBlue, RoundedCornerShape(22.dp))
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .heightIn(min = 44.dp)
+                .border(1.dp, IosColors.lightBlue, RoundedCornerShape(20.dp))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Bottom
         ) {
             val empty = state.translateInput.isEmpty()
-            val shown = if (empty) "অনুবাদ করার জন্য এখানে টাইপ করুন" else state.translateInput + "│"
-            Text(
-                shown, color = if (empty) IosColors.dim else IosColors.text,
-                fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = fontOf(shown),
-                modifier = Modifier.weight(1f)
-            )
-            if (state.online) Status(Icons.Filled.CheckCircle, "ONLINE", Color(0xFF81C995))
-            if (state.offlineReady) Status(null, "OFFLINE", IosColors.lightBlue)
-            if (!state.online && !state.offlineReady) Status(Icons.Outlined.CloudOff, "NO MODEL", IosColors.dim)
+            val shown = if (empty) "সব লিখে উপরের ছবিতে চাপুন — তখন অনুবাদ হবে" else state.translateInput + "│"
+            Box(Modifier.weight(1f).heightIn(max = 96.dp).verticalScroll(scroll)) {
+                Text(
+                    shown, color = if (empty) IosColors.dim else IosColors.text,
+                    fontSize = 16.sp, lineHeight = 23.sp, fontFamily = fontOf(shown)
+                )
+            }
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 6.dp, bottom = 2.dp)) {
+                if (state.online) Status(Icons.Filled.CheckCircle, "ONLINE", Color(0xFF81C995))
+                if (state.offlineReady) Status(null, "OFFLINE", IosColors.lightBlue)
+                if (!state.online && !state.offlineReady) Status(Icons.Outlined.CloudOff, "NO MODEL", IosColors.dim)
+            }
+        }
+    }
+}
+
+/** The translate button: the son's photo in a box shaped like the ক/A key. */
+@Composable
+private fun TranslatePhotoKey(dirty: Boolean, onTap: () -> Unit) {
+    PressBox(
+        Modifier.size(width = 44.dp, height = 38.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        onTap = onTap
+    ) {
+        Image(
+            androidx.compose.ui.res.painterResource(com.reganbarua.jujukeys.R.drawable.photo_key), "অনুবাদ করুন",
+            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(7.dp))
+                .then(if (dirty) Modifier.border(1.5.dp, Color(0xFFFFD54F), RoundedCornerShape(7.dp)) else Modifier),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+/** "কোন ভাষায় অনুবাদ হবে?" — German, Russian, Japanese, Portuguese first. */
+@Composable
+internal fun LanguagePicker(state: KeyboardState, actions: KeyboardActions) {
+    val src = if (state.translateFrom == Language.BANGLA) "bn" else "en"
+    var query by remember { mutableStateOf("") }
+    val list = remember(src) { com.reganbarua.jujukeys.translate.TranslateLangs.targetsFor(src) }
+    Column(
+        Modifier.fillMaxSize().padding(6.dp).clip(RoundedCornerShape(16.dp)).background(IosColors.panel)
+            .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(16.dp))
+    ) {
+        Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("কোন ভাষায় অনুবাদ হবে?", color = IosColors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                fontFamily = BanglaFont, modifier = Modifier.weight(1f))
+            SmallIcon(Icons.Filled.Close, "বন্ধ") { actions.onTranslatePicker(false) }
+        }
+        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
+            items(list, key = { it.code }) { l ->
+                val on = l.code == state.translateTo
+                Row(
+                    Modifier.fillMaxWidth().background(if (on) IosColors.key else Color.Transparent)
+                        .clickable { actions.onTranslateTarget(l.code) }.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(l.native, color = IosColors.text, fontSize = 15.sp, fontFamily = fontOf(l.native))
+                        Text(l.bn, color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont)
+                    }
+                    Text(
+                        if (l.offline) "অনলাইন · অফলাইন" else "শুধু অনলাইন",
+                        color = if (l.offline) IosColors.lightBlue else IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun LangPill(text: String) {
+private fun LangPill(text: String, onTap: (() -> Unit)? = null) {
     Box(
         Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .then(if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier)
             .background(IosColors.key, RoundedCornerShape(18.dp))
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
@@ -376,24 +448,63 @@ private fun SmallIcon(icon: ImageVector, description: String, onTap: () -> Unit)
 internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardActions) {
     val enabled = state.prefs.clipboardOn
     var selected by remember { mutableStateOf<Long?>(null) }
+    // pin mode: every item shows a pin; tap to choose, "শেষ" applies
+    var pinMode by remember { mutableStateOf(false) }
+    val picks = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
+    fun finishPins() {
+        clips.forEach { c -> val want = picks[c.id] ?: c.pinned; if (want != c.pinned) actions.onClipPin(c.id) }
+        picks.clear(); pinMode = false
+    }
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "ফিরে যান") { actions.onPanel(Panel.KEYS) }
-            Spacer(Modifier.width(12.dp))
-            Text("ক্লিপবোর্ড", color = IosColors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, fontFamily = BanglaFont)
-            Spacer(Modifier.weight(1f))
-            SmallIcon(if (enabled) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff, "ক্লিপবোর্ড চালু/বন্ধ") {
-                actions.onClipEnabled(!enabled)
+            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "ফিরে যান") {
+                if (pinMode) { picks.clear(); pinMode = false } else actions.onPanel(Panel.KEYS)
             }
-            Spacer(Modifier.width(8.dp))
-            SmallIcon(Icons.Outlined.Edit, "সব Google Keep-এ সেভ") { actions.onClipAllToKeep() }
+            Spacer(Modifier.width(12.dp))
+            Text(if (pinMode) "পিন করুন" else "ক্লিপবোর্ড", color = IosColors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, fontFamily = BanglaFont)
+            Spacer(Modifier.weight(1f))
+            if (enabled && clips.isNotEmpty()) {
+                PressBox(
+                    Modifier.size(38.dp), shape = CircleShape,
+                    color = if (pinMode) Color(0xFFFFD54F) else IosColors.key,
+                    pressedColor = IosColors.keyPressed,
+                    onTap = { if (pinMode) finishPins() else { selected = null; picks.clear(); pinMode = true } }
+                ) {
+                    Icon(
+                        if (pinMode) Icons.Filled.PushPin else Icons.Outlined.PushPin, "পিন",
+                        tint = if (pinMode) Color(0xFF111111) else IosColors.text, modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            if (pinMode) {
+                Box(
+                    Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFD54F))
+                        .clickable { finishPins() }.padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) { Text("শেষ", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = BanglaFont) }
+            } else {
+                SmallIcon(if (enabled) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff, "ক্লিপবোর্ড চালু/বন্ধ") {
+                    actions.onClipEnabled(!enabled)
+                }
+                Spacer(Modifier.width(8.dp))
+                SmallIcon(Icons.Outlined.Edit, "সব Google Keep-এ সেভ") { actions.onClipAllToKeep() }
+            }
+        }
+        if (pinMode) {
+            Text(
+                "যেগুলো পিন করতে চান চাপুন — আবার চাপলে আনপিন", color = Color(0xFFFFD54F), fontSize = 12.5.sp,
+                fontFamily = BanglaFont,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp)).background(Color(0x24FFD54F)).padding(horizontal = 10.dp, vertical = 5.dp)
+            )
         }
 
         val sel = clips.firstOrNull { it.id == selected }
-        if (sel != null) {
+        if (sel != null && !pinMode) {
             // actions for the long-pressed item
             Row(
                 Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
@@ -401,9 +512,6 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 ActionChip("✕", null) { selected = null }
-                ActionChip(if (sel.pinned) "আনপিন" else "পিন", if (sel.pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin) {
-                    actions.onClipPin(sel.id); selected = null
-                }
                 if (sel.sensitive && !state.sensitiveUnlocked) {
                     ActionChip("দেখুন", null) { actions.onClipAction(sel.id, SensitiveAction.VIEW); selected = null }
                 }
@@ -425,13 +533,21 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 )
             }
         } else {
-            ClipGrid(clips, selected, state.sensitiveUnlocked, actions) { selected = it }
+            ClipGrid(
+                clips, selected, state.sensitiveUnlocked, actions,
+                pinPick = if (pinMode) { id -> picks[id] ?: (clips.firstOrNull { it.id == id }?.pinned ?: false) } else null,
+                onPinToggle = { id -> val now = picks[id] ?: (clips.firstOrNull { it.id == id }?.pinned ?: false); picks[id] = !now }
+            ) { selected = it }
         }
     }
 }
 
 @Composable
-private fun ClipGrid(clips: List<ClipItem>, selected: Long?, unlocked: Boolean, actions: KeyboardActions, onSelect: (Long) -> Unit) {
+private fun ClipGrid(
+    clips: List<ClipItem>, selected: Long?, unlocked: Boolean, actions: KeyboardActions,
+    pinPick: ((Long) -> Boolean)? = null, onPinToggle: (Long) -> Unit = {},
+    onSelect: (Long) -> Unit,
+) {
         val recent = clips.filter { !it.pinned }
         val pinned = clips.filter { it.pinned }
         LazyVerticalGrid(
@@ -443,11 +559,11 @@ private fun ClipGrid(clips: List<ClipItem>, selected: Long?, unlocked: Boolean, 
         ) {
             if (recent.isNotEmpty()) {
                 item(span = { GridItemSpan(2) }) { SectionTitle("সাম্প্রতিক") }
-                items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions) { onSelect(c.id) } }
+                items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
             if (pinned.isNotEmpty()) {
                 item(span = { GridItemSpan(2) }) { SectionTitle("পিন করা হয়েছে") }
-                items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions) { onSelect(c.id) } }
+                items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
         }
 }
@@ -459,14 +575,20 @@ private fun SectionTitle(text: String) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ClipTile(clip: ClipItem, isSelected: Boolean, unlocked: Boolean, actions: KeyboardActions, onLongPress: () -> Unit) {
+private fun ClipTile(
+    clip: ClipItem, isSelected: Boolean, unlocked: Boolean, actions: KeyboardActions,
+    pinPick: Boolean? = null, onPinToggle: (Long) -> Unit = {}, onLongPress: () -> Unit,
+) {
     Box(
         Modifier
             .heightIn(min = 56.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) IosColors.keyPressed else IosColors.card)
-            .combinedClickable(onClick = { actions.onClipTap(clip.id) }, onLongClick = onLongPress)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .combinedClickable(
+                onClick = { if (pinPick != null) onPinToggle(clip.id) else actions.onClipTap(clip.id) },
+                onLongClick = { if (pinPick == null) onLongPress() }
+            )
+            .padding(start = 12.dp, end = if (pinPick != null) 34.dp else 12.dp, top = 10.dp, bottom = 10.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         if (clip.sensitive && !unlocked) {
@@ -481,7 +603,14 @@ private fun ClipTile(clip: ClipItem, isSelected: Boolean, unlocked: Boolean, act
                 overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip.text)
             )
         }
-        if (clip.pinned) {
+        if (pinPick != null) {
+            Box(
+                Modifier.align(Alignment.TopEnd).offset(x = 26.dp, y = (-4).dp).size(26.dp).clip(CircleShape)
+                    .background(if (pinPick) Color(0xFFFFD54F) else Color(0x59000000))
+                    .border(1.5.dp, if (pinPick) Color(0xFFFFD54F) else Color(0x99FFFFFF), CircleShape),
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Filled.PushPin, null, tint = if (pinPick) Color(0xFF111111) else Color(0xBFFFFFFF), modifier = Modifier.size(14.dp)) }
+        } else if (clip.pinned) {
             Icon(
                 Icons.Filled.PushPin, null, tint = IosColors.dim,
                 modifier = Modifier.size(12.dp).align(Alignment.TopEnd)
@@ -700,16 +829,17 @@ private fun stickerBitmap(name: String?): ImageBitmap? {
     return bmp
 }
 
-/** First button of the emoji bottom row: the user's first sticker as the icon. */
+/** First button of the emoji bottom row: the son's small round photo (= stickers). */
 @Composable
-private fun StickerTabButton(on: Boolean, first: String?, onClick: () -> Unit) {
-    val bmp = stickerBitmap(first)
+private fun StickerTabButton(on: Boolean, @Suppress("UNUSED_PARAMETER") first: String?, onClick: () -> Unit) {
     Box(
         Modifier.size(26.dp).clip(CircleShape).background(if (on) IosColors.key else Color.Transparent).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (bmp != null) Image(bmp, "স্টিকার", Modifier.size(21.dp), contentScale = ContentScale.Fit)
-        else Text("🖼", fontSize = 16.sp)
+        Image(
+            androidx.compose.ui.res.painterResource(com.reganbarua.jujukeys.R.drawable.photo_mini), "স্টিকার",
+            Modifier.size(if (on) 22.dp else 21.dp).clip(CircleShape), contentScale = ContentScale.Crop
+        )
     }
 }
 

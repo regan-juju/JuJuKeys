@@ -56,6 +56,12 @@ class KeyboardState {
     // ---- Translate mode (Gboard style: type in the box, translation goes into the app)
     var translateOn by mutableStateOf(false)
     var translateFrom by mutableStateOf(Language.BANGLA)
+    /** Language code the text is translated INTO ("en", "de", "bn" …). */
+    var translateTo by mutableStateOf("en")
+    /** The language list is open. */
+    var translatePicker by mutableStateOf(false)
+    /** The box changed since the last translation (the photo button then translates again). */
+    var translateDirty by mutableStateOf(false)
     var translateInput by mutableStateOf("")
     var translateStatus by mutableStateOf("")
     var online by mutableStateOf(false)
@@ -99,6 +105,8 @@ interface KeyboardActions {
     fun onCursorMove(steps: Int)
     fun onEnter()
     fun onShift()
+    /** Shift key pressed (true) / released (false): letters typed while it is held are capitals. */
+    fun onShiftHeld(held: Boolean)
     fun onToggleLanguage()
     fun onShowImePicker()
     fun onOpenSettings()
@@ -127,6 +135,10 @@ interface KeyboardActions {
     fun onTranslateToggle()
     fun onTranslateSwap()
     fun onOpenTranslateApp()
+    /** The photo button: translate everything in the box now. */
+    fun onTranslateNow()
+    fun onTranslatePicker(open: Boolean)
+    fun onTranslateTarget(code: String)
 
     // clipboard
     fun onClipPaste(text: String)

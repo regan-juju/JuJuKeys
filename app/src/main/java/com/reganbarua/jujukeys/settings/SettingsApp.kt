@@ -85,9 +85,9 @@ private val TextSub = Color(0xFF9AA0A6)
 private val Accent = Color(0xFFA8C7FA)
 
 enum class Screen(val title: String) {
-    MAIN("JuJuKeys"), LANGUAGES("ভাষা"), PREFERENCES("পছন্দসমূহ"), THEME("থিম"),
-    TEXT("সংশোধন ও সাজেশন"), VOICE("ভয়েস টাইপিং"), CLIPBOARD("ক্লিপবোর্ড"), TRANSLATE("অনুবাদ"),
-    DICTIONARY("অভিধান"), EMOJI("ইমোজি ও স্টিকার"), PRIVACY("গোপনীয়তা"), ABOUT("সম্পর্কে"), TEST("লিখে দেখুন"),
+    MAIN("JuJuKeys"), LANGUAGES("Languages"), PREFERENCES("Preferences"), THEME("Themes"),
+    TEXT("Text correction"), VOICE("Voice typing"), CLIPBOARD("Clipboard"), TRANSLATE("Translate"),
+    DICTIONARY("Dictionary"), EMOJI("Emoji & stickers"), PRIVACY("Privacy"), ABOUT("About"), TEST("Try it"),
 }
 
 /** Gboard-style settings. [enabled]/[selected] show the setup banner until the keyboard is on. */
@@ -131,7 +131,7 @@ private fun TopBar(title: String, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(Modifier.size(48.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "পিছনে", tint = TextMain)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextMain)
         }
         Spacer(Modifier.width(12.dp))
         Text(title, color = TextMain, fontSize = 22.sp)
@@ -211,7 +211,7 @@ private fun <T> ChoiceItem(title: String, options: List<Pair<T, String>>, curren
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text("বাতিল") } }
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Cancel") } }
         )
     }
 }
@@ -249,10 +249,10 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
                 .background(Color(0xFF2B2F36), RoundedCornerShape(16.dp)).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("কীবোর্ড চালু করুন", color = TextMain, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Text("Turn on the keyboard", color = TextMain, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             Text(
-                if (!enabled) "১) তালিকায় JuJuKeys চালু (ON) করুন। Android সব কীবোর্ডের জন্য একটি সাধারণ সতর্কবার্তা দেখায় — JuJuKeys আপনার লেখা কোথাও পাঠায় না।"
-                else "২) JuJuKeys বেছে নিন।",
+                if (!enabled) "1) Turn JuJuKeys ON in the list. Android shows the same general warning for every keyboard — JuJuKeys never sends what you type anywhere."
+                else "2) Choose JuJuKeys.",
                 color = TextSub, fontSize = 14.sp
             )
             Button(
@@ -261,62 +261,62 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
                     else (context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Accent)
-            ) { Text(if (!enabled) "সেটিংস খুলুন" else "কীবোর্ড বাছাই করুন", color = Color(0xFF062E6F)) }
+            ) { Text(if (!enabled) "Open settings" else "Choose keyboard", color = Color(0xFF062E6F)) }
         }
     }
-    Item("ভাষা", "বাংলা (অভ্র), ENGLISH", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
-    Item("পছন্দসমূহ", "কী, লেআউট, শব্দ ও কম্পন", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
-    Item("থিম", "৮টি লিকুইড গ্লাস থিম", Icons.Outlined.Palette) { open(Screen.THEME) }
-    Item("সংশোধন ও সাজেশন", "স্বয়ংক্রিয় সংশোধন, বড় হাতের অক্ষর, সাজেশন", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
-    Item("ভয়েস টাইপিং", "Google ভয়েস টাইপিং", Icons.Outlined.Mic) { open(Screen.VOICE) }
-    Item("ক্লিপবোর্ড", "ইতিহাস, পিন, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
-    Item("অনুবাদ", "অফলাইন মডেল, অনলাইন API key", Icons.Outlined.Translate) { open(Screen.TRANSLATE) }
-    Item("অভিধান", "নিজের শব্দ যোগ করুন", Icons.AutoMirrored.Outlined.MenuBook) { open(Screen.DICTIONARY) }
-    Item("ইমোজি ও স্টিকার", "সাম্প্রতিক ইমোজি, নিজের স্টিকার যোগ", Icons.Outlined.EmojiEmotions) { open(Screen.EMOJI) }
-    Item("গোপনীয়তা", "কী ডেটা কোথাও পাঠানো হয় না", Icons.Outlined.Shield) { open(Screen.PRIVACY) }
-    Item("লিখে দেখুন", "কীবোর্ড পরীক্ষা করুন", Icons.Outlined.Keyboard) { open(Screen.TEST) }
-    Item("সম্পর্কে", "JuJuKeys সংস্করণ", Icons.Outlined.Info) { open(Screen.ABOUT) }
+    Item("Languages", "Bangla (Avro), English", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
+    Item("Preferences", "Keys, layout, sound & vibration", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
+    Item("Themes", "8 liquid glass themes", Icons.Outlined.Palette) { open(Screen.THEME) }
+    Item("Text correction", "Auto-correct, capitals, suggestions", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
+    Item("Voice typing", "Google voice typing", Icons.Outlined.Mic) { open(Screen.VOICE) }
+    Item("Clipboard", "History, pin, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
+    Item("Translate", "Languages, offline models, online API key", Icons.Outlined.Translate) { open(Screen.TRANSLATE) }
+    Item("Dictionary", "Your words (added automatically)", Icons.AutoMirrored.Outlined.MenuBook) { open(Screen.DICTIONARY) }
+    Item("Emoji & stickers", "Recent emoji, add your stickers", Icons.Outlined.EmojiEmotions) { open(Screen.EMOJI) }
+    Item("Privacy", "Your typing is never sent anywhere", Icons.Outlined.Shield) { open(Screen.PRIVACY) }
+    Item("Try it", "Test the keyboard", Icons.Outlined.Keyboard) { open(Screen.TEST) }
+    Item("About", "JuJuKeys version", Icons.Outlined.Info) { open(Screen.ABOUT) }
 }
 
 @Composable
 private fun LanguagesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    Header("ইনস্টল করা ভাষা")
-    Item("বাংলা", "অভ্র ফোনেটিক — ইংরেজি অক্ষরে লিখলে বাংলা (ami → আমি)")
-    Item("ENGLISH", "QWERTY")
-    Header("শুরুর ভাষা")
+    Header("Installed languages")
+    Item("Bangla", "Avro phonetic — type in English letters, get Bangla (ami → আমি)")
+    Item("English", "QWERTY")
+    Header("Starting language")
     ChoiceItem(
-        "কীবোর্ড খুললে প্রথমে", listOf(true to "বাংলা", false to "ENGLISH"), p.defaultBangla
+        "When the keyboard opens", listOf(true to "Bangla", false to "English"), p.defaultBangla
     ) {
         Prefs.setBoolean(context, "default_bangla", it)
         Prefs.setLastLanguageBangla(context, it)
         refresh()
     }
-    Note("লেখার সময় ভাষা বদলাতে সাজেশন বারের ক / A বোতাম চাপুন।")
+    Note("To switch language while typing, tap the ক / A key on the suggestion bar.")
 }
 
 @Composable
 private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    Header("কী")
-    ToggleItem("বোল্ড অক্ষর", "কী-র লেখা মোটা করে দেখাও", "bold_keys", p.boldKeys, refresh)
-    ToggleItem("নম্বরের সারি", "অক্ষরের উপরে ১–০ সারি দেখাও", "number_row", p.numberRow, refresh)
-    ToggleItem("ইমোজি বোতাম দেখাও", null, "emoji_key", p.showEmojiKey, refresh)
-    ToggleItem("ভয়েস ইনপুট বোতাম", null, "voice_key", p.showVoiceKey, refresh)
-    Header("লেআউট")
+    Header("Keys")
+    ToggleItem("Bold letters", "Show key labels in bold", "bold_keys", p.boldKeys, refresh)
+    ToggleItem("Number row", "Show a 1–0 row above the letters", "number_row", p.numberRow, refresh)
+    ToggleItem("Photo / emoji key", null, "emoji_key", p.showEmojiKey, refresh)
+    ToggleItem("Voice input key", null, "voice_key", p.showVoiceKey, refresh)
+    Header("Layout")
     ChoiceItem(
-        "কীবোর্ডের উচ্চতা",
-        listOf(0.9f to "ছোট", 1.0f to "মাঝারি", 1.1f to "বড়", 1.2f to "অনেক বড়"), p.heightScale
+        "Keyboard height",
+        listOf(0.9f to "Small", 1.0f to "Normal", 1.1f to "Large", 1.2f to "Extra large"), p.heightScale
     ) { Prefs.setFloat(context, "height_scale", it); refresh() }
-    Header("স্বয়ংক্রিয়ভাবে লুকানো")
-    ToggleItem("কিছু না লিখলে কীবোর্ড লুকাও", "নির্দিষ্ট সময় কোনো কী না চাপলে কীবোর্ড নিজে থেকে নেমে যাবে", "auto_hide", p.autoHide, refresh)
+    Header("Auto-hide")
+    ToggleItem("Hide the keyboard when idle", "The keyboard closes by itself if no key is pressed for a while", "auto_hide", p.autoHide, refresh)
     if (p.autoHide) {
-        Text("কতক্ষণ পর লুকাবে", color = TextMain, fontSize = 17.sp, modifier = Modifier.padding(start = 20.dp, top = 6.dp))
+        Text("Hide after", color = TextMain, fontSize = 17.sp, modifier = Modifier.padding(start = 20.dp, top = 6.dp))
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf(5 to "৫ সে.", 10 to "১০ সে.", 20 to "২০ সে.", 30 to "৩০ সে.").forEach { (sec, label) ->
+            listOf(5 to "5 s", 10 to "10 s", 20 to "20 s", 30 to "30 s").forEach { (sec, label) ->
                 val on = p.autoHideSeconds == sec
                 Box(
                     Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp))
@@ -327,30 +327,30 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
                 ) { Text(label, color = if (on) Color(0xFF062E6F) else TextMain, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal) }
             }
         }
-        Note("আবার খুলতে: লেখার ঘরে একবার ট্যাপ করলেই কীবোর্ড ফিরে আসবে।")
+        Note("To bring it back, just tap the text field once.")
     }
-    Header("কী চাপলে")
-    ToggleItem("কী চাপলে শব্দ", null, "sound", p.sound, refresh)
-    ToggleItem("কী চাপলে কম্পন", null, "vibrate", p.vibrate, refresh)
+    Header("Key press")
+    ToggleItem("Sound on key press", null, "sound", p.sound, refresh)
+    ToggleItem("Vibrate on key press", null, "vibrate", p.vibrate, refresh)
     if (p.vibrate) {
         ChoiceItem(
-            "কম্পনের জোর",
-            listOf(0 to "সিস্টেম ডিফল্ট", 1 to "হালকা", 2 to "মাঝারি", 3 to "জোরে"), p.vibrateStrength
+            "Vibration strength",
+            listOf(0 to "System default", 1 to "Light", 2 to "Medium", 3 to "Strong"), p.vibrateStrength
         ) { Prefs.setInt(context, "vibrate_strength", it); refresh() }
     }
-    ToggleItem("কী চাপলে বড় করে দেখাও", null, "popup", p.popup, refresh)
-    ToggleItem("লম্বা চাপলে চিহ্ন", "কী লম্বা চাপলে সংখ্যা/চিহ্ন", "long_press_symbols", p.longPressSymbols, refresh)
+    ToggleItem("Pop-up on key press", null, "popup", p.popup, refresh)
+    ToggleItem("Long press for symbols", "Hold a key for its number / symbol", "long_press_symbols", p.longPressSymbols, refresh)
     ChoiceItem(
-        "লম্বা চাপের সময়",
-        listOf(200 to "২০০ মি.সে.", 300 to "৩০০ মি.সে.", 400 to "৪০০ মি.সে.", 500 to "৫০০ মি.সে."), p.longPressDelay
+        "Long press delay",
+        listOf(200 to "200 ms", 300 to "300 ms", 400 to "400 ms", 500 to "500 ms"), p.longPressDelay
     ) { Prefs.setInt(context, "long_press_delay", it); refresh() }
 }
 
 @Composable
 private fun ThemePage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    Header("থিম")
-    Note("একটি থিম বেছে নিন — কীবোর্ড সাথে সাথে বদলে যাবে। সব থিমে লিকুইড গ্লাস কী; শুধু একটি সাদা, বাকিগুলো ডার্ক।")
+    Header("Themes")
+    Note("Pick a theme — the keyboard changes at once. Every theme has liquid glass keys; one is white, the rest are dark.")
     Themes.all.forEach { t ->
         val selected = t.id == p.theme
         Column(
@@ -412,26 +412,26 @@ private fun ThemePreview(t: KbTheme, selected: Boolean) {
 @Composable
 private fun TextPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    Header("স্বয়ংক্রিয় সংশোধন")
-    ToggleItem("স্বয়ংক্রিয় সংশোধন", "লেখার সময় ভুল ইংরেজি বানান ঠিক করো (স্পেস চাপলে)", "auto_correct", p.autoCorrect, refresh)
-    ToggleItem("স্বয়ংক্রিয় বড় হাতের অক্ষর", "ENGLISH-এ প্রতিটি বাক্যের প্রথম অক্ষর বড় হাতের", "auto_cap", p.autoCapitalize, refresh)
-    ToggleItem("দুবার স্পেসে দাঁড়ি/ফুলস্টপ", "বাংলায় ।  ENGLISH-এ .", "double_space", p.doubleSpacePeriod, refresh)
-    Header("সাজেশন")
-    ToggleItem("আপত্তিকর শব্দ সাজেস্ট করো না", null, "block_offensive", p.blockOffensive, refresh)
-    ToggleItem("সাজেশন বার", "সাজেশন ও অন্যান্য বোতাম দেখাও", "suggestions", p.showSuggestions, refresh)
-    ToggleItem("শব্দের সাজেশন", "লেখার সময় সাজেশন বারে শব্দ দেখাও", "word_suggestions", p.wordSuggestions, refresh)
-    ToggleItem("পরের শব্দের সাজেশন", "আগের শব্দ দেখে পরের শব্দ আন্দাজ করো", "next_word", p.nextWordSuggestions, refresh)
-    ToggleItem("আমার লেখা থেকে শেখো", "ভালো সাজেশনের জন্য — শুধু এই ফোনে থাকে", "learn_words", p.learnWords, refresh)
-    ActionButton("শেখা শব্দ মুছুন", primary = false) { Prefs.setBoolean(context, "clear_learned", true) }
-    Note("বানান ও ব্যাকরণ যাচাই (লাল/নীল দাগ) Android-এর আলাদা \"spell checker\" সেবা — কীবোর্ড সেটি দেয় না। ফোনের Settings → Languages & input → Spell checker থেকে চালু করতে পারেন।")
+    Header("Auto-correction")
+    ToggleItem("Auto-correct", "Fix English spelling mistakes when you press space", "auto_correct", p.autoCorrect, refresh)
+    ToggleItem("Auto-capitalisation", "English only: first letter of every sentence is a capital (never in Bangla)", "auto_cap", p.autoCapitalize, refresh)
+    ToggleItem("Double-space full stop", "Bangla ।  English .", "double_space", p.doubleSpacePeriod, refresh)
+    Header("Suggestions")
+    ToggleItem("Block offensive words", null, "block_offensive", p.blockOffensive, refresh)
+    ToggleItem("Suggestion bar", "Show suggestions and buttons", "suggestions", p.showSuggestions, refresh)
+    ToggleItem("Word suggestions", "Show words on the suggestion bar while typing", "word_suggestions", p.wordSuggestions, refresh)
+    ToggleItem("Next-word suggestions", "Guess the next word from the previous one", "next_word", p.nextWordSuggestions, refresh)
+    ToggleItem("Learn from my typing", "Your most-typed words come first — stays on this phone", "learn_words", p.learnWords, refresh)
+    ActionButton("Clear learned words", primary = false) { Prefs.setBoolean(context, "clear_learned", true) }
+    Note("Red / blue underlines come from Android's separate spell checker, not the keyboard. Turn it on in phone Settings → Languages & input → Spell checker.")
 }
 
 @Composable
 private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    ToggleItem("ভয়েস ইনপুট বোতাম", "কীবোর্ডের নিচে 🎤", "voice_key", p.showVoiceKey, refresh)
-    Note("🎤 চাপলে Google ভয়েস টাইপিং চালু হয় (Gboard বা Google অ্যাপ লাগবে)। বলা শেষে আবার JuJuKeys-এ ফিরে আসবে।")
-    ActionButton("ফোনের কীবোর্ড সেটিংস", primary = false) {
+    ToggleItem("Voice input key", "🎤 under the keyboard", "voice_key", p.showVoiceKey, refresh)
+    Note("🎤 starts Google voice typing (needs Gboard or the Google app). When you finish speaking you come back to JuJuKeys.")
+    ActionButton("Phone keyboard settings", primary = false) {
         context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
     }
 }
@@ -439,39 +439,39 @@ private fun VoicePage(p: KeyboardPrefs, refresh: () -> Unit) {
 @Composable
 private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    ToggleItem("ক্লিপবোর্ড", "কপি করা লেখা কীবোর্ডে জমা রাখো", "clipboard", p.clipboardOn, refresh)
-    Note("কিছু কপি করলেই কীবোর্ডের ক্লিপবোর্ডে চলে আসে, লেখা হুবহু (স্পেস ও লাইনসহ) থাকে। কোনো লেখা লম্বা চাপলে পিন / কপি / Keep / মুছুন। ইতিহাস এনক্রিপ্ট করে শুধু এই ফোনে রাখা হয় (Android Keystore), ফোনের ব্যাকআপে যায় না।")
-    Header("সংবেদনশীল লেখা (পাসওয়ার্ড, OTP …)")
+    ToggleItem("Clipboard", "Keep copied text in the keyboard", "clipboard", p.clipboardOn, refresh)
+    Note("Anything you copy appears in the keyboard clipboard exactly as copied (spaces and lines too). Pin button at the top: tap it, choose items, then Done. Hold an item: copy / Keep / delete. History is encrypted and stays on this phone (Android Keystore); it is not in phone backups.")
+    Header("Sensitive text (passwords, OTP …)")
     ToggleItem(
-        "সংবেদনশীল লেখাও রাখো",
-        "যে অ্যাপ থেকে কপি করছেন সেটি লেখাকে 'গোপন' চিহ্নিত করলে (পাসওয়ার্ড ম্যানেজার, ব্যাংক অ্যাপ) — চালু থাকলে সেটাও ইতিহাসে থাকবে",
+        "Keep sensitive text too",
+        "When the app you copy from marks text as private (password managers, bank apps) — if on, it is kept in history too",
         "save_sensitive", p.saveSensitive, refresh
     )
-    Note("• এনক্রিপ্ট করে রাখা হয়; ইতিহাসে লেখা ঢাকা থাকে (🔒 ••••)।\n" +
-        "• দেখা, বসানো, কপি বা Keep-এ পাঠানোর আগে ফোনের লক (PIN/প্যাটার্ন/আঙুলের ছাপ) চাইবে; একবার দিলে ১ মিনিট খোলা থাকে।\n" +
-        "• নিজে থেকে কখনো Keep, অনুবাদ বা অন্য কোথাও যায় না; শব্দ শেখায়ও ব্যবহার হয় না।\n" +
-        "• পাসওয়ার্ডের ঘরে আপনি যা টাইপ করেন তা কখনো জমা হয় না — শুধু আপনি নিজে কপি করলে এই নিয়মে রাখা হয়।\n" +
-        "• ফোনে স্ক্রিন লক না থাকলে এগুলো খোলা যাবে না।\n" +
-        "• সতর্কতা: কেউ আপনার ফোনের PIN জানলে এগুলো দেখতে পারবে।")
-    ActionButton("সব সংবেদনশীল লেখা মুছুন", primary = false) {
+    Note("• Stored encrypted; hidden in the history (🔒 ••••).\n" +
+        "• Viewing, pasting, copying or sending to Keep asks for the phone lock (PIN / pattern / fingerprint); unlocked for 1 minute.\n" +
+        "• Never goes to Keep, translation or anywhere else by itself; never used for learning words.\n" +
+        "• What you type in password fields is never stored — only text you copy yourself follows this rule.\n" +
+        "• Without a screen lock on the phone these cannot be opened.\n" +
+        "• Warning: anyone who knows your phone PIN can see them.")
+    ActionButton("Delete all sensitive text", primary = false) {
         ClipHistory(context).clearSensitive()
         Prefs.sp(context).edit().putLong("clip_changed", System.currentTimeMillis()).apply()
     }
-    ActionButton("Google Keep খুলুন") { ClipHistory.openKeep(context) }
-    Header("Google Keep-এ পাঠানো (নিজে থেকে সিঙ্ক হয় না)")
-    Note("Keep অন্য অ্যাপকে কোনো নোটে নিজে থেকে লেখা যোগ করতে দেয় না, আর সেভ হলো কিনা জানায়ও না। তাই এভাবে কাজ করে:\n" +
-        "১. প্রথমবার ✎ চাপলে Keep-এ \"JuJuKeys ক্লিপবোর্ড\" নোট সব লেখাসহ খোলে — Keep-এ 'Save' চাপুন।\n" +
-        "২. পরে ✎ চাপলে শুধু নতুন লেখাগুলো কপি হয় ও Keep খোলে — ওই নোট খুলে লম্বা চেপে 'Paste' করুন।\n" +
-        "৩. কীবোর্ডে ফিরে \"Keep-এ সেভ হয়েছে?\" প্রশ্নে 'হ্যাঁ' চাপুন। 'না' চাপলে লেখাগুলো পরে আবার পাঠানো যাবে।")
+    ActionButton("Open Google Keep") { ClipHistory.openKeep(context) }
+    Header("Sending to Google Keep (not an automatic sync)")
+    Note("Keep does not let other apps add to a note, nor say whether it was saved. So it works like this:\n" +
+        "1. First ✎ opens a new Keep note \"JuJuKeys ক্লিপবোর্ড\" with everything — tap 'Save' in Keep.\n" +
+        "2. Later ✎ copies only the new items and opens Keep — open that note, hold and 'Paste'.\n" +
+        "3. Back in the keyboard answer 'হ্যাঁ' to \"Keep-এ সেভ হয়েছে?\". 'না' means they can be sent again later.")
     var sentCount by remember { mutableStateOf(Prefs.keepSentIds(context).size) }
-    Item("পাঠানো হয়েছে বলে চিহ্নিত", if (sentCount == 0) "কিছু নেই" else "${sentCount}টি লেখা")
-    ActionButton("সব লেখা আবার পাঠানোর জন্য চিহ্ন মুছুন", primary = false) {
+    Item("Marked as sent", if (sentCount == 0) "None" else "$sentCount items")
+    ActionButton("Clear the sent marks (send all again)", primary = false) {
         Prefs.setKeepSentIds(context, emptySet()); Prefs.clearKeepPending(context); sentCount = 0
     }
-    ActionButton("Keep-এর নোট নতুন করে শুরু করুন", primary = false) {
+    ActionButton("Start a new Keep note", primary = false) {
         Prefs.setKeepNoteCreated(context, false); Prefs.setKeepSentIds(context, emptySet()); Prefs.clearKeepPending(context); sentCount = 0
     }
-    ActionButton("ইতিহাস মুছুন (পিন করা ছাড়া)", primary = false) {
+    ActionButton("Clear history (except pinned)", primary = false) {
         ClipHistory(context).clearUnpinned()
         Prefs.sp(context).edit().putLong("clip_changed", System.currentTimeMillis()).apply()
     }
@@ -485,46 +485,54 @@ private fun TranslatePage() {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var key by remember { mutableStateOf(Prefs.cloudApiKey(context)) }
-    LaunchedEffect(Unit) { engine.checkOfflineModel { modelReady = it } }
+    LaunchedEffect(Unit) { engine.checkOfflineModel("bn", "en") { modelReady = it } }
 
-    Header("অফলাইন")
+    Header("Offline")
     Item(
-        "বাংলা ⇄ ENGLISH মডেল",
-        when (modelReady) { true -> "✓ ফোনে আছে — ইন্টারনেট ছাড়াই অনুবাদ হবে"; false -> "নেই (~৩০MB, একবারই নামাতে হবে)"; null -> "দেখা হচ্ছে…" }
+        "Bangla ⇄ English model",
+        when (modelReady) { true -> "✓ On the phone — translates without internet"; false -> "Not downloaded (~30 MB, once)"; null -> "Checking…" }
     )
-    ActionButton(if (busy) "নামানো হচ্ছে…" else "অফলাইন মডেল নামান", enabled = !busy && modelReady != true) {
+    ActionButton(if (busy) "Downloading…" else "Download offline model", enabled = !busy && modelReady != true) {
         busy = true; message = ""
-        engine.downloadOfflineModel { ok, err ->
+        engine.downloadOfflineModel("bn", "en") { ok, err ->
             busy = false; modelReady = ok
-            message = if (ok) "" else "হয়নি: ${err ?: "ইন্টারনেট দেখুন"}"
+            message = if (ok) "" else "Failed: ${err ?: "check the internet"}"
         }
     }
     if (message.isNotEmpty()) Note(message)
-    Header("অনলাইন (ঐচ্ছিক)")
-    Note("Google Cloud Translation API key দিলে ইন্টারনেট থাকলে সেটি দিয়ে অনুবাদ হবে; না দিলে অফলাইন মডেলই চলবে।")
+    Header("Languages")
+    Note("You type in Bangla or English; tap the language on the translate bar (e.g. ENGLISH ▾) to translate into German, Russian, Japanese, Portuguese and about 55 more. Each offline language downloads once (~30 MB) the first time you use it. Nepali, Burmese, Punjabi and Sinhala work online only (API key).")
+    Note("How to translate: write everything in the box, then tap the photo button (top right) — or press Enter. The whole text is translated at once.")
+    Header("Online (optional)")
+    Note("With your own Google Cloud Translation API key, translation uses it when online; without it the offline model is used.")
     OutlinedTextField(
         value = key, onValueChange = { key = it }, singleLine = true,
         placeholder = { Text("API key") },
         visualTransformation = PasswordVisualTransformation(),     // key is never shown on screen
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
     )
-    ActionButton("Key সেভ করুন", primary = false) {
-        message = if (Prefs.setCloudApiKey(context, key)) "সেভ হয়েছে (এনক্রিপ্ট করে)" else "সেভ হয়নি — ফোনের নিরাপদ চাবিঘর (Keystore) কাজ করছে না"
+    ActionButton("Save key", primary = false) {
+        message = if (Prefs.setCloudApiKey(context, key)) "Saved (encrypted)" else "Not saved — the phone's secure key store (Keystore) is not working"
     }
-    ActionButton("Key মুছুন", primary = false) { key = ""; Prefs.setCloudApiKey(context, ""); message = "Key মুছে ফেলা হয়েছে — এখন শুধু অফলাইন অনুবাদ" }
-    Note("Key এনক্রিপ্ট করে শুধু এই ফোনে রাখা হয় (Android Keystore), ফোনের ব্যাকআপে যায় না।")
+    ActionButton("Delete key", primary = false) { key = ""; Prefs.setCloudApiKey(context, ""); message = "Key deleted — offline translation only" }
+    Note("The key is encrypted and stays on this phone (Android Keystore); not in phone backups.")
 }
 
 @Composable
 private fun DictionaryPage() {
     val context = LocalContext.current
     var words by remember { mutableStateOf(Prefs.userWords(context)) }
+    val auto = remember { Prefs.autoWords(context) }
+    var autoOn by remember { mutableStateOf(Prefs.sp(context).getBoolean("auto_dictionary", true)) }
     var input by remember { mutableStateOf("") }
-    Note("নিজের শব্দ (নাম, জায়গা ইত্যাদি) যোগ করুন — লেখার সময় সাজেশনে আগে আসবে। বাংলা বা ENGLISH দুটোই চলবে।")
+    Item("Add new words automatically", "A word you type twice that the dictionary does not know (a name, a place) is added here", trailing = {
+        Switch(checked = autoOn, onCheckedChange = { autoOn = it; Prefs.setBoolean(context, "auto_dictionary", it) })
+    }) { autoOn = !autoOn; Prefs.setBoolean(context, "auto_dictionary", autoOn) }
+    Note("Your words come first in the suggestions. Bangla or English both work. A word you delete here is never added again by itself.")
     Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
-            placeholder = { Text("যেমন: বিলাইছড়ি") }, modifier = Modifier.weight(1f)
+            placeholder = { Text("e.g. বিলাইছড়ি") }, modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(8.dp))
         Button(
@@ -533,13 +541,13 @@ private fun DictionaryPage() {
                 if (w.isNotEmpty()) { words = (listOf(w) + words).distinct(); Prefs.setUserWords(context, words); input = "" }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Accent)
-        ) { Text("যোগ", color = Color(0xFF062E6F)) }
+        ) { Text("Add", color = Color(0xFF062E6F)) }
     }
-    Header("আমার শব্দ (${words.size})")
+    Header("My words (${words.size})")
     words.forEach { w ->
-        Item(w, trailing = {
-            Icon(Icons.Filled.Close, "মুছুন", tint = TextSub, modifier = Modifier.size(22.dp).clickable {
-                words = words - w; Prefs.setUserWords(context, words)
+        Item(w, if (w in auto) "added automatically" else null, trailing = {
+            Icon(Icons.Filled.Close, "Delete", tint = TextSub, modifier = Modifier.size(22.dp).clickable {
+                words = words - w; Prefs.setUserWords(context, words); Prefs.addRemovedWord(context, w)
             })
         })
     }
@@ -548,24 +556,24 @@ private fun DictionaryPage() {
 @Composable
 private fun EmojiPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
-    ToggleItem("ইমোজি বোতাম দেখাও", null, "emoji_key", p.showEmojiKey, refresh)
-    ToggleItem("সাম্প্রতিক ইমোজি", "সম্প্রতি ব্যবহার করা ইমোজি আগে দেখাও", "recent_emoji", p.recentEmoji, refresh)
-    ActionButton("সাম্প্রতিক ইমোজি মুছুন", primary = false) { Prefs.clearRecentEmoji(context) }
-    Header("স্টিকার")
-    Note("কীবোর্ডে 😊 → নিচের সারির প্রথম বোতাম। চাপলে স্টিকার পাঠায়; চেপে ধরলে শেয়ার / গ্যালারিতে সেভ / উপরে রাখুন / মুছুন। যত খুশি স্টিকার রাখা যায়।")
-    ActionButton("স্টিকার যোগ করুন (গ্যালারি থেকে)") { com.reganbarua.jujukeys.sticker.StickerAddActivity.start(context) }
-    Note("সাধারণ ছবি দিলে পটভূমি সরিয়ে সাদা বর্ডার দেওয়া যায় (ফোনেই, Google ML Kit)। গ্যালারিতে ছবি Share → JuJuKeys স্টিকার করেও যোগ হয়।")
+    ToggleItem("Photo / emoji key", null, "emoji_key", p.showEmojiKey, refresh)
+    ToggleItem("Recent emoji", "Show recently used emoji first", "recent_emoji", p.recentEmoji, refresh)
+    ActionButton("Clear recent emoji", primary = false) { Prefs.clearRecentEmoji(context) }
+    Header("Stickers")
+    Note("Tap the photo key on the keyboard to open your stickers. Tap a sticker to send it; hold it to share / save to gallery / move to top / delete. No limit on how many.")
+    ActionButton("Add stickers (from gallery)") { com.reganbarua.jujukeys.sticker.StickerAddActivity.start(context) }
+    Note("Ordinary photos can get the background removed and a white border (on the phone, Google ML Kit). A sheet of many stickers is split into separate stickers. You can also share pictures from the gallery to \"JuJuKeys স্টিকার\".")
 }
 
 @Composable
 private fun PrivacyPage() {
-    Note("• আপনি যা টাইপ করেন তা কোথাও জমা রাখা, লগ করা বা পাঠানো হয় না।")
-    Note("• ক্লিপবোর্ডের ইতিহাস ও API key এনক্রিপ্ট করে শুধু এই ফোনে থাকে। অ্যাপ যে লেখাকে গোপন চিহ্নিত করে, তা শুধু আপনি সেটিংসে চালু করলে রাখা হয় (ঢাকা অবস্থায়, ফোনের লক দিয়ে খোলে)। ক্লিপবোর্ড, API key আর শেখা শব্দ ফোনের ব্যাকআপে যায় না।")
-    Note("• কোনো অ্যাপ যে ঘরকে গোপন (Incognito) বলে চিহ্নিত করে, সেখানে লেখা শব্দ শেখা হয় না।")
-    Note("• অনুবাদ অফলাইনে ফোনেই হয়। শুধু আপনি নিজে API key দিলে, অনুবাদের বক্সের লেখাটুকু Google-এ যায়।")
-    Note("• \"আমার লেখা থেকে শেখো\" চালু থাকলে কোন শব্দের পর কোন শব্দ লেখেন তা শুধু এই ফোনে জমা থাকে (লেখা সংশোধন → শেখা শব্দ মুছুন)।")
-    Note("• স্টিকার শুধু এই ফোনে থাকে; পটভূমি সরানোও ফোনেই হয়, ছবি কোথাও যায় না। স্টিকার Google ব্যাকআপে যায় না।")
-    Note("• ইন্টারনেট লাগে শুধু অনুবাদের মডেল আর স্টিকারের পটভূমি সরানোর মডেল নামাতে (একবার)।")
+    Note("• What you type is never stored, logged or sent anywhere.")
+    Note("• Clipboard history and the API key are encrypted and stay on this phone. Text an app marks as private is kept only if you turn that on (hidden, opened with the phone lock). Clipboard, API key and learned words are not in phone backups.")
+    Note("• Nothing is learned in fields an app marks as private (incognito).")
+    Note("• Translation runs offline on the phone. Only if you add your own API key does the text in the translate box go to Google.")
+    Note("• With \"Learn from my typing\" on, the words you use stay only on this phone (Text correction → Clear learned words). New words typed twice go into your Dictionary.")
+    Note("• Stickers stay on this phone; background removal happens on the phone too. Stickers are not in Google backups.")
+    Note("• Internet is needed only to download the translation models and the sticker background model (once).")
 }
 
 @Composable
@@ -575,32 +583,32 @@ private fun AboutPage() {
     Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         Image(painterResource(R.drawable.logo), "JuJuKeys", modifier = Modifier.size(120.dp).clip(CircleShape))
     }
-    Item("JuJuKeys", "সংস্করণ $version")
-    Item("তৈরি করেছেন", "রিগ্যান বড়ুয়া")
+    Item("JuJuKeys", "Version $version")
+    Item("Made by", "Regan Barua (রিগ্যান বড়ুয়া)")
     val sp = Prefs.sp(context)
     val ms = sp.getLong("bench_dict_ms", -1)
     Item(
-        "এই ফোনে অভিধান",
-        if (ms < 0) "কীবোর্ড একবার খুললে এখানে মাপা সময় দেখাবে"
-        else "লোড হতে ${ms} মি.সে. · বাংলা ${sp.getInt("bench_words_bn", 0)}টি · ইংরেজি ${sp.getInt("bench_words_en", 0)}টি শব্দ"
+        "Dictionary on this phone",
+        if (ms < 0) "Open the keyboard once to see the measured time here"
+        else "Loads in $ms ms · ${sp.getInt("bench_words_bn", 0)} Bangla · ${sp.getInt("bench_words_en", 0)} English words"
     )
-    Header("উৎস ও লাইসেন্স")
-    Item("শব্দের ঘনত্বের তালিকা", "FrequencyWords — github.com/hermitdave/FrequencyWords (rev 525f9b5, content/2018) · CC BY-SA 4.0")
-    Item("অতিরিক্ত বাংলা শব্দ", "Avro Phonetic অভিধান — github.com/sarim/ibus-avro (rev dd521a1) · Mozilla Public License 2.0 · assets/dict_bn_avro.txt")
-    Item("ইমোজি তালিকা", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
-    Item("বাংলা ফন্ট", "Noto Sans Bengali · SIL Open Font License 1.1")
-    Item("অনুবাদ", "Google ML Kit")
-    Item("স্টিকারের পটভূমি সরানো", "Google ML Kit Subject Segmentation (beta) — ফোনেই চলে")
-    Note("বিস্তারিত: github.com/regan-juju/JuJuKeys → THIRD_PARTY_NOTICES.md")
+    Header("Sources & licences")
+    Item("Word frequency list", "FrequencyWords — github.com/hermitdave/FrequencyWords (rev 525f9b5, content/2018) · CC BY-SA 4.0")
+    Item("Extra Bangla words", "Avro Phonetic dictionary — github.com/sarim/ibus-avro (rev dd521a1) · Mozilla Public License 2.0 · assets/dict_bn_avro.txt")
+    Item("Emoji list", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
+    Item("Bangla font", "Noto Sans Bengali · SIL Open Font License 1.1")
+    Item("Translation", "Google ML Kit")
+    Item("Sticker background removal", "Google ML Kit Subject Segmentation (beta) — runs on the phone")
+    Note("Details: github.com/regan-juju/JuJuKeys → THIRD_PARTY_NOTICES.md")
 }
 
 @Composable
 private fun TestPage() {
     var text by remember { mutableStateOf("") }
-    Note("এখানে লিখে কীবোর্ড পরীক্ষা করুন।")
+    Note("Type here to test the keyboard.")
     OutlinedTextField(
         value = text, onValueChange = { text = it },
         modifier = Modifier.fillMaxWidth().height(160.dp).padding(horizontal = 20.dp),
-        placeholder = { Text("এখানে টাইপ করুন…") }
+        placeholder = { Text("Type here…") }
     )
 }

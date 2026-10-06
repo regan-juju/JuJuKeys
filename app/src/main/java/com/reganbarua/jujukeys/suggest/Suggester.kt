@@ -83,6 +83,24 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     /** Words the user often types get a boost. Filled by [Learner]. */
     @Volatile var learnedCounts: Map<String, Int> = emptyMap()
+        set(value) {
+            field = value
+            // typed at least twice → offered while typing, even if it is not in the dictionary
+            val often = value.entries.filter { it.value >= 2 }.sortedByDescending { it.value }
+            learnedBn = often.filter { e -> e.key.any { it in 'ঀ'..'৿' } }.map { Triple(it.key, skeleton(it.key), it.value) }
+            learnedEn = often.filter { e -> e.key.all { it.code < 128 } && e.key.any { it.isLetter() } }.map { it.key to it.value }
+        }
+    @Volatile private var learnedBn: List<Triple<String, String, Int>> = emptyList()
+    @Volatile private var learnedEn: List<Pair<String, Int>> = emptyList()
+
+    /** The user's most-typed words (for the suggestion bar before anything is typed). */
+    fun favourites(bangla: Boolean, n: Int): List<String> =
+        if (bangla) learnedBn.filter { it.third >= 3 }.take(n).map { it.first }
+        else learnedEn.filter { it.second >= 3 && it.first.length > 1 }.take(n).map { it.first }
+
+    /** True if the word is in the built-in dictionary. */
+    fun known(word: String): Boolean =
+        if (word.any { it in 'ঀ'..'৿' }) banglaFreq(word) > 0 else englishFreq(word) > 0
 
     // ------------------------------------------------------------------ lookup
 
@@ -126,6 +144,9 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         val found = top(english, "en", p, 40)
         // exact word first, then words the user types often, then by frequency
         found.firstOrNull { it.word == p }?.let { if (out.size < n) out.add(it.word) }
+        // words the user types often (dictionary or not), most-typed first
+        learnedEn.asSequence().filter { it.first.startsWith(p) && it.first != p }.take(n)
+            .forEach { if (out.size < n) out.add(it.first) }
         val learned = learnedCounts
         found.sortedByDescending { (learned[it.word] ?: 0) * 1_000_000_000L + it.freq }
             .forEach { if (out.size < n) out.add(it.word) }
@@ -225,6 +246,8 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         val out = LinkedHashSet<String>()
         out.add(nfc(converted))
         userBangla.filter { it.second.startsWith(key) }.forEach { if (out.size < n) out.add(it.first) }
+        // words the user types often (even ones not in the dictionary), most-typed first
+        learnedBn.asSequence().filter { it.second.startsWith(key) }.take(n).forEach { if (out.size < n) out.add(it.first) }
         (same.sortedByDescending(rank) + longer.sortedByDescending(rank)).forEach { if (out.size < n) out.add(it.word) }
         if (out.size < n) extraMatches(key, n - out.size + 4).forEach { if (out.size < n) out.add(it) }
         return out.toList()

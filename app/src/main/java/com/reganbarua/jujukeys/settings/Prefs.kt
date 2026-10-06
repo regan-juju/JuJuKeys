@@ -144,6 +144,18 @@ object Prefs {
     }
 
     // ---- personal dictionary (অভিধান)
+    /** Words the user deleted from "আমার শব্দ" — never added automatically again. */
+    fun removedWords(context: Context): Set<String> =
+        (sp(context).getString("user_words_removed", "") ?: "").split('\n').filter { it.isNotBlank() }.toSet()
+
+    fun addRemovedWord(context: Context, w: String) {
+        sp(context).edit().putString("user_words_removed", (removedWords(context) + w).joinToString("\n")).apply()
+    }
+
+    /** Words that were added automatically (shown with a mark in the dictionary page). */
+    fun autoWords(context: Context): Set<String> =
+        (sp(context).getString("auto_words", "") ?: "").split('\n').filter { it.isNotBlank() }.toSet()
+
     fun userWords(context: Context): List<String> =
         (sp(context).getString("user_words", "") ?: "").split('\n').filter { it.isNotBlank() }
     fun setUserWords(context: Context, words: List<String>) {

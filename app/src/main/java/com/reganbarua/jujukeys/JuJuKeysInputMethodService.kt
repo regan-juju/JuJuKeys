@@ -119,6 +119,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private val recent = StringBuilder()       // last few characters we typed (for auto-capital, double space)
     private var lastWord: String? = null       // previous word, for next-word suggestions
     private var lastShiftTap = 0L
+    /** Shift is being held down (capitals while held); a letter was typed during the hold. */
+    private var shiftHeld = false
+    private var shiftChord = false
+    /** Shift ONCE came from the user's own tap (never automatic in Bangla). */
+    private var shiftByUser = false
     private var lastSpaceTime = 0L
     private var lastEditTime = 0L
     private var passwordField = false
@@ -398,10 +403,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
             // Key labels are CAPITAL, but typing is normal: small letters, Shift = capital.
             val out = when {
                 !c.isLetter() -> c
-                state.shift == ShiftState.OFF -> c.lowercaseChar()
+                state.shift == ShiftState.OFF && !shiftHeld -> c.lowercaseChar()
                 else -> c.uppercaseChar()
             }
-            if (state.shift == ShiftState.ONCE && c.isLetter()) state.shift = ShiftState.OFF
+            afterShiftLetter(c)
             if (out.isLetter() || (out == '\'' && enWord.isNotEmpty())) {
                 sinkCommit(out.toString())
                 enWord.append(out)
@@ -415,9 +420,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
         // বাংলা
         val ch = if (c.isLetter()) {
-            if (state.shift == ShiftState.OFF) c.lowercaseChar() else c.uppercaseChar()
+            if (state.shift == ShiftState.OFF && !shiftHeld) c.lowercaseChar() else c.uppercaseChar()
         } else c
-        if (state.shift == ShiftState.ONCE && c.isLetter()) state.shift = ShiftState.OFF
+        afterShiftLetter(c)
 
         if (AvroPhonetic.isPhoneticChar(ch)) {
             roman.append(ch)
@@ -515,6 +520,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onEnter() {
         if (state.translateOn) {
+            // not translated yet → this Enter translates (the next one sends)
+            if (state.translateDirty && (tCommitted.toString() + tComposing).isNotBlank()) { onTranslateNow(); return }
             // keep the translation in the app, clear the box, then send / new line
             main.removeCallbacks(translateRunnable)
             roman.clear(); tCommitted.setLength(0); tComposing = ""
@@ -550,11 +557,31 @@ class JuJuKeysInputMethodService : InputMethodService(),
             state.shift == ShiftState.ONCE -> ShiftState.OFF
             else -> ShiftState.ONCE
         }
+        shiftByUser = state.shift != ShiftState.OFF
         lastShiftTap = now
+    }
+
+    /** Shift held down: every letter typed while holding is a capital; letting go ends it. */
+    override fun onShiftHeld(held: Boolean) {
+        if (held) { shiftHeld = true; shiftChord = false; return }
+        shiftHeld = false
+        if (shiftChord && state.shift != ShiftState.LOCK) state.shift = ShiftState.OFF
+        shiftChord = false
+    }
+
+    /** A letter used up a one-time Shift (not while Shift is held). */
+    private fun afterShiftLetter(c: Char) {
+        if (!c.isLetter()) return
+        if (shiftHeld) { shiftChord = true; return }
+        if (state.shift == ShiftState.ONCE) { state.shift = ShiftState.OFF; shiftByUser = false }
     }
 
     /** ENGLISH: capital letter at the start of a sentence — worked out here, no app round-trip. */
     private fun updateCaps() {
+        // বাংলা: Shift is never switched on automatically — only by the user's own tap / hold
+        if (state.language == Language.BANGLA && state.shift == ShiftState.ONCE && !shiftByUser && !shiftHeld) {
+            state.shift = ShiftState.OFF
+        }
         if (state.language != Language.ENGLISH || state.translateOn || passwordField || state.shift == ShiftState.LOCK) return
         if (!state.prefs.autoCapitalize || !fieldWantsCaps) {
             if (state.shift == ShiftState.ONCE && enWord.isEmpty()) state.shift = ShiftState.OFF
@@ -565,6 +592,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val start = t.isEmpty() || t.endsWith("\n") ||
             (t.endsWith(" ") && (trimmed.isEmpty() || trimmed.last() in ".?!।"))
         state.shift = if (start && enWord.isEmpty()) ShiftState.ONCE else ShiftState.OFF
+        shiftByUser = false
     }
 
     override fun onToggleLanguage() {
@@ -573,7 +601,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
         setLanguage(if (state.language == Language.BANGLA) Language.ENGLISH else Language.BANGLA)
         if (state.translateOn) {
             state.translateFrom = state.language
+            state.translateTo = savedTarget(srcCode())
             clearTranslateBox()
+            prepareModels()
         }
     }
 
@@ -632,6 +662,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onPage(page: Page) {
         if (page != Page.LETTERS) { commitWord(); endEnglishWord() }
         state.page = page
+        refreshSuggestions()
     }
 
     private fun loadExtraWords() {
@@ -833,8 +864,31 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (state.prefs.learnWords && !noLearn) {
             learner.learn(lastWord, w)
             if (++learnedSinceSave >= 15) saveLearned()
+            maybeAddToDictionary(w)
         }
         lastWord = w
+    }
+
+    /**
+     * "নিজের অভিধান": a word typed twice that the built-in dictionary does not know (a name,
+     * a place, a local word) is added to the user's own dictionary automatically. Words the
+     * user removed from that list are never added again.
+     */
+    private fun maybeAddToDictionary(w: String) {
+        if (!Prefs.sp(this).getBoolean("auto_dictionary", true)) return
+        if (w.length < 2 || w.length > 30 || w.any { it.isDigit() || it in "০১২৩৪৫৬৭৮৯" }) return
+        val bangla = w.any { it in 'ঀ'..'৿' }
+        if (!bangla && !w.all { it.isLetter() || it == '\'' || it == '-' }) return
+        if (learner.count(w) != 2) return                       // exactly at the 2nd time, once
+        val s = suggester ?: return
+        worker.execute {
+            if (s.known(w)) return@execute
+            val removed = Prefs.removedWords(this)
+            val words = Prefs.userWords(this)
+            if (w in removed || words.any { it.equals(w, ignoreCase = true) }) return@execute
+            Prefs.setUserWords(this, listOf(w) + words)
+            Prefs.sp(this).edit().putString("auto_words", (Prefs.autoWords(this) + w).joinToString("\n")).apply()
+        }
     }
 
     /** Auto-correction (setting): fix an English typo when space is pressed. */
@@ -866,7 +920,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     private fun refreshSuggestions() {
-        if (passwordField) {
+        if (passwordField || (state.page == Page.NUMPAD && !state.translateOn)) {   // numbers: no words
             state.suggestions = emptyList(); state.moreSuggestions = emptyList(); return
         }
         val seq = ++suggestionSeq
@@ -921,6 +975,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val fits = { w: String -> if (bangla) w.any { it in 'ঀ'..'৿' } else w.all { it.code < 128 } }
         val out = LinkedHashSet<String>()
         if (prev != null) learner.nextWords(prev, 12).filter(fits).forEach { out.add(it) }
+        // nothing to go on yet → the words this user types most
+        if (out.size < 3) s?.favourites(bangla, 9)?.forEach { if (out.size < 12) out.add(it) }
         if (bangla) {
             if (out.isEmpty()) listOf("আমি", "সে", "আপনি").forEach { out.add(it) }
             s?.topBangla?.forEach { if (out.size < 18) out.add(it) }
@@ -1130,6 +1186,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     // ================================================================== translate
 
+    private fun srcCode() = if (state.translateFrom == Language.BANGLA) "bn" else "en"
+
+    /** Remembered target language for text typed in [src]. */
+    private fun savedTarget(src: String): String {
+        val def = if (src == "bn") "en" else "bn"
+        val t = Prefs.sp(this).getString("translate_to_$src", def) ?: def
+        return if (t == src) def else t
+    }
+
     override fun onTranslateToggle() {
         if (state.translateOn) { stopTranslate(); return }
         commitWord()
@@ -1137,18 +1202,33 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.panel = Panel.KEYS
         state.translateOn = true
         state.translateFrom = state.language
+        state.translateTo = savedTarget(srcCode())
         state.translateStatus = ""
+        state.translatePicker = false
         clearTranslateBox()
+        prepareModels()
+    }
+
+    /** Online? Offline model for this pair on the phone? Downloads it once if possible. */
+    private fun prepareModels() {
+        val from = srcCode(); val to = state.translateTo
         state.online = translator.isOnline()
-        translator.warmUp()          // load the model now, so the first translation is quick
-        translator.checkOfflineModel { ready ->
+        if (!translator.offlinePossible(from, to)) {
+            state.offlineReady = false
+            state.translateStatus = if (state.online) "" else "এই ভাষা শুধু অনলাইনে"
+            return
+        }
+        translator.warmUp(from, to)          // load the model now, so the first translation is quick
+        translator.checkOfflineModel(from, to) { ready ->
+            if (from != srcCode() || to != state.translateTo) return@checkOfflineModel
             state.offlineReady = ready
             if (!ready && translator.isOnline()) {
                 state.translateStatus = "অফলাইন মডেল নামানো হচ্ছে (একবারই, ~৩০MB)…"
-                translator.downloadOfflineModel { ok, err ->
+                translator.downloadOfflineModel(from, to) { ok, err ->
+                    if (from != srcCode() || to != state.translateTo) return@downloadOfflineModel
                     state.offlineReady = ok
                     state.translateStatus = if (ok) "অফলাইন অনুবাদ প্রস্তুত ✓" else "মডেল নামানো যায়নি: ${err ?: ""}"
-                    if (ok) translator.warmUp()
+                    if (ok) translator.warmUp(from, to)
                 }
             } else if (!ready) {
                 state.translateStatus = "অফলাইন মডেল নেই — একবার ইন্টারনেট চালু করুন"
@@ -1157,10 +1237,28 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onTranslateSwap() {
+        val oldSrc = srcCode()
         val next = if (state.translateFrom == Language.BANGLA) Language.ENGLISH else Language.BANGLA
         state.translateFrom = next
         setLanguage(next)
+        // bn → en becomes en → bn; any other target stays
+        state.translateTo = if (state.translateTo == srcCode()) oldSrc else savedTarget(srcCode())
+        state.translateStatus = ""
         clearTranslateBox()
+        prepareModels()
+    }
+
+    override fun onTranslatePicker(open: Boolean) { state.translatePicker = open }
+
+    override fun onTranslateTarget(code: String) {
+        state.translatePicker = false
+        if (code == srcCode()) { onTranslateSwap(); return }
+        state.translateTo = code
+        Prefs.sp(this).edit().putString("translate_to_${srcCode()}", code).apply()
+        state.translateStatus = ""
+        lastTranslation = ""
+        state.translateDirty = (tCommitted.toString() + tComposing).isNotBlank()
+        prepareModels()
     }
 
     override fun onOpenTranslateApp() {
@@ -1175,6 +1273,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         tCommitted.setLength(0); tComposing = ""
         state.translateInput = ""
         state.translateOn = false
+        state.translatePicker = false
+        state.translateDirty = false
         state.translateStatus = ""
         translator.release()                          // free the ML Kit models' memory
         markEdit()
@@ -1188,14 +1288,22 @@ class JuJuKeysInputMethodService : InputMethodService(),
         roman.clear()
         tCommitted.setLength(0); tComposing = ""
         state.translateInput = ""
+        state.translateDirty = false
         markEdit()
         currentInputConnection?.setComposingText("", 1)
     }
 
+    /** Typing only fills the box; nothing is translated until the photo button (or Enter). */
     private fun translateInputChanged() {
         state.translateInput = tCommitted.toString() + tComposing
-        main.removeCallbacks(translateRunnable)
-        main.postDelayed(translateRunnable, 400)   // translate once typing pauses — keeps typing smooth
+        state.translateDirty = true
+        if (state.translateStatus.startsWith("✓")) state.translateStatus = ""
+    }
+
+    override fun onTranslateNow() {
+        commitWord()                                  // the half-typed word counts too
+        state.translateInput = tCommitted.toString() + tComposing
+        runTranslation()
     }
 
     private fun runTranslation() {
@@ -1204,30 +1312,32 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val seq = ++translateSeq
         if (raw.isEmpty()) {
             lastTranslation = ""
+            state.translateDirty = false
             markEdit()
             currentInputConnection?.setComposingText("", 1)
             return
         }
-        val toEnglish = state.translateFrom == Language.BANGLA
+        val from = srcCode(); val to = state.translateTo
         translating = true
+        state.translateStatus = "অনুবাদ হচ্ছে…"
         translator.translate(
-            raw, toEnglish,
+            raw, from, to,
             status = { state.translateStatus = it },
             onResult = { result, error ->
                 translating = false
-                if (translatePending) {          // text changed while we were busy → translate the latest once
-                    translatePending = false
-                    main.post(translateRunnable)
-                }
+                if (translatePending) { translatePending = false; main.post { runTranslation() } }
                 if (seq != translateSeq || !state.translateOn) return@translate
-                if (result != null && result.text != lastTranslation) {
-                    lastTranslation = result.text
-                    markEdit()
-                    currentInputConnection?.setComposingText(result.text, 1)
-                    if (state.translateStatus.isNotEmpty()) state.translateStatus = ""
+                if (result != null) {
+                    if (result.text != lastTranslation) {
+                        lastTranslation = result.text
+                        markEdit()
+                        currentInputConnection?.setComposingText(result.text, 1)
+                    }
+                    state.translateDirty = false
+                    state.translateStatus = if (result.online) "✓ অনুবাদ হয়েছে" else "✓ অনুবাদ হয়েছে (অফলাইন)"
                     if (!result.online) state.offlineReady = true
                 } else {
-                    state.translateStatus = error ?: "অনুবাদ হয়নি"
+                    state.translateStatus = error ?: "অনুবাদ হয়নি — আবার চাপুন"
                 }
             }
         )

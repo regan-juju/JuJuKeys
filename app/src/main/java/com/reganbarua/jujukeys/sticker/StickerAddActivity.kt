@@ -97,13 +97,13 @@ class StickerAddActivity : ComponentActivity() {
     private fun process(uris: List<Uri>) {
         if (busy) return
         busy = true; done = 0; total = uris.size; summary = ""
-        status = "শুরু হচ্ছে…"
+        status = "Starting…"
         val wantCut = cutOut; val wantBorder = border; val wantSplit = split
         Thread {
             val maker = StickerMaker(applicationContext)
             var cut = 0; var kept = 0; var failed = 0; var bad = 0; var sheets = 0; var fromSheets = 0
             uris.forEachIndexed { i, u ->
-                runOnUiThread { status = "${bn(i + 1)} / ${bn(uris.size)} তৈরি হচ্ছে…" + if (wantCut && maker.modelOk == null) " (প্রথমবার পটভূমি সরানোর অংশ নামতে পারে)" else "" }
+                runOnUiThread { status = "Making ${i + 1} / ${uris.size}…" + if (wantCut && maker.modelOk == null) " (the first time, the background-removal part may download)" else "" }
                 val made = runCatching { maker.make(u, wantCut, wantBorder, wantSplit) }
                     .getOrElse { StickerMaker.Made(StickerMaker.Result.BAD_IMAGE, emptyList()) }
                 when (made.result) {
@@ -120,12 +120,12 @@ class StickerAddActivity : ComponentActivity() {
             val n = StickerStore.count(applicationContext)
             val made = cut + kept + failed + fromSheets
             val parts = buildList {
-                add("${bn(made)}টি স্টিকার যোগ হয়েছে")
-                if (sheets > 0) add("${bn(sheets)}টি স্টিকার-শিট ভাগ করে ${bn(fromSheets)}টি আলাদা স্টিকার")
-                if (cut > 0) add("${bn(cut)}টির পটভূমি সরানো হয়েছে")
-                if (failed > 0) add("${bn(failed)}টির পটভূমি সরানো যায়নি — মূল ছবি রাখা হলো (কীবোর্ডে চেপে ধরে মুছতে পারবেন)")
-                if (modelFailed) add("পটভূমি সরানোর অংশ নামানো যায়নি — ইন্টারনেট চালু করে আবার চেষ্টা করুন")
-                if (bad > 0) add("${bn(bad)}টি ছবি খোলা যায়নি")
+                add("$made stickers added")
+                if (sheets > 0) add("$sheets sticker sheet(s) split into $fromSheets separate stickers")
+                if (cut > 0) add("Background removed from $cut")
+                if (failed > 0) add("$failed could not have the background removed — the original picture was kept (hold it in the keyboard to delete)")
+                if (modelFailed) add("The background-removal part could not be downloaded — turn on the internet and try again")
+                if (bad > 0) add("$bad picture(s) could not be opened")
             }
             runOnUiThread { busy = false; status = ""; summary = parts.joinToString("\n• ", prefix = "• "); count = n }
         }.start()
@@ -137,26 +137,26 @@ class StickerAddActivity : ComponentActivity() {
             Modifier.fillMaxSize().background(Bg).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("স্টিকার যোগ করুন", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("এখন আছে: ${bn(count)}টি স্টিকার · যত খুশি যোগ করা যায়", color = Sub, fontSize = 14.sp)
-            Toggle("পটভূমি নিজে সরান", "সাধারণ ছবি থেকে মানুষ/মূল অংশ কেটে নেয় (Google ML Kit, ফোনেই)", cutOut) {
+            Text("Add stickers", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("You have $count stickers · add as many as you like", color = Sub, fontSize = 14.sp)
+            Toggle("Remove background", "Cuts the people / main subject out of an ordinary photo (Google ML Kit, on the phone)", cutOut) {
                 cutOut = it; save(KEY_CUT, it)
             }
-            Toggle("সাদা বর্ডার", "কেটে নেওয়া ছবির চারপাশে স্টিকারের মতো সাদা রেখা ও হালকা ছায়া", border) {
+            Toggle("White border", "A sticker-style white outline and soft shadow around the cut-out", border) {
                 border = it; save(KEY_BORDER, it)
             }
-            Toggle("স্টিকার-শিট ভাগ করুন", "একটা ছবিতে অনেক স্টিকার (যেমন ৩×৩) থাকলে আলাদা আলাদা স্টিকার হবে — কালো বা স্বচ্ছ পটভূমি", split) {
+            Toggle("Split sticker sheets", "A picture with many stickers (e.g. 3×3) becomes separate stickers — black or see-through background", split) {
                 split = it; save(KEY_SPLIT, it)
             }
             Text(
-                "স্বচ্ছ PNG বা কালো পটভূমির স্টিকার (আগে থেকে বানানো) দিলে কালো অংশ সরে যায়, স্টিকার যেমন আছে তেমন থাকে — বাড়তি কাটা বা বর্ডার হয় না।",
+                "Ready-made stickers (see-through PNG, or on a black background) are kept as they are — the black goes, nothing else is cut or bordered.",
                 color = Sub, fontSize = 13.sp
             )
             Button(
                 onClick = onPick, enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Accent)
-            ) { Text("গ্যালারি থেকে ছবি বাছুন", color = Color(0xFF062E6F), fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
-            Text("একসাথে অনেকগুলো বাছা যায়। গ্যালারি থেকে ছবি Share → JuJuKeys করেও যোগ করা যায়।", color = Sub, fontSize = 13.sp)
+            ) { Text("Choose pictures from the gallery", color = Color(0xFF062E6F), fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+            Text("You can pick many at once. You can also Share pictures from the gallery to JuJuKeys.", color = Sub, fontSize = 13.sp)
             if (busy) {
                 LinearProgressIndicator(
                     progress = { if (total == 0) 0f else done / total.toFloat() },
@@ -167,14 +167,14 @@ class StickerAddActivity : ComponentActivity() {
             if (summary.isNotEmpty()) {
                 Text(summary, color = Color.White, fontSize = 15.sp, lineHeight = 22.sp)
                 OutlinedButton(onClick = { finish() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("শেষ — কীবোর্ডে ফিরুন", color = Accent, fontSize = 16.sp)
+                    Text("Done — back to the keyboard", color = Accent, fontSize = 16.sp)
                 }
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "• সব কাজ ফোনেই হয়, ছবি কোথাও পাঠানো হয় না।\n" +
-                    "• কীবোর্ডে: 😊 → নিচের প্রথম বোতাম (স্টিকার)। চাপলে পাঠায়, চেপে ধরলে শেয়ার / সেভ / উপরে রাখুন / মুছুন।\n" +
-                    "• স্টিকার ফোনের ব্যাকআপে যায় না (Google ব্যাকআপের ২৫ MB সীমা ভরে না যায়)।",
+                "• Everything happens on the phone; pictures are never sent anywhere.\n" +
+                    "• In the keyboard: tap the photo key → your stickers. Tap to send; hold to share / save / move to top / delete.\n" +
+                    "• Stickers are not in Google backups (so the 25 MB backup limit is not used up).",
                 color = Sub, fontSize = 13.sp, lineHeight = 20.sp
             )
         }

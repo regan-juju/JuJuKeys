@@ -23,10 +23,10 @@ import java.net.URLEncoder
 import kotlin.concurrent.thread
 
 /**
- * Bangla ⇄ English translation.
+ * Translation from Bangla / English into many languages ([TranslateLangs]).
  *
  *  • Offline: Google ML Kit (the on-device engine behind Google Translate's offline mode).
- *    The Bangla model (~30 MB) downloads once, then works with no internet.
+ *    Each language's model (~30 MB) downloads once, then works with no internet.
  *  • Online:  Google Cloud Translation API, only if the user saved their own API key
  *    in the app. Falls back to offline if that fails.
  *
@@ -46,80 +46,89 @@ class TranslateEngine(private val context: Context) {
             caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    /** Remembered after the first check, so each translation does not ask again (faster). */
-    @Volatile private var modelReady = false
+    /** Languages whose offline model is known to be on the phone (English is built in). */
+    private val ready = java.util.Collections.synchronizedSet(HashSet<String>().apply { add("en") })
 
-    /** Calls back true when the Bangla offline model is already on the phone. */
-    fun checkOfflineModel(callback: (Boolean) -> Unit) {
-        if (modelReady) { callback(true); return }
+    private fun mlkit(code: String): String? = TranslateLanguage.fromLanguageTag(code)
+
+    /** True when this pair can be translated on the phone at all (both languages in ML Kit). */
+    fun offlinePossible(from: String, to: String) = mlkit(from) != null && mlkit(to) != null
+
+    /** Calls back true when the offline models for [from] → [to] are already on the phone. */
+    fun checkOfflineModel(from: String, to: String, callback: (Boolean) -> Unit) {
+        val need = setOf(from, to) - "en"
+        if (!offlinePossible(from, to)) { callback(false); return }
+        if (ready.containsAll(need)) { callback(true); return }
         RemoteModelManager.getInstance()
             .getDownloadedModels(TranslateRemoteModel::class.java)
             .addOnSuccessListener { models ->
-                modelReady = models.any { it.language == TranslateLanguage.BENGALI }
-                callback(modelReady)
+                models.forEach { ready.add(it.language) }
+                callback(ready.containsAll(need))
             }
             .addOnFailureListener { callback(false) }
     }
 
-    /** Loads both translators into memory ahead of time so the first result comes fast. */
-    fun warmUp() {
-        checkOfflineModel { ready ->
-            if (!ready) return@checkOfflineModel
-            translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH).translate("আমি")
-            translator(TranslateLanguage.ENGLISH, TranslateLanguage.BENGALI).translate("hi")
-        }
+    /** Loads the translator into memory ahead of time so the first result comes fast. */
+    fun warmUp(from: String, to: String) {
+        checkOfflineModel(from, to) { ok -> if (ok) runCatching { translator(from, to).translate("a") } }
     }
 
-    /** Downloads the offline model (needs internet once). */
-    fun downloadOfflineModel(onDone: (Boolean, String?) -> Unit) {
-        val t = translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH)
-        t.downloadModelIfNeeded(DownloadConditions.Builder().build())
-            .addOnSuccessListener { modelReady = true; onDone(true, null) }
+    /** Downloads the offline models for [from] → [to] (needs internet once; ~30 MB per language). */
+    fun downloadOfflineModel(from: String, to: String, onDone: (Boolean, String?) -> Unit) {
+        if (!offlinePossible(from, to)) { onDone(false, "এই ভাষা শুধু অনলাইনে (API key দিয়ে)"); return }
+        translator(from, to).downloadModelIfNeeded(DownloadConditions.Builder().build())
+            .addOnSuccessListener { ready.add(from); ready.add(to); onDone(true, null) }
             .addOnFailureListener { onDone(false, it.message) }
     }
 
     /**
-     * Translates [text] from Bangla to English ([toEnglish] = true) or the other way.
+     * Translates [text] from [from] to [to] (language codes, e.g. "bn", "en", "de").
+     * Online (own API key) first; if that fails, the phone's offline model.
      * [status] receives short progress messages in Bangla.
      */
     fun translate(
         text: String,
-        toEnglish: Boolean,
+        from: String,
+        to: String,
         status: (String) -> Unit,
         onResult: (Result?, String?) -> Unit,
     ) {
         val key = Prefs.cloudApiKey(context)
         if (key.isNotBlank() && isOnline()) {
             thread(name = "jujukeys-translate") {
-                val r = runCatching { cloudTranslate(text, toEnglish, key) }
+                val r = runCatching { cloudTranslate(text, from, to, key) }
                 main.post {
                     val value = r.getOrNull()
                     if (value != null) onResult(Result(value, true), null)
-                    else offline(text, toEnglish, status, onResult)   // fall back
+                    else if (offlinePossible(from, to)) offline(text, from, to, status, onResult)   // fall back
+                    else onResult(null, "অনলাইন অনুবাদ হয়নি — আবার চেষ্টা করুন")
                 }
             }
+        } else if (offlinePossible(from, to)) {
+            offline(text, from, to, status, onResult)
         } else {
-            offline(text, toEnglish, status, onResult)
+            onResult(null, "এই ভাষা শুধু অনলাইনে — ইন্টারনেট ও API key লাগবে")
         }
     }
 
     private fun offline(
         text: String,
-        toEnglish: Boolean,
+        from: String,
+        to: String,
         status: (String) -> Unit,
         onResult: (Result?, String?) -> Unit,
     ) {
-        val t = if (toEnglish) translator(TranslateLanguage.BENGALI, TranslateLanguage.ENGLISH)
-        else translator(TranslateLanguage.ENGLISH, TranslateLanguage.BENGALI)
+        val t = translator(from, to)
+        val need = setOf(from, to) - "en"
         // Model already on the phone → translate straight away (no extra checks = faster).
-        if (modelReady) {
+        if (ready.containsAll(need)) {
             t.translate(text)
                 .addOnSuccessListener { onResult(Result(it, false), null) }
                 .addOnFailureListener { onResult(null, "অনুবাদ হয়নি: ${it.message}") }
             return
         }
-        checkOfflineModel { ready ->
-            if (!ready) {
+        checkOfflineModel(from, to) { ok ->
+            if (!ok) {
                 if (!isOnline()) {
                     onResult(null, "অফলাইন মডেল নেই — একবার ইন্টারনেট চালু করে অনুবাদ করুন")
                     return@checkOfflineModel
@@ -128,7 +137,7 @@ class TranslateEngine(private val context: Context) {
             }
             t.downloadModelIfNeeded(DownloadConditions.Builder().build())
                 .addOnSuccessListener {
-                    modelReady = true
+                    ready.add(from); ready.add(to)
                     t.translate(text)
                         .addOnSuccessListener { onResult(Result(it, false), null) }
                         .addOnFailureListener { onResult(null, "অনুবাদ হয়নি: ${it.message}") }
@@ -140,17 +149,17 @@ class TranslateEngine(private val context: Context) {
     private fun translator(from: String, to: String): Translator =
         translators.getOrPut("$from>$to") {
             Translation.getClient(
-                TranslatorOptions.Builder().setSourceLanguage(from).setTargetLanguage(to).build()
+                TranslatorOptions.Builder().setSourceLanguage(mlkit(from)!!).setTargetLanguage(mlkit(to)!!).build()
             )
         }
 
-    private fun cloudTranslate(text: String, toEnglish: Boolean, key: String): String? {
+    private fun cloudTranslate(text: String, from: String, to: String, key: String): String? {
         // The key goes in a request header, not in the web address (addresses can end up in
         // error messages or logs).
         val url = URL("https://translation.googleapis.com/language/translate/v2")
         val body = "q=" + URLEncoder.encode(text, "UTF-8") +
-            "&source=" + (if (toEnglish) "bn" else "en") +
-            "&target=" + (if (toEnglish) "en" else "bn") +
+            "&source=" + from +
+            "&target=" + to +
             "&format=text"
         val conn = url.openConnection() as HttpURLConnection
         try {

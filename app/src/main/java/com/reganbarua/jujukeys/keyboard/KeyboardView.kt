@@ -137,7 +137,9 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     val w = size.width; val h = size.height
                     val bg = theme.bg
                     val blobs = theme.blobs.map { b ->
-                        Brush.radialGradient(listOf(b.color, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r)
+                        // a little stronger colour behind the glass, so the keys look see-through
+                        val c = b.color.copy(alpha = (b.color.alpha * 1.6f).coerceAtMost(0.55f))
+                        Brush.radialGradient(listOf(c, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r)
                     }
                     onDrawBehind {
                         drawRect(bg)
@@ -171,6 +173,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                         enter = slideInVertically(tween(180)) { it } + fadeIn(tween(120)),
                         exit = slideOutVertically(tween(160)) { it } + fadeOut(tween(120))
                     ) { MoreSuggestionsPanel(state, actions) }
+                    if (state.translateOn && state.translatePicker) LanguagePicker(state, actions)
                 }
                 BottomStrip(state, actions)
             }
@@ -216,7 +219,7 @@ private fun Modifier.keyPadding() = this.fillMaxHeight().padding(horizontal = Ke
 private fun RowScope.BackspaceKey(actions: KeyboardActions, weight: Float = 1.29f, color: Color = IosColors.key) {
     PressBox(
         Modifier.weight(weight).keyPadding(),
-        color = color, pressedColor = IosColors.keyPressed,
+        color = color, pressedColor = if (IosColors.theme.rainbow != null) IosColors.pressedOf(color) else IosColors.keyPressed,
         onTap = { actions.onBackspace() },
         repeating = true,
         kind = KeyKind.DELETE
@@ -226,17 +229,22 @@ private fun RowScope.BackspaceKey(actions: KeyboardActions, weight: Float = 1.29
 }
 
 @Composable
-private fun ReturnKey(modifier: Modifier, label: String, actions: KeyboardActions, @Suppress("UNUSED_PARAMETER") pill: Boolean) {
-    // Always plain and faded (like iPhone): no colour, no text; 🔍 in search fields.
+private fun ReturnKey(
+    modifier: Modifier, label: String, actions: KeyboardActions,
+    @Suppress("UNUSED_PARAMETER") pill: Boolean, rainbow: Int = 7,
+) {
+    // Plain and faded (like iPhone): no colour, no text; 🔍 in search fields.
+    // Only the rainbow theme colours it, like every other key there.
+    val rc = IosColors.rainbowAt(rainbow)
     PressBox(
         modifier.keyPadding(),
-        color = IosColors.faded, pressedColor = IosColors.fadedPressed,
+        color = rc ?: IosColors.faded, pressedColor = rc?.let { IosColors.pressedOf(it) } ?: IosColors.fadedPressed,
         onTap = { actions.onEnter() },
         kind = KeyKind.RETURN
     ) {
         Icon(
             if (label == "search") Symbols.search else Symbols.keyboardReturn, "Return",
-            tint = IosColors.fadedIcon, modifier = Modifier.size(26.dp)
+            tint = if (rc != null) IosColors.text else IosColors.fadedIcon, modifier = Modifier.size(26.dp)
         )
     }
 }
@@ -251,7 +259,11 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
         modifier
             .keyPadding()
             .clip(KeyShape)
-            .background(if (pressed) IosColors.keyPressed else IosColors.key)
+            .then(
+                IosColors.rainbowBrush()?.takeIf { !pressed }?.let { Modifier.background(it, alpha = 0.8f) }
+                    ?: Modifier.background(if (pressed) IosColors.keyPressed else IosColors.key)
+            )
+            .border(0.8.dp, IosColors.glassEdge, KeyShape)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
@@ -307,7 +319,7 @@ private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
         // left column: + − * /
         Column(
             Modifier.weight(1.3f).fillMaxHeight().padding(horizontal = KeyHPad, vertical = KeyVPad)
-                .clip(RoundedCornerShape(8.dp)).background(IosColors.fn)
+                .clip(RoundedCornerShape(8.dp)).background(IosColors.keyOr(4, IosColors.fn))
         ) {
             listOf("+" to "+", "−" to "-", "*" to "*", "/" to "/").forEach { (shown, typed) ->
                 PressBox(
@@ -321,35 +333,35 @@ private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
         Column(Modifier.weight(5.2f).fillMaxHeight()) {
             val rows = listOf("123", "456", "789")
             val right: List<@Composable RowScope.() -> Unit> = listOf(
-                { NumKey("%", actions, IosColors.fn, 20.sp) },
+                { NumKey("%", actions, IosColors.keyOr(9, IosColors.fn), 20.sp) },
                 {
                     PressBox(
-                        Modifier.weight(1f).keyPadding(), color = IosColors.fn, pressedColor = IosColors.keyPressed,
+                        Modifier.weight(1f).keyPadding(), color = IosColors.keyOr(5, IosColors.fn), pressedColor = IosColors.keyPressed,
                         onTap = { actions.onRawText(" ") }, fireOnDown = true, kind = KeyKind.SPACE
                     ) { Icon(Symbols.spaceBar, "Space", tint = IosColors.text, modifier = Modifier.size(26.dp)) }
                 },
-                { BackspaceKey(actions, 1f, IosColors.fn) },
+                { BackspaceKey(actions, 1f, IosColors.keyOr(0, IosColors.fn)) },
             )
             rows.forEachIndexed { i, digits ->
                 Row(Modifier.weight(1f).fillMaxWidth()) {
-                    digits.forEach { d -> NumKey(d.toString(), actions, IosColors.key, 28.sp) }
+                    digits.forEach { d -> NumKey(d.toString(), actions, IosColors.keyOr(d - '1', IosColors.key), 28.sp) }
                     right[i]()
                 }
             }
         }
     }
     KeyRow {
-        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
             KeyLabel("ABC", 16.sp)
         }
-        NumKey(",", actions, IosColors.fn, 20.sp, 0.65f)
-        FuncKey(Modifier.weight(0.65f), color = IosColors.fn, onTap = { actions.onPage(Page.SYMBOLS) }) {
+        NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 20.sp, 0.65f)
+        FuncKey(Modifier.weight(0.65f), color = IosColors.keyOr(3, IosColors.fn), onTap = { actions.onPage(Page.SYMBOLS) }) {
             KeyLabel("!?#", 15.sp)
         }
-        NumKey("0", actions, IosColors.key, 28.sp, 1.3f)
-        NumKey("=", actions, IosColors.fn, 20.sp, 0.65f)
-        NumKey(".", actions, IosColors.fn, 20.sp, 0.65f)
-        ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true)
+        NumKey("0", actions, IosColors.keyOr(9, IosColors.key), 28.sp, 1.3f)
+        NumKey("=", actions, IosColors.keyOr(6, IosColors.fn), 20.sp, 0.65f)
+        NumKey(".", actions, IosColors.keyOr(8, IosColors.fn), 20.sp, 0.65f)
+        ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true, rainbow = 7)
     }
 }
 
@@ -357,7 +369,7 @@ private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
 private fun RowScope.NumKey(text: String, actions: KeyboardActions, color: Color, size: TextUnit, weight: Float = 1f) {
     PressBox(
         Modifier.weight(weight).keyPadding(),
-        color = color, pressedColor = IosColors.keyPressed,
+        color = color, pressedColor = if (IosColors.theme.rainbow != null) IosColors.pressedOf(color) else IosColors.keyPressed,
         onTap = { actions.onRawText(text) }, fireOnDown = true
     ) { KeyLabel(text, size) }
 }
@@ -371,39 +383,41 @@ private fun SymbolPage(more: Boolean, bangla: Boolean, enterLabel: String, actio
     val r1 = if (more) "~ ` | • √ π ÷ × ¶ ∆".split(' ') else digits.map { it.toString() }
     val r2 = if (more) "£ € ¥ ^ ° = { } \\ %".split(' ') else "@ # ৳ _ & - + ( ) /".split(' ')
     val r3 = if (more) "© ® ™ ✓ [ ] < >".split(' ') else "* \" ' : ; ! ?".split(' ')
-    KeyRow { r1.forEach { SymKey(it, actions, preview) } }
-    KeyRow { r2.forEach { SymKey(it, actions, preview) } }
+    KeyRow { r1.forEachIndexed { i, t -> SymKey(t, actions, preview, color = IosColors.keyOr(i, IosColors.key)) } }
+    KeyRow { r2.forEachIndexed { i, t -> SymKey(t, actions, preview, color = IosColors.keyOr(i, IosColors.key)) } }
     KeyRow {
-        FuncKey(Modifier.weight(1.4f), color = IosColors.fn, onTap = {
+        FuncKey(Modifier.weight(1.4f), color = IosColors.keyOr(0, IosColors.fn), onTap = {
             actions.onPage(if (more) Page.SYMBOLS else Page.MORE_SYMBOLS)
         }) { KeyLabel(if (more) "?123" else "=\\<", 15.sp) }
-        r3.forEach { SymKey(it, actions, preview, if (more) 0.9f else 1f) }
-        BackspaceKey(actions, 1.4f, IosColors.fn)
+        r3.forEachIndexed { i, t -> SymKey(t, actions, preview, if (more) 0.9f else 1f, IosColors.keyOr(i + 1, IosColors.key)) }
+        BackspaceKey(actions, 1.4f, IosColors.keyOr(9, IosColors.fn))
     }
     KeyRow {
-        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
             KeyLabel("ABC", 16.sp)
         }
-        NumKey(",", actions, IosColors.fn, 20.sp, 0.8f)
-        FuncKey(Modifier.weight(0.9f), color = IosColors.fn, onTap = { actions.onPage(Page.NUMPAD) }) {
+        NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 20.sp, 0.8f)
+        FuncKey(Modifier.weight(0.9f), color = IosColors.keyOr(3, IosColors.fn), onTap = { actions.onPage(Page.NUMPAD) }) {
             Text(
                 if (bangla) "১ ২\n৩ ৪" else "1 2\n3 4", color = IosColors.text, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, lineHeight = 13.sp, fontFamily = if (bangla) BanglaFont else null
             )
         }
         SpaceKey(Modifier.weight(4.2f), if (bangla) "ক" else "EN BN", actions)   // plain, like the letters page
-        NumKey(".", actions, IosColors.fn, 20.sp, 0.8f)
+        NumKey(".", actions, IosColors.keyOr(8, IosColors.fn), 20.sp, 0.8f)
         ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true)
     }
 }
 
 @Composable
-private fun RowScope.SymKey(text: String, actions: KeyboardActions, preview: KeyPreview, weight: Float = 1f) {
+private fun RowScope.SymKey(
+    text: String, actions: KeyboardActions, preview: KeyPreview, weight: Float = 1f, color: Color = IosColors.key,
+) {
     var bounds by remember { mutableStateOf(Rect.Zero) }
     val popup = LocalPopupEnabled.current
     PressBox(
         Modifier.weight(weight).keyPadding().onGloballyPositioned { bounds = it.boundsInRoot() },
-        color = IosColors.key, pressedColor = IosColors.keyPressed,
+        color = color, pressedColor = if (IosColors.theme.rainbow != null) IosColors.pressedOf(color) else IosColors.keyPressed,
         onTap = { actions.onRawText(text) }, fireOnDown = true,
         onPressChange = { down ->
             if (popup) {
@@ -589,7 +603,16 @@ internal fun PressBox(
         modifier
             .clip(shape)
             .background(if (pressed) pressedColor else color)
-            .then(if (glass) Modifier.border(0.7.dp, IosColors.glassEdge, shape) else Modifier)
+            .then(if (glass) Modifier.drawWithCache {
+                // liquid glass: lighter top, diagonal light sheen (same as the letter keys)
+                val body = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.09f), 1f to Color.Transparent)
+                val sheen = Brush.linearGradient(
+                    0f to Color.White.copy(alpha = 0.16f), 0.42f to Color.Transparent, 1f to Color.White.copy(alpha = 0.05f),
+                    start = Offset.Zero, end = Offset(size.width, size.height)
+                )
+                onDrawBehind { drawRect(body); drawRect(sheen) }
+            } else Modifier)
+            .then(if (glass) Modifier.border(0.8.dp, IosColors.glassEdge, shape) else Modifier)
             .then(gestures),
         contentAlignment = Alignment.Center,
         content = content

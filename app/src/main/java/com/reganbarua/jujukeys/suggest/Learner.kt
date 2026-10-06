@@ -25,6 +25,9 @@ class Learner {
         next[previous]?.entries?.sortedByDescending { it.value }?.take(n)?.map { it.key } ?: emptyList()
 
     @Synchronized
+    fun count(word: String): Int = counts[word] ?: 0
+
+    @Synchronized
     fun snapshotCounts(): Map<String, Int> = HashMap(counts)
 
     @Synchronized
