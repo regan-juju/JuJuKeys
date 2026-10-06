@@ -55,6 +55,12 @@ class DictionaryFilesTest {
         assertTrue("জামানত" in s.bangla("জামানত", 6))
         assertTrue("ফুচকা" in s.bangla("ফুছকা", 6))
         assertTrue("bkash" in s.english("bka", 5))
+        // iPhone-style fix: jemon → যেমন; real Avro words stay as they are
+        assertEquals("যেমন", s.autoFix(com.reganbarua.jujukeys.bengali.AvroPhonetic.convert("jemon")))
+        assertEquals("যদি", s.autoFix(com.reganbarua.jujukeys.bengali.AvroPhonetic.convert("jodi")))
+        assertEquals("যখন", s.autoFix(com.reganbarua.jujukeys.bengali.AvroPhonetic.convert("jokhon")))
+        assertEquals(null, s.autoFix(com.reganbarua.jujukeys.bengali.AvroPhonetic.convert("jol")))
+        assertEquals(null, s.autoFix(com.reganbarua.jujukeys.bengali.AvroPhonetic.convert("zemon")))
         // common words still win over the new rare ones
         assertEquals("আমি", s.bangla("আমি", 6).first())
     }

@@ -123,13 +123,25 @@ class ClipHistory(private val context: Context) {
         // else: the plain copy stays untouched, so nothing is lost; migration is retried next time
     }
 
-    /** Saved only in encrypted form. If the Keystore fails, nothing new is written in plain text. */
+    /**
+     * Saved only in encrypted form. If the Keystore fails, nothing new is written in plain text.
+     * Encryption runs on a background thread (Keystore can take tens of ms) — in order.
+     */
     private fun save() {
-        val e = CryptoBox.encrypt(toJson(items)) ?: return
-        prefs.edit().putString(KEY_ENC, e).apply()
+        val json = toJson(items)
+        SAVER.execute {
+            val e = CryptoBox.encrypt(json) ?: return@execute
+            prefs.edit().putString(KEY_ENC, e).apply()
+        }
     }
 
     companion object {
+        private val SAVER = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "jujukeys-clip-save").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+        }
+
+        /** Waits until earlier saves are on disk (tests). */
+        fun flush() { SAVER.submit {}.get() }
         const val MAX_UNPINNED = 40
         const val KEY_PLAIN = "items"                 // old, unencrypted (migrated away)
         const val KEY_ENC = "items_enc"

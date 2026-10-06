@@ -167,6 +167,51 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         return if (bestF >= 50 && bestF > own * 50) best else null
     }
 
+    /** How common a Bangla word is: its frequency, 1 if only in the extra list, 0 if unknown. */
+    fun banglaFreq(word: String): Long {
+        val w = nfc(word); val key = skeleton(w)
+        for (i in range(bangla, key)) if (bangla[i].key == key && bangla[i].word == w) return bangla[i].freq
+        val ks = extraKeys; val ws = extraWords
+        var lo = 0; var hi = ks.size
+        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ks[mid] < key) lo = mid + 1 else hi = mid }
+        while (lo < ks.size && ks[lo] == key) { if (ws[lo] == w) return 1; lo++ }
+        return 0
+    }
+
+    /**
+     * iPhone-style fix: when Avro's spelling is not a real word, or a very rare one
+     * ("jemon" → জেমন), and a common word sounds the same (যেমন), return that word.
+     * The closest spelling wins (amra → আমরা, not আমার); null = keep Avro's spelling.
+     */
+    fun autoFix(converted: String, minFreq: Long = 20): String? {
+        if (converted.isEmpty()) return null
+        val c = nfc(converted)
+        val key = skeleton(c)
+        if (key.length < 2) return null
+        val own = banglaFreq(c)
+        val need = maxOf(minFreq, own * 50)            // a real, common Avro word is never replaced
+        var best: Entry? = null; var bestD = Int.MAX_VALUE
+        for (i in range(bangla, key)) {
+            val e = bangla[i]
+            if (e.key != key || e.freq < need || e.word == c) continue
+            val d = distance(c, e.word)
+            if (d > 3) continue
+            val b = best
+            if (b == null || d < bestD || (d == bestD && e.freq > b.freq)) { best = e; bestD = d }
+        }
+        return best?.word
+    }
+
+    private fun distance(a: String, b: String): Int {
+        var prev = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            val cur = IntArray(b.length + 1); cur[0] = i
+            for (j in 1..b.length) cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+            prev = cur
+        }
+        return prev[b.length]
+    }
+
     /** Up to [n] Bangla words for the Avro conversion [converted]. */
     fun bangla(converted: String, n: Int = 3): List<String> {
         if (converted.isEmpty()) return emptyList()

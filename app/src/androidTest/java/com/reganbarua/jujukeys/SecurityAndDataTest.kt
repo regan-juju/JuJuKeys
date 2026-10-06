@@ -49,12 +49,14 @@ class SecurityAndDataTest {
         val h = ClipHistory(ctx)
         h.add(text)
         h.add("পাসওয়ার্ড-৯৮৭", sensitive = true)
+        ClipHistory.flush()
         assertFalse("plain text found on disk", rawText("jujukeys_clipboard").contains("hello"))
         assertFalse("sensitive text found on disk", rawText("jujukeys_clipboard").contains("পাসওয়ার্ড-৯৮৭"))
         val again = ClipHistory(ctx)
         assertEquals(text, again.items.first { !it.sensitive }.text)          // spaces, tab, line breaks kept
         assertTrue(again.items.any { it.sensitive && it.text == "পাসওয়ার্ড-৯৮৭" })
         again.clearSensitive()
+        ClipHistory.flush()
         assertTrue(ClipHistory(ctx).items.none { it.sensitive })
         assertTrue(ClipHistory(ctx).items.any { it.text == text })
     }
@@ -65,6 +67,7 @@ class SecurityAndDataTest {
         assertTrue(h.items.isEmpty())
         h.add("abc")
         h.add("abc  ")
+        ClipHistory.flush()
         assertEquals(1, h.items.size)
         assertEquals("abc  ", h.items[0].text)
     }

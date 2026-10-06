@@ -105,6 +105,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var learnedSinceSave = 0
 
     private val roman = StringBuilder()        // Roman letters of the Bangla word being typed
+    /** iPhone-style fix for the current word (jemon → যেমন), valid only for [autoFor]. */
+    private var autoWord: String? = null
+    private var autoFor = ""
     private val enWord = StringBuilder()       // English word being typed (kept here: no app round-trip)
     private val recent = StringBuilder()       // last few characters we typed (for auto-capital, double space)
     private var lastWord: String? = null       // previous word, for next-word suggestions
@@ -772,7 +775,17 @@ class JuJuKeysInputMethodService : InputMethodService(),
         worker.execute {
             val raw: List<String> = when {
                 bangla && romanNow.isNotEmpty() -> {
-                    val base = s?.bangla(AvroPhonetic.convert(romanNow), 18) ?: listOf(AvroPhonetic.convert(romanNow))
+                    val conv = AvroPhonetic.convert(romanNow)
+                    val list0 = s?.bangla(conv, 18) ?: listOf(conv)
+                    // jemon → যেমন first (Avro's জেমন stays as the 2nd choice)
+                    val fix = if (romanNow.length >= 3) s?.autoFix(conv) else null
+                    val base = if (fix != null) listOf(fix) + list0.filter { it != fix } else list0
+                    if (fix != null) main.post {
+                        if (seq == suggestionSeq && roman.toString() == romanNow) {
+                            autoWord = fix; autoFor = romanNow
+                            sinkSetComposing(fix)
+                        }
+                    }
                     // chottogram → চট্টগ্রাম … as an extra suggestion; the Avro result stays first
                     RomanAliases.merge(base, aliases?.lookup(romanNow) ?: emptyList())
                 }
@@ -1050,6 +1063,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.translateInput = ""
         state.translateOn = false
         state.translateStatus = ""
+        translator.release()                          // free the ML Kit models' memory
         markEdit()
         currentInputConnection?.finishComposingText()   // keep the translation in the app
         refreshSuggestions()
@@ -1111,7 +1125,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
     /** Puts the finished Bangla word into the app (or the translate box). */
     private fun commitWord() {
         if (roman.isEmpty()) return
-        val bangla = AvroPhonetic.convert(roman.toString())
+        val r = roman.toString()
+        val bangla = autoWord?.takeIf { autoFor == r } ?: AvroPhonetic.convert(r)
+        autoWord = null
         roman.clear()
         if (state.translateOn) {
             tComposing = ""

@@ -172,6 +172,12 @@ class TranslateEngine(private val context: Context) {
         }
     }
 
+    /** Lets go of the translation models (memory) when the translate box is closed. */
+    fun release() {
+        translators.values.forEach { runCatching { it.close() } }
+        translators.clear()
+    }
+
     fun close() {
         translators.values.forEach { it.close() }
         translators.clear()
