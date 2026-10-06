@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -31,7 +33,7 @@ android {
     // private key from GitHub Secrets (key rotation). For a local signed build, put
     // JUJU_STORE_FILE / JUJU_STORE_PASSWORD / JUJU_KEY_ALIAS / JUJU_KEY_PASSWORD in
     // local.properties or the environment; otherwise the release APK is left UNSIGNED.
-    val localProps = java.util.Properties().apply {
+    val localProps = Properties().apply {
         val f = rootProject.file("local.properties"); if (f.exists()) f.inputStream().use { load(it) }
     }
     fun secret(name: String): String? = System.getenv(name) ?: localProps.getProperty(name)
