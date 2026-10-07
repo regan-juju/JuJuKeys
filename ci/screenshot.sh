@@ -22,15 +22,18 @@ focus_field() {
 }
 sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >> $LOG; sleep 10
 for t in 1 2 3 4; do
-  focus_field; sleep 6
+  focus_field; sleep 3
   sh dumpsys input_method | grep -q 'mInputShown=true' && break
 done
-sleep 10
+# the keyboard hides itself after a few idle seconds (auto-hide) — photograph quickly
+sleep 2
 adb exec-out screencap -p > shots/api${API}-1-letters.png
 sh dumpsys input_method | grep -E 'mInputShown|mCurMethodId' >> $LOG
-sh settings put system accelerometer_rotation 0; sh settings put system user_rotation 1; sleep 6
-adb exec-out screencap -p > shots/api${API}-2-landscape.png
-sh settings put system user_rotation 0; sleep 6
-adb exec-out screencap -p > shots/api${API}-3-back.png
+sleep 2; focus_field; sleep 3
+adb exec-out screencap -p > shots/api${API}-2-again.png
+sh settings put system accelerometer_rotation 0; sh settings put system user_rotation 1; sleep 4; focus_field; sleep 3
+adb exec-out screencap -p > shots/api${API}-3-landscape.png
+sh settings put system user_rotation 0; sleep 4; focus_field; sleep 3
+adb exec-out screencap -p > shots/api${API}-4-back.png
 sh logcat -d -t 600 | grep -iE "jujukeys|AndroidRuntime|FATAL" | tail -80 > shots/api${API}-log.txt
 cat $LOG
