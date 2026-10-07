@@ -30,6 +30,9 @@ import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import com.reganbarua.jujukeys.sticker.StickerAddActivity
 import com.reganbarua.jujukeys.sticker.StickerStore
+import com.reganbarua.jujukeys.sticker.ProfileStore
+import com.reganbarua.jujukeys.sticker.ProfileTree
+import com.reganbarua.jujukeys.sticker.StickerProfilesActivity
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -699,10 +702,45 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     // ================================================================== stickers
 
+    private var profileRestored = false
+
     private fun refreshStickers() {
         worker.execute {
             val list = runCatching { StickerStore.seed(this); StickerStore.list(this) }.getOrDefault(emptyList())
-            main.post { state.stickers = list }
+            val alive = list.toHashSet()
+            val tree = runCatching { ProfileStore.load(this).onlyExisting(alive) }.getOrDefault(ProfileTree())
+            val recent = runCatching { ProfileStore.recent(this) }.getOrDefault(emptyList()).filter { tree.exists(it) }
+            val last = if (!profileRestored) runCatching { ProfileStore.lastOpened(this) }.getOrNull() else null
+            main.post {
+                state.stickers = list; state.profileTree = tree; state.recentProfiles = recent
+                if (!profileRestored) { profileRestored = true; state.stickerProfile = last }
+                // the open profile was deleted (e.g. in the profiles screen) → back to সব স্টিকার
+                if (state.stickerProfile != null && !tree.exists(state.stickerProfile)) state.stickerProfile = null
+            }
+        }
+    }
+
+    override fun onStickerProfile(id: String?) {
+        state.stickerSheet = null
+        state.stickerProfile = id?.takeIf { state.profileTree.exists(it) }
+        val opened = state.stickerProfile
+        worker.execute {
+            runCatching { ProfileStore.opened(this, opened) }
+            val recent = runCatching { ProfileStore.recent(this) }.getOrDefault(emptyList())
+            main.post { state.recentProfiles = recent.filter { state.profileTree.exists(it) } }
+        }
+    }
+
+    override fun onStickerManage(profile: String?, sticker: String?) {
+        state.stickerSheet = null
+        runCatching { StickerProfilesActivity.start(this, profile, sticker) }.onFailure { toast("খোলা যায়নি") }
+    }
+
+    override fun onStickerRemoveFromProfile(name: String) {
+        val id = state.stickerProfile ?: return
+        worker.execute {
+            val tree = runCatching { ProfileStore.update(this) { it.removeSticker(id, name) } }.getOrNull()
+            main.post { if (tree != null) state.profileTree = tree.onlyExisting(state.stickers.toHashSet()); toast("প্রোফাইল থেকে সরানো হয়েছে") }
         }
     }
 
@@ -752,7 +790,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onStickerAdd() {
         state.stickerSheet = null
-        runCatching { StickerAddActivity.start(this) }.onFailure { toast("খোলা যায়নি") }
+        // added inside a profile → the new stickers go into that profile too
+        runCatching { StickerAddActivity.start(this, state.stickerProfile) }.onFailure { toast("খোলা যায়নি") }
     }
 
     /** Android's share sheet with the sticker as a PNG — e.g. Facebook → new post with the picture. */
@@ -783,10 +822,16 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onStickerTop(name: String) {
+        val profile = state.stickerProfile
         worker.execute {
-            runCatching { StickerStore.moveTop(this, name) }
-            val list = runCatching { StickerStore.list(this) }.getOrDefault(state.stickers)
-            main.post { state.stickers = list }
+            if (profile != null) {
+                val tree = runCatching { ProfileStore.update(this) { it.moveStickerTop(profile, name) } }.getOrNull()
+                main.post { if (tree != null) state.profileTree = tree.onlyExisting(state.stickers.toHashSet()) }
+            } else {
+                runCatching { StickerStore.moveTop(this, name) }
+                val list = runCatching { StickerStore.list(this) }.getOrDefault(state.stickers)
+                main.post { state.stickers = list }
+            }
         }
     }
 
@@ -795,7 +840,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         worker.execute {
             runCatching { StickerStore.delete(this, name) }
             val list = runCatching { StickerStore.list(this) }.getOrDefault(state.stickers)
-            main.post { state.stickers = list; toast("স্টিকার মুছে ফেলা হয়েছে") }
+            val tree = runCatching { ProfileStore.load(this).onlyExisting(list.toHashSet()) }.getOrDefault(state.profileTree)
+            main.post { state.stickers = list; state.profileTree = tree; toast("স্টিকার মুছে ফেলা হয়েছে") }
         }
     }
 

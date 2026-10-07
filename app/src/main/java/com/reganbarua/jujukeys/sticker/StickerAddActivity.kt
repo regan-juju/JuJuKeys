@@ -57,6 +57,10 @@ class StickerAddActivity : ComponentActivity() {
     private var status by mutableStateOf("")
     private var summary by mutableStateOf("")
     private var count by mutableIntStateOf(0)
+    /** New stickers also go into this profile (null = only "সব স্টিকার"). */
+    private var profile by mutableStateOf<String?>(null)
+    private var tree by mutableStateOf(ProfileTree())
+    private var picking by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +69,11 @@ class StickerAddActivity : ComponentActivity() {
         border = sp.getBoolean(KEY_BORDER, true)
         split = sp.getBoolean(KEY_SPLIT, true)
         thin = sp.getBoolean(KEY_THIN, true)
-        Thread { StickerStore.seed(this); val n = StickerStore.count(this); runOnUiThread { count = n } }.start()
+        profile = intent.getStringExtra(EXTRA_PROFILE)?.ifEmpty { null }
+        Thread {
+            StickerStore.seed(this); val n = StickerStore.count(this); val t = ProfileStore.load(this)
+            runOnUiThread { count = n; tree = t; if (!t.exists(profile)) profile = null }
+        }.start()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Accent, background = Bg, surface = Color(0xFF2B2B2B))) {
@@ -82,6 +90,8 @@ class StickerAddActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // opened again from the keyboard inside another profile → use that one
+        if (intent.hasExtra(EXTRA_PROFILE)) profile = intent.getStringExtra(EXTRA_PROFILE)?.ifEmpty { null }?.takeIf { tree.exists(it) }
         sharedUris(intent).takeIf { it.isNotEmpty() }?.let { process(it) }
     }
 
@@ -101,6 +111,8 @@ class StickerAddActivity : ComponentActivity() {
         busy = true; done = 0; total = uris.size; summary = ""
         status = "Starting…"
         val wantCut = cutOut; val wantBorder = border; val wantSplit = split; val wantThin = thin
+        val into = profile
+        val madeNames = ArrayList<String>()
         Thread {
             val maker = StickerMaker(applicationContext)
             var cut = 0; var kept = 0; var failed = 0; var bad = 0; var sheets = 0; var fromSheets = 0
@@ -108,6 +120,7 @@ class StickerAddActivity : ComponentActivity() {
                 runOnUiThread { status = "Making ${i + 1} / ${uris.size}…" + if (wantCut && maker.modelOk == null) " (the first time, the background-removal part may download)" else "" }
                 val made = runCatching { maker.make(u, wantCut, wantBorder, wantSplit, wantThin) }
                     .getOrElse { StickerMaker.Made(StickerMaker.Result.BAD_IMAGE, emptyList()) }
+                madeNames += made.names
                 when (made.result) {
                     StickerMaker.Result.CUT_OUT -> cut++
                     StickerMaker.Result.SPLIT -> { sheets++; fromSheets += made.names.size }
@@ -117,12 +130,13 @@ class StickerAddActivity : ComponentActivity() {
                 }
                 runOnUiThread { done = i + 1 }
             }
+            if (into != null && madeNames.isNotEmpty()) runCatching { ProfileStore.update(applicationContext) { it.addStickers(into, madeNames) } }
             val modelFailed = wantCut && maker.modelOk == false
             maker.close()
             val n = StickerStore.count(applicationContext)
             val made = cut + kept + failed + fromSheets
             val parts = buildList {
-                add("$made stickers added")
+                add("$made stickers added" + (into?.let { id -> " — also to profile “${tree.path(id).joinToString(" › ") { it.name }}”" } ?: ""))
                 if (sheets > 0) add("$sheets sticker sheet(s) split into $fromSheets separate stickers")
                 if (cut > 0) add("Background removed from $cut")
                 if (failed > 0) add("$failed could not have the background removed — the original picture was kept (hold it in the keyboard to delete)")
@@ -141,6 +155,17 @@ class StickerAddActivity : ComponentActivity() {
         ) {
             Text("Add stickers", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("You have $count stickers · add as many as you like", color = Sub, fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text("Also add to profile", color = Color.White, fontSize = 17.sp)
+                    Text(profile?.let { id -> tree.path(id).joinToString(" › ") { it.name } } ?: "None — only “সব স্টিকার”", color = Accent, fontSize = 14.sp)
+                }
+                OutlinedButton(onClick = { picking = true }, enabled = !busy) { Text("Change", color = Accent) }
+            }
+            if (picking) ProfilePickerDialog(
+                tree = tree, title = "Add new stickers to…", allowNone = true, noneLabel = "None — only “সব স্টিকার”",
+                onPick = { profile = it; picking = false }, onDismiss = { picking = false }
+            )
             Toggle("Remove background", "Cuts the people / main subject out of an ordinary photo (Google ML Kit, on the phone)", cutOut) {
                 cutOut = it; save(KEY_CUT, it)
             }
@@ -178,7 +203,7 @@ class StickerAddActivity : ComponentActivity() {
             Spacer(Modifier.height(4.dp))
             Text(
                 "• Everything happens on the phone; pictures are never sent anywhere.\n" +
-                    "• In the keyboard: tap the photo key → your stickers. Tap to send; hold to share / save / move to top / delete.\n" +
+                    "• In the keyboard: tap the photo key → your stickers and profiles. Tap to send; hold for share / save / move to top / profiles / delete.\n" +
                     "• Stickers are not in Google backups (so the 25 MB backup limit is not used up).",
                 color = Sub, fontSize = 13.sp, lineHeight = 20.sp
             )
@@ -209,8 +234,11 @@ class StickerAddActivity : ComponentActivity() {
         private val Bg = Color(0xFF1B1B1B)
         private val Sub = Color(0xFFB0B0B0)
 
-        fun start(ctx: Context) = ctx.startActivity(
+        const val EXTRA_PROFILE = "profile"
+
+        fun start(ctx: Context, profile: String? = null) = ctx.startActivity(
             Intent(ctx, StickerAddActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(EXTRA_PROFILE, profile.orEmpty())   // "" = only সব স্টিকার
         )
 
         fun bn(n: Int): String = n.toString().map { if (it in '0'..'9') '০' + (it - '0') else it }.joinToString("")

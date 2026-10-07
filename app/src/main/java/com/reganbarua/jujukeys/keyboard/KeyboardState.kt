@@ -81,6 +81,12 @@ class KeyboardState {
     var stickers by mutableStateOf<List<String>>(emptyList())
     /** Sticker the app could not take directly → "শেয়ার / সেভ" sheet; null = closed. */
     var stickerSheet by mutableStateOf<String?>(null)
+    /** Profile being shown in the sticker tab; null = "সব স্টিকার" (top level). */
+    var stickerProfile by mutableStateOf<String?>(null)
+    /** All sticker profiles (folders inside folders), stickers that no longer exist left out. */
+    var profileTree by mutableStateOf(com.reganbarua.jujukeys.sticker.ProfileTree())
+    /** Recently opened profiles, newest first (quick chips). */
+    var recentProfiles by mutableStateOf<List<String>>(emptyList())
 }
 
 /** Key-press bubble shown above a letter key (like iPhone). */
@@ -130,6 +136,12 @@ interface KeyboardActions {
     fun onStickerTop(name: String)
     fun onStickerDelete(name: String)
     fun onStickerSheetClose()
+    /** Open a profile in the sticker tab (null = সব স্টিকার). */
+    fun onStickerProfile(id: String?)
+    /** Opens the full "Sticker profiles" screen at [profile]; with [sticker] = choose its profiles. */
+    fun onStickerManage(profile: String?, sticker: String?)
+    /** Takes the sticker out of the profile being shown (the sticker itself stays). */
+    fun onStickerRemoveFromProfile(name: String)
 
     // translate
     fun onTranslateToggle()

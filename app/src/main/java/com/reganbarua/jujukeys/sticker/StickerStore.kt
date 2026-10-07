@@ -76,6 +76,16 @@ object StickerStore {
         file(ctx, name).delete()
         thumbs.remove(name)
         writeOrder(ctx, StickerOrder.remove(readOrder(ctx), name))
+        ProfileStore.update(ctx) { it.removeEverywhere(name) }   // gone from every profile too
+    }
+
+    /** Puts [name] directly before [before] (null = at the end) in the "সব স্টিকার" order. */
+    fun moveBefore(ctx: Context, name: String, before: String?) = synchronized(lock) {
+        val order = list(ctx)
+        if (name !in order || name == before) return@synchronized
+        val rest = order - name
+        val at = before?.let { rest.indexOf(it) }?.takeIf { it >= 0 } ?: rest.size
+        writeOrder(ctx, rest.take(at) + name + rest.drop(at))
     }
 
     fun count(ctx: Context): Int = list(ctx).size

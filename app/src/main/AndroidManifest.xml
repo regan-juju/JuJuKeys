@@ -43,6 +43,14 @@
             android:taskAffinity=""
             android:theme="@style/Theme.JuJuKeys.Auth" />
 
+        <!-- Sticker profiles: folders inside folders; choose and arrange each profile's stickers -->
+        <activity
+            android:name=".sticker.StickerProfilesActivity"
+            android:exported="false"
+            android:label="JuJuKeys স্টিকার প্রোফাইল"
+            android:taskAffinity="com.reganbarua.jujukeys.stickers"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Make stickers from gallery pictures (also: gallery → Share → JuJuKeys) -->
         <activity
             android:name=".sticker.StickerAddActivity"

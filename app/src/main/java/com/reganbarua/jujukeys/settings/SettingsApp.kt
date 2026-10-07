@@ -560,8 +560,10 @@ private fun EmojiPage(p: KeyboardPrefs, refresh: () -> Unit) {
     ToggleItem("Recent emoji", "Show recently used emoji first", "recent_emoji", p.recentEmoji, refresh)
     ActionButton("Clear recent emoji", primary = false) { Prefs.clearRecentEmoji(context) }
     Header("Stickers")
-    Note("Tap the photo key on the keyboard to open your stickers. Tap a sticker to send it; hold it to share / save to gallery / move to top / delete. No limit on how many.")
+    Note("Tap the photo key on the keyboard to open your stickers. Tap a sticker to send it; hold it to share / save to gallery / move to top / put in profiles / delete. No limit on how many.")
     ActionButton("Add stickers (from gallery)") { com.reganbarua.jujukeys.sticker.StickerAddActivity.start(context) }
+    ActionButton("Sticker profiles (folders)") { com.reganbarua.jujukeys.sticker.StickerProfilesActivity.start(context) }
+    Note("Profiles are folders for stickers, and can hold more profiles (any depth, hundreds are fine). One sticker can be in many profiles — the picture is stored only once. In the keyboard the top line shows where you are (সব স্টিকার › …); tap a profile to open it, hold it to edit.")
     Note("Ordinary photos can get the background removed and a white border (on the phone, Google ML Kit). A sheet of many stickers is split into separate stickers. You can also share pictures from the gallery to \"JuJuKeys স্টিকার\".")
 }
 

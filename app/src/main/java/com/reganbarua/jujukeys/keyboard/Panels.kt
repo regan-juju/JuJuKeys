@@ -83,6 +83,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -844,20 +848,53 @@ private fun StickerTabButton(on: Boolean, @Suppress("UNUSED_PARAMETER") first: S
 }
 
 /**
- * The user's stickers, 4 per row. First tile = "＋ যোগ করুন". Tap = send, hold = menu
- * (শেয়ার / গ্যালারিতে সেভ / উপরে রাখুন / মুছুন). No limit on how many.
+ * The user's stickers, 4 per row, organised in profiles (folders inside folders).
+ * Top: where you are (সব স্টিকার › পরিবার › …) and "সাজান"; at the top level, recent profiles.
+ * Grid: ＋ যোগ করুন, ＋ প্রোফাইল, the profiles inside this one, then this profile's stickers.
+ * Tap a sticker = send; hold = menu. Tap a profile = open; hold = edit it in the profiles screen.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier: Modifier) {
     var menuFor by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val tree = state.profileTree
+    val here = state.stickerProfile?.takeIf { tree.exists(it) }
+    val path = remember(tree, here) { tree.path(here) }
+    val children = remember(tree, here) { tree.children(here) }
+    val stickers = if (here == null) state.stickers else tree[here]?.stickers.orEmpty()
+    val recent = if (here == null) state.recentProfiles.mapNotNull { tree[it] }.take(6) else emptyList()
     Box(modifier) {
         Column(Modifier.fillMaxSize()) {
-            Text(
-                "আমার স্টিকার (${bnNum(state.stickers.size)})", color = IosColors.dim, fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold, fontFamily = BanglaFont, modifier = Modifier.padding(start = 10.dp, top = 2.dp)
-            )
+            // where am I
+            Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 4.dp, top = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    Crumb(if (here == null) "সব স্টিকার (${bnNum(state.stickers.size)})" else "সব স্টিকার", here == null) { actions.onStickerProfile(null) }
+                    path.forEachIndexed { i, p ->
+                        Text("›", color = IosColors.dim, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                        Crumb(if (i == path.lastIndex) "${p.name} (${bnNum(stickers.size)})" else p.name, i == path.lastIndex) { actions.onStickerProfile(p.id) }
+                    }
+                }
+                Row(
+                    Modifier.clip(RoundedCornerShape(8.dp)).clickable { actions.onStickerManage(here, null) }.padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Tune, null, tint = IosColors.dim, modifier = Modifier.size(15.dp))
+                    Text(" সাজান", color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont)
+                }
+            }
+            if (recent.isNotEmpty()) LazyRow(
+                Modifier.fillMaxWidth().padding(top = 3.dp), contentPadding = PaddingValues(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(recent, key = { it.id }) { p ->
+                    Text(
+                        p.name, color = IosColors.text, fontSize = 12.sp, fontFamily = BanglaFont, maxLines = 1,
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(IosColors.key)
+                            .clickable { actions.onStickerProfile(p.id) }.padding(horizontal = 10.dp, vertical = 3.dp)
+                    )
+                }
+            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -866,18 +903,33 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 item(key = "+add") {
-                    Column(
-                        Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, IosColors.dim.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .clickable { actions.onStickerAdd() },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                    AddTile("＋", if (here == null) "যোগ করুন" else "এখানে যোগ") { actions.onStickerAdd() }
+                }
+                item(key = "+profile") {
+                    AddTile(null, "প্রোফাইল") { actions.onStickerManage(here, null) }
+                }
+                items(children, key = { "p:" + it.id }) { p ->
+                    val cover = remember(tree, p.id) { tree.coverOf(p.id) }
+                    val bmp = stickerBitmap(cover)
+                    Box(
+                        Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(IosColors.key)
+                            .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(12.dp))
+                            .combinedClickable(
+                                onClick = { actions.onKeyFeedback(KeyKind.NORMAL); actions.onStickerProfile(p.id) },
+                                onLongClick = { actions.onStickerManage(p.id, null) }
+                            )
                     ) {
-                        Text("＋", color = IosColors.text, fontSize = 26.sp)
-                        Text("যোগ করুন", color = IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont)
+                        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 16.dp), contentScale = ContentScale.Fit)
+                        else Icon(Icons.Filled.Folder, null, tint = IosColors.dim, modifier = Modifier.align(Alignment.Center).size(30.dp))
+                        Icon(Icons.Filled.Folder, null, tint = IosColors.text.copy(alpha = 0.85f), modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(14.dp))
+                        Text(
+                            p.name, color = IosColors.text, fontSize = 11.sp, fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 4.dp, vertical = 1.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
-                items(state.stickers, key = { it }) { name ->
+                items(stickers, key = { it }) { name ->
                     val bmp = stickerBitmap(name)
                     Box(
                         Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp))
@@ -891,19 +943,27 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                         if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().padding(3.dp), contentScale = ContentScale.Fit)
                     }
                 }
+                if (here != null && stickers.isEmpty() && children.isEmpty()) item(key = "empty", span = { GridItemSpan(4) }) {
+                    Text(
+                        "এই প্রোফাইল খালি। “সাজান” চেপে স্টিকার বাছুন, অথবা “এখানে যোগ” দিয়ে গ্যালারি থেকে আনুন।",
+                        color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont, modifier = Modifier.padding(6.dp)
+                    )
+                }
             }
         }
         // hold → menu
         menuFor?.let { name ->
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).clickable { menuFor = null })
             Column(
-                Modifier.align(Alignment.Center).width(230.dp).clip(RoundedCornerShape(14.dp)).background(IosColors.panel)
+                Modifier.align(Alignment.Center).width(240.dp).clip(RoundedCornerShape(14.dp)).background(IosColors.panel)
                     .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(14.dp)).padding(vertical = 4.dp)
             ) {
                 StickerMenuRow(Icons.Filled.Share, "শেয়ার") { menuFor = null; actions.onStickerShare(name) }
                 StickerMenuRow(Icons.Filled.Download, "গ্যালারিতে সেভ") { menuFor = null; actions.onStickerSave(name) }
                 StickerMenuRow(Icons.Filled.PushPin, "উপরে রাখুন") { menuFor = null; actions.onStickerTop(name) }
-                StickerMenuRow(Icons.Filled.Delete, if (confirmDelete) "নিশ্চিত? আবার চাপুন" else "মুছুন", danger = confirmDelete) {
+                StickerMenuRow(Icons.Filled.Folder, "প্রোফাইলে রাখুন…") { menuFor = null; actions.onStickerManage(here, name) }
+                if (here != null) StickerMenuRow(Icons.Filled.RemoveCircleOutline, "এই প্রোফাইল থেকে সরান") { menuFor = null; actions.onStickerRemoveFromProfile(name) }
+                StickerMenuRow(Icons.Filled.Delete, if (confirmDelete) "নিশ্চিত? সব জায়গা থেকে মুছবে" else "ফোন থেকে মুছুন", danger = confirmDelete) {
                     if (confirmDelete) { menuFor = null; confirmDelete = false; actions.onStickerDelete(name) } else confirmDelete = true
                 }
             }
@@ -935,6 +995,30 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Crumb(text: String, current: Boolean, onClick: () -> Unit) {
+    Text(
+        text, color = if (current) IosColors.text else IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont,
+        fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+private fun AddTile(symbol: String?, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+            .border(1.dp, IosColors.dim.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (symbol != null) Text(symbol, color = IosColors.text, fontSize = 26.sp)
+        else Icon(Icons.Filled.CreateNewFolder, null, tint = IosColors.text, modifier = Modifier.size(28.dp))
+        Text(label, color = IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont)
     }
 }
 
