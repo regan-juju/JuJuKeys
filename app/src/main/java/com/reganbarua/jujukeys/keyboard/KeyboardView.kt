@@ -85,11 +85,12 @@ internal fun fontOf(text: String): FontFamily? =
 
 internal val KeyShape = RoundedCornerShape(8.dp)
 private val PillShape = RoundedCornerShape(50)
-private val BaseRowHeight = 52.dp      // 42dp key + 10dp gap (a little bigger, like iPhone 26)
-// Gaps around each key. Wider keys + taller gaps = nearly square keys (≈35.5 × 39 dp at Normal);
-// the row height and touch area are unchanged. Shared by letters, symbols and the number pad.
-internal val KeyHPad = 1.6.dp
-internal val KeyVPad = 9.dp
+// Row = key + gap. 49.1 × Normal(1.1) = 54 dp: key ≈ 36 × 45 dp with a 9 dp gap between rows.
+private val BaseRowHeight = 49.1.dp
+// Gaps around each key: big, nearly square keys (≈36 × 45 dp at Normal) with small gaps.
+// Shared by letters, symbols and the number pad. Touches in a gap go to the nearest key.
+internal val KeyHPad = 1.4.dp
+internal val KeyVPad = 4.5.dp
 private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
 
 /** Sound/vibration callback for every key press. */
