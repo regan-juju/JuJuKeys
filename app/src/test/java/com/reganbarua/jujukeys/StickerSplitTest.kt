@@ -63,4 +63,24 @@ class StickerSplitTest {
         assertFalse(StickerSplit.darkBackgroundToAlpha(px, w, w))
         assertTrue(px.contentEquals(copy))
     }
+
+    @Test fun thickWhiteBorderBecomesThin() {
+        val w = 200
+        val px = IntArray(w * w)
+        for (y in 0 until w) for (x in 0 until w) {
+            val d2 = (x - 100) * (x - 100) + (y - 100) * (y - 100)
+            px[y * w + x] = when {
+                d2 <= 50 * 50 -> RED
+                d2 <= 60 * 60 -> WHITE                       // 10 px border
+                d2 <= 63 * 63 -> 0x66808080                  // grey shadow
+                else -> 0
+            }
+        }
+        StickerSplit.thinBorder(px, w, w)
+        var white = 0
+        for (x in 100 until w) if (px[100 * w + x] == WHITE) white++
+        assertTrue("white run $white", white in 1..7)
+        assertEquals(RED, px[100 * w + 100])
+        assertEquals(0, px[100 * w + 100 + 62])
+    }
 }

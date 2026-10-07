@@ -60,7 +60,7 @@ class StickerMaker(private val ctx: Context) {
     /** False once the cut-out model could not be fetched (asked once per [StickerMaker]). */
     var modelOk: Boolean? = null; private set
 
-    fun make(uri: Uri, cutOut: Boolean, border: Boolean, split: Boolean): Made {
+    fun make(uri: Uri, cutOut: Boolean, border: Boolean, split: Boolean, thin: Boolean = true): Made {
         val src = decode(uri) ?: return Made(Result.BAD_IMAGE, emptyList())
         // 1) sticker sheet / ready-made sticker: see-through already, or on a black background
         var sheet: IntArray? = null
@@ -69,7 +69,10 @@ class StickerMaker(private val ctx: Context) {
         sheet?.let { px ->
             val pieces = if (split) StickerSplit.split(px, src.width, src.height)
             else listOf(Piece(src.width, src.height, px))
-            val names = pieces.map { p -> StickerStore.add(ctx, fit(Bitmap.createBitmap(p.px, p.w, p.h, Bitmap.Config.ARGB_8888))) }
+            val names = pieces.map { p ->
+                if (thin) StickerSplit.thinBorder(p.px, p.w, p.h)
+                StickerStore.add(ctx, fit(Bitmap.createBitmap(p.px, p.w, p.h, Bitmap.Config.ARGB_8888)))
+            }
             return Made(if (names.size > 1) Result.SPLIT else Result.KEPT_TRANSPARENT, names)
         }
         // 2) ordinary photo

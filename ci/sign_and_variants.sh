@@ -35,7 +35,7 @@ echo "$KIND" > "$OUT/key-kind.txt"
 
 # emulator test variants (native libs removed so they install on x86_64 emulators;
 # the signing is exactly the same as the real APK)
-curl -sSfL -o "$RUNNER_TEMP/v15.apk" https://github.com/regan-juju/JuJuKeys/releases/download/v1.0.15/JuJuKeys-v1.0.15.apk
+cp ci/fixtures/JuJuKeys-v1.0.15.apk "$RUNNER_TEMP/v15.apk"   # old version kept in the repo (releases were cleared)
 nolib "$RUNNER_TEMP/v15.apk" "$RUNNER_TEMP/v15.zip";  sign_old "$RUNNER_TEMP/v15.zip" "$OUT/t-old-v15.apk"
 nolib "$APK" "$RUNNER_TEMP/new.zip";                   sign_rotated "$RUNNER_TEMP/new.zip" "$OUT/t-new-rotated.apk"
 sign_old "$RUNNER_TEMP/new.zip" "$OUT/t-new-oldkey-only.apk"     # what someone with only the OLD public key could make

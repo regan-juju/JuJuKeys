@@ -144,19 +144,22 @@ jobs:
     needs: [build, device-tests, instrumented-tests]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
           name: signed
           path: signed
+      - name: Version name
+        run: echo "VNAME=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)" >> $GITHUB_ENV
       - name: Real key only
         run: |
           if [ "$(cat signed/key-kind.txt)" != "real" ]; then echo "::error::Not signed with the real key — no release."; exit 1; fi
-          cp signed/app-release.apk JuJuKeys-v1.0.${{ github.run_number }}.apk
+          cp signed/app-release.apk JuJuKeys-v${{ env.VNAME }}.apk
       - name: Publish to Releases (phone download link)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: JuJuKeys v1.0.${{ github.run_number }}
+          tag_name: v${{ env.VNAME }}
+          name: JuJuKeys v${{ env.VNAME }}
           body: "JuJuKeys কীবোর্ড — ফোনে APK ডাউনলোড করে ইনস্টল করুন।"
-          files: JuJuKeys-v1.0.${{ github.run_number }}.apk
+          files: JuJuKeys-v${{ env.VNAME }}.apk
           make_latest: true

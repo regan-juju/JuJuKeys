@@ -50,6 +50,7 @@ class StickerAddActivity : ComponentActivity() {
     private var cutOut by mutableStateOf(true)
     private var border by mutableStateOf(true)
     private var split by mutableStateOf(true)
+    private var thin by mutableStateOf(true)
     private var busy by mutableStateOf(false)
     private var done by mutableIntStateOf(0)
     private var total by mutableIntStateOf(0)
@@ -63,6 +64,7 @@ class StickerAddActivity : ComponentActivity() {
         cutOut = sp.getBoolean(KEY_CUT, true)
         border = sp.getBoolean(KEY_BORDER, true)
         split = sp.getBoolean(KEY_SPLIT, true)
+        thin = sp.getBoolean(KEY_THIN, true)
         Thread { StickerStore.seed(this); val n = StickerStore.count(this); runOnUiThread { count = n } }.start()
 
         setContent {
@@ -98,13 +100,13 @@ class StickerAddActivity : ComponentActivity() {
         if (busy) return
         busy = true; done = 0; total = uris.size; summary = ""
         status = "Starting…"
-        val wantCut = cutOut; val wantBorder = border; val wantSplit = split
+        val wantCut = cutOut; val wantBorder = border; val wantSplit = split; val wantThin = thin
         Thread {
             val maker = StickerMaker(applicationContext)
             var cut = 0; var kept = 0; var failed = 0; var bad = 0; var sheets = 0; var fromSheets = 0
             uris.forEachIndexed { i, u ->
                 runOnUiThread { status = "Making ${i + 1} / ${uris.size}…" + if (wantCut && maker.modelOk == null) " (the first time, the background-removal part may download)" else "" }
-                val made = runCatching { maker.make(u, wantCut, wantBorder, wantSplit) }
+                val made = runCatching { maker.make(u, wantCut, wantBorder, wantSplit, wantThin) }
                     .getOrElse { StickerMaker.Made(StickerMaker.Result.BAD_IMAGE, emptyList()) }
                 when (made.result) {
                     StickerMaker.Result.CUT_OUT -> cut++
@@ -144,6 +146,9 @@ class StickerAddActivity : ComponentActivity() {
             }
             Toggle("White border", "A sticker-style white outline and soft shadow around the cut-out", border) {
                 border = it; save(KEY_BORDER, it)
+            }
+            Toggle("Thin border", "Ready-made stickers: the thick white border becomes a thin white line; nothing white stays behind", thin) {
+                thin = it; save(KEY_THIN, it)
             }
             Toggle("Split sticker sheets", "A picture with many stickers (e.g. 3×3) becomes separate stickers — black or see-through background", split) {
                 split = it; save(KEY_SPLIT, it)
@@ -199,6 +204,7 @@ class StickerAddActivity : ComponentActivity() {
         const val KEY_CUT = "cut_out"
         const val KEY_BORDER = "border"
         const val KEY_SPLIT = "split_sheet"
+        const val KEY_THIN = "thin_border"
         private val Accent = Color(0xFFA8C7FA)
         private val Bg = Color(0xFF1B1B1B)
         private val Sub = Color(0xFFB0B0B0)

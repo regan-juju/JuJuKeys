@@ -19,7 +19,9 @@ android {
         val code = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
             ?: (project.findProperty("VERSION_CODE") as String?)?.toIntOrNull() ?: 28
         versionCode = code
-        versionName = "1.0.$code"
+        // Shown version: VERSION_NAME in gradle.properties (restarted at 1.0.1 on 07/10/2026).
+        // versionCode keeps rising (run number) so every new APK installs as an update.
+        versionName = (project.findProperty("VERSION_NAME") as String?) ?: "1.0.$code"
         // Phones only (ARM) — keeps the APK small; ML Kit ships big native libraries.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")

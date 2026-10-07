@@ -164,6 +164,76 @@ object StickerSplit {
         for (i in m.indices) if (drop[lab[i]]) m[i] = false
     }
 
+    /**
+     * Thick white sticker border (and its grey shadow) → a thin white line, like a thread.
+     * Only white / grey pixels joined to the outside and close to the edge are removed, so white
+     * parts inside the picture (a space suit, glasses) stay. Changes [px] in place.
+     */
+    fun thinBorder(px: IntArray, w: Int, h: Int, line: Int = 3) {
+        val n = w * h
+        fun passable(c: Int): Boolean {
+            val a = alpha(c); if (a < 20) return true
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            val mx = maxOf(r, g, b); val mn = minOf(r, g, b)
+            return mx - mn < 40 && ((r + g + b) / 3 > 165 || a < 230)
+        }
+        // white/grey reachable from the picture's edge
+        val rim = BooleanArray(n); val q = IntArray(n); var qh = 0; var qt = 0
+        fun push(i: Int) { if (!rim[i] && passable(px[i])) { rim[i] = true; q[qt++] = i } }
+        for (x in 0 until w) { push(x); push((h - 1) * w + x) }
+        for (y in 0 until h) { push(y * w); push(y * w + w - 1) }
+        while (qh < qt) {
+            val i = q[qh++]; val x = i % w; val y = i / w
+            if (x > 0) push(i - 1); if (x < w - 1) push(i + 1); if (y > 0) push(i - w); if (y < h - 1) push(i + w)
+        }
+        // distance (steps) from the see-through outside
+        val dist = IntArray(n) { -1 }
+        qh = 0; qt = 0
+        for (i in 0 until n) if (alpha(px[i]) < 20) { dist[i] = 0; q[qt++] = i }
+        while (qh < qt) {
+            val i = q[qh++]; val x = i % w; val y = i / w
+            for (dy in -1..1) for (dx in -1..1) {          // 8 neighbours: diagonals count as one step
+                val xx = x + dx; val yy = y + dy
+                if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue
+                val m = yy * w + xx
+                if (dist[m] < 0) { dist[m] = dist[i] + 1; q[qt++] = m }
+            }
+        }
+        // border width = depth where the white rim meets the picture (its inner edge)
+        val inner = ArrayList<Int>()
+        for (i in 0 until n) {
+            if (!rim[i] || alpha(px[i]) < 20) continue
+            val x = i % w; val y = i / w
+            val touches = (x > 0 && !rim[i - 1] && alpha(px[i - 1]) >= 20) || (x < w - 1 && !rim[i + 1] && alpha(px[i + 1]) >= 20) ||
+                (y > 0 && !rim[i - w] && alpha(px[i - w]) >= 20) || (y < h - 1 && !rim[i + w] && alpha(px[i + w]) >= 20)
+            if (touches) inner += dist[i]
+        }
+        if (inner.isEmpty()) return
+        inner.sort()
+        val limit = minOf(max(w, h) * 0.09f, inner[inner.size / 2] * 1.25f + 1f)
+        val keep = BooleanArray(n) { i -> alpha(px[i]) > 20 && !(rim[i] && dist[i] <= limit) }
+        // smooth the cut edge a little (open by 1), then a thin white line around it
+        val opened = dilate(erode(keep, w, h), w, h)
+        var ring = opened.copyOf()
+        repeat(line) { ring = dilate(ring, w, h) }
+        for (i in 0 until n) {
+            px[i] = when {
+                opened[i] -> px[i]
+                ring[i] -> 0xFFFFFFFF.toInt()
+                else -> 0
+            }
+        }
+    }
+
+    private fun dilate(m: BooleanArray, w: Int, h: Int): BooleanArray {
+        val o = BooleanArray(m.size)
+        for (y in 0 until h) for (x in 0 until w) {
+            val i = y * w + x
+            o[i] = m[i] || (x > 0 && m[i - 1]) || (x < w - 1 && m[i + 1]) || (y > 0 && m[i - w]) || (y < h - 1 && m[i + w])
+        }
+        return o
+    }
+
     private fun trimmed(px: IntArray, w: Int, h: Int): Piece? {
         var l = w; var t = h; var r = -1; var b = -1
         for (y in 0 until h) for (x in 0 until w) if (alpha(px[y * w + x]) > 8) {
