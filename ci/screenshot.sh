@@ -8,6 +8,8 @@ mkdir -p shots; LOG=shots/api${API}-steps.txt
 APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
 adb install -r "$APK" >> $LOG 2>&1
 sh wm size 1080x2400 >> $LOG; sh wm density 420 >> $LOG; sleep 3
+# the emulator has a "hardware keyboard", which hides on-screen keyboards — show them anyway
+sh settings put secure show_ime_with_hard_keyboard 1 >> $LOG
 for i in 1 2 3 4 5; do
   sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
   sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4
