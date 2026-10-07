@@ -7,7 +7,6 @@ sh() { adb shell "$@" 2>&1 | tr -d '\r'; }
 mkdir -p shots; LOG=shots/api${API}-steps.txt
 APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
 adb install -r "$APK" >> $LOG 2>&1
-sh wm size 1080x2400 >> $LOG; sh wm density 420 >> $LOG; sleep 3
 # the emulator has a "hardware keyboard", which hides on-screen keyboards — show them anyway
 sh settings put secure show_ime_with_hard_keyboard 1 >> $LOG
 for i in 1 2 3 4 5; do
@@ -23,10 +22,8 @@ focus_field() {
 }
 sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >> $LOG; sleep 10
 for t in 1 2 3 4; do
+  focus_field; sleep 6
   sh dumpsys input_method | grep -q 'mInputShown=true' && break
-  sh input keyevent KEYCODE_BACK >/dev/null; sleep 1   # closes any picker that opened
-  sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >/dev/null; sleep 6
-  focus_field; sleep 5
 done
 sleep 10
 adb exec-out screencap -p > shots/api${API}-1-letters.png
