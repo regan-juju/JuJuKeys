@@ -102,8 +102,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val weight = LocalKeyWeight.current
     val popupOn = LocalPopupEnabled.current
     val feedback = LocalKeyFeedback.current
-    val keyPadH = with(density) { 2.6.dp.toPx() }
-    val keyPadV = with(density) { 5.dp.toPx() }
+    val keyPadH = with(density) { KeyHPad.toPx() }
+    val keyPadV = with(density) { KeyVPad.toPx() }
     val sidePad = with(density) { 3.dp.toPx() }
     val corner = with(density) { 8.dp.toPx() }
     val rowPx = with(density) { rowH.toPx() }
