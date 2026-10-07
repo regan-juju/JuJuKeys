@@ -31,6 +31,8 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
@@ -143,14 +145,23 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     var bubble by remember { mutableStateOf<Pair<Int, String>?>(null) }
 
     // ---- geometry
-    var size by remember { mutableStateOf(Size.Zero) }
+    var measured by remember { mutableStateOf(Size.Zero) }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    val geometry = remember(rows, size, rowPx) {
+    // Width to lay the keys out in. If the measured width is missing or clearly wrong (Android 15
+    // can report 0 / a tiny width for the keyboard window at first), use the screen width instead —
+    // a phone keyboard is always full width. Otherwise every key collapsed into the left edge.
+    val screenPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
+    /** A width that can be trusted: the real one, or the screen width if it is 0 / far too small. */
+    fun usable(w: Float) = if (w >= screenPx * 0.5f) w else screenPx
+    // Key rectangles for a given width, cached (computed once per width, not per frame).
+    val cache = remember(rows, rowPx, screenPx) { HashMap<Int, Pair<List<Rect>, List<Rect>>>() }
+    fun geometryFor(width: Float): Pair<List<Rect>, List<Rect>> = cache.getOrPut(usable(width).toInt()) {
+        val wTotal = usable(width)
         val keyRects = ArrayList<Rect>()     // what is drawn
         val hitRects = ArrayList<Rect>()     // what is touchable (includes the gaps around a key)
         rows.forEachIndexed { r, row ->
             val total = row.sumOf { it.weight.toDouble() }.toFloat()
-            val unit = (size.width - 2 * sidePad) / total
+            val unit = (wTotal - 2 * sidePad) / total
             var x = sidePad
             val top = r * rowPx
             row.forEach { k ->
@@ -162,6 +173,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         }
         keyRects to hitRects
     }
+    val size = Size(usable(measured.width), rowPx * rows.size)
+    val geometry = remember(rows, size, rowPx) { geometryFor(size.width) }
     // Glass rim made for each row's own height, so every row looks the same
     // (one gradient over the whole keyboard made the top row bright and the bottom rows bare).
     val rims = remember(geometry) {
@@ -218,11 +231,13 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         Modifier
             .fillMaxWidth()
             .height(rowH * rows.size)
-            .onGloballyPositioned { size = Size(it.size.width.toFloat(), it.size.height.toFloat()); origin = it.positionInRoot() }
+            .onSizeChanged { measured = Size(it.width.toFloat(), it.height.toFloat()) }
+            .onGloballyPositioned { measured = Size(it.size.width.toFloat(), it.size.height.toFloat()); origin = it.positionInRoot() }
             .pointerInput(flat, geometry) {
                 pressed.clear()
-                val (keyRects, hitRects) = geometry
                 fun hit(p: Offset): Int {
+                    // the real width of this keyboard at the moment of the touch (never a stale or zero one)
+                    val hitRects = geometryFor(size.width.toFloat()).second
                     for (i in hitRects.indices) {
                         if (flat[i].type != KType.GAP && hitRects[i].contains(p)) return i
                     }
@@ -310,7 +325,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 }
             }
     ) {
-        val (keyRects, _) = geometry
+        val (keyRects, _) = geometryFor(this.size.width)
         val iconPx = 25.dp.toPx()
         for (i in flat.indices) {
             val k = flat[i]
