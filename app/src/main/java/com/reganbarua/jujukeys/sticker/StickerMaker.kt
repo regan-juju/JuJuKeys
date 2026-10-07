@@ -156,17 +156,17 @@ class StickerMaker(private val ctx: Context) {
         return if (r < 0) null else Rect(l, t, r + 1, btm + 1)
     }
 
-    /** White sticker outline: the shape drawn in white all around (plus a soft shadow), then the picture on top. */
+    /** Thin white outline (like a thread) all around the shape, a faint shadow, then the picture on top. */
     private fun addBorder(fg: Bitmap): Bitmap {
         val box = trimRect(fg) ?: return fg
         val cut = Bitmap.createBitmap(fg, box.left, box.top, box.width(), box.height())
-        val r = max(6f, max(cut.width, cut.height) * 0.028f)
+        val r = max(2f, max(cut.width, cut.height) * 0.007f)   // thin, thread-like outline
         val pad = (r * 1.6f).roundToInt()
         val out = Bitmap.createBitmap(cut.width + pad * 2, cut.height + pad * 2, Bitmap.Config.ARGB_8888)
         val c = Canvas(out)
         val shape = cut.extractAlpha()                 // alpha-only: drawn in the paint's colour
         val white = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
-        val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(55, 0, 0, 0) }
+        val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(35, 0, 0, 0) }
         for (k in 0 until 24) {
             val a = (k * Math.PI * 2 / 24).toFloat()
             c.drawBitmap(shape, pad + cos(a) * r, pad + sin(a) * r + r * 0.45f, shadow)
