@@ -1,6 +1,10 @@
 name: Keyboard screenshots (Android 13 / 14 / 15)
-# Manual only: builds a debug APK and photographs the keyboard on emulators.
-on: workflow_dispatch
+# Builds a debug APK and photographs the keyboard on emulators.
+# Runs by hand, or on a push to the 'shots-check' branch (never makes a release).
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "shots-check" ]
 jobs:
   shots:
     runs-on: ubuntu-latest
