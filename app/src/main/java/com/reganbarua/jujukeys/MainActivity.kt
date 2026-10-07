@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import com.reganbarua.jujukeys.security.DataMigration
 import com.reganbarua.jujukeys.settings.SettingsApp
 
-/** The app = Gboard-style settings (opened from the launcher or the keyboard's 🌐 button). */
+/** The app = Gboard-style settings (opened from the launcher, or the keyboard's ⚙ button: hold ক/A). */
 class MainActivity : ComponentActivity() {
 
     private var enabled by mutableStateOf(false)

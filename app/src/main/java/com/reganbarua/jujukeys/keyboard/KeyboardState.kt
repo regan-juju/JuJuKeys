@@ -115,6 +115,8 @@ interface KeyboardActions {
     fun onShiftHeld(held: Boolean)
     fun onToggleLanguage()
     fun onShowImePicker()
+    /** 🌐 tap: the next keyboard (or the keyboard list if there is no other one). */
+    fun onNextKeyboard()
     fun onOpenSettings()
     /** Sound / vibration for a key press, following the settings. */
     fun onKeyFeedback(kind: KeyKind)

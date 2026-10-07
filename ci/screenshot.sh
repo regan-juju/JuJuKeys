@@ -29,6 +29,12 @@ done
 sleep 2
 adb exec-out screencap -p > shots/api${API}-1-letters.png
 sh dumpsys input_method | grep -E 'mInputShown|mCurMethodId' >> $LOG
+# (320x640 emulator) hold ক/A → Keep · Translate · Settings slide out
+sh input swipe 20 330 20 330 900; sleep 2
+adb exec-out screencap -p > shots/api${API}-5-tools.png
+# ১২৩ → number pad
+sh input tap 20 524; sleep 2
+adb exec-out screencap -p > shots/api${API}-6-numpad.png
 sleep 2; focus_field; sleep 3
 adb exec-out screencap -p > shots/api${API}-2-again.png
 sh settings put system accelerometer_rotation 0; sh settings put system user_rotation 1; sleep 4; focus_field; sleep 3

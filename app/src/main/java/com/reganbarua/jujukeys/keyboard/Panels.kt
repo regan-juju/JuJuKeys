@@ -83,6 +83,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Tune
@@ -198,6 +199,11 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                     Spacer(Modifier.width(8.dp))
                     ToolButton(state.translateOn, { toolsOpen = false; actions.onTranslateToggle() }) {
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
+                    ToolButton(false, { toolsOpen = false; actions.onOpenSettings() }) {
+                        Icon(Icons.Filled.Settings, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                 }
             }

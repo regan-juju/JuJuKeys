@@ -175,13 +175,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     }
     val size = Size(usable(measured.width), rowPx * rows.size)
     val geometry = remember(rows, size, rowPx) { geometryFor(size.width) }
-    // Glass rim made for each row's own height, so every row looks the same
-    // (one gradient over the whole keyboard made the top row bright and the bottom rows bare).
-    val rims = remember(geometry) {
-        val t = IosColors.theme
-        val grow = with(density) { 2.dp.toPx() }
-        geometry.first.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) }
-    }
     // Rainbow theme: every key has its own glass colour — letters by column, the others
     // (Shift, 123, photo key, return) from the same rainbow; the space bar shows the whole rainbow.
     val tint: List<Pair<Color, Color>?> = remember(flat) {
@@ -202,23 +195,31 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
         }
     }
     val rainbowSpace = remember(flat) { IosColors.rainbowBrush() }
-    // Liquid glass on every key: body a little lighter at the top, a diagonal light sheen.
-    val bodies = remember(geometry, tint) {
-        geometry.first.mapIndexed { i, r ->
-            val base = tint.getOrNull(i)?.first ?: IosColors.key
-            Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
-        }
-    }
-    val sheens = remember(geometry) {
-        val strong = IosColors.theme.rainbow != null
-        geometry.first.map { r ->
-            Brush.linearGradient(
-                0f to Color.White.copy(alpha = if (strong) 0.24f else 0.17f),
-                0.42f to Color.Transparent,
-                1f to Color.White.copy(alpha = 0.05f),
-                start = r.topLeft, end = Offset(r.right, r.bottom)
-            )
-        }
+    // Liquid glass on every key: a rim made for each row's own height (so every row looks the same),
+    // a body a little lighter at the top, and a diagonal light sheen. Built for the SAME key
+    // rectangles that are drawn (cached per width), so the glass always sits exactly on its key.
+    class Looks(val rims: List<Pair<Brush, Brush>>, val bodies: List<Brush>, val sheens: List<Brush>)
+    val looksCache = remember(rows, rowPx, screenPx, tint) { HashMap<Int, Looks>() }
+    fun looksFor(width: Float): Looks = looksCache.getOrPut(usable(width).toInt()) {
+        val rects = geometryFor(width).first
+        val t = IosColors.theme
+        val grow = with(density) { 2.dp.toPx() }
+        val strong = t.rainbow != null
+        Looks(
+            rims = rects.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) },
+            bodies = rects.mapIndexed { i, r ->
+                val base = tint.getOrNull(i)?.first ?: IosColors.key
+                Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
+            },
+            sheens = rects.map { r ->
+                Brush.linearGradient(
+                    0f to Color.White.copy(alpha = if (strong) 0.24f else 0.17f),
+                    0.42f to Color.Transparent,
+                    1f to Color.White.copy(alpha = 0.05f),
+                    start = r.topLeft, end = Offset(r.right, r.bottom)
+                )
+            }
+        )
     }
     val photo = ImageBitmap.imageResource(com.reganbarua.jujukeys.R.drawable.photo_mini)
 
@@ -326,6 +327,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             }
     ) {
         val (keyRects, _) = geometryFor(this.size.width)
+        val looks = looksFor(this.size.width)
         val iconPx = 25.dp.toPx()
         for (i in flat.indices) {
             val k = flat[i]
@@ -345,11 +347,11 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 when {
                     down -> drawRoundRect(tc?.second ?: IosColors.keyPressed, kr.topLeft, kr.size, cr)
                     k.type == KType.SPACE && rainbowSpace != null -> drawRoundRect(rainbowSpace, kr.topLeft, kr.size, cr, alpha = 0.80f)
-                    else -> bodies.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
+                    else -> looks.bodies.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
                         ?: drawRoundRect(tc?.first ?: IosColors.key, kr.topLeft, kr.size, cr)
                 }
-                sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
-                val rim = rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
+                looks.sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
+                val rim = looks.rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.9.dp.toPx()))
             }
             when (k.type) {

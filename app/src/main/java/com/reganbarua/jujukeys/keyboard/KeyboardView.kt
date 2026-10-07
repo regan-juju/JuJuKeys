@@ -354,17 +354,19 @@ private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
         }
     }
     KeyRow {
-        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+        // , !?# = . were half-width keys; ABC / 0 / return give some room so they are ~35% bigger
+        // (the row still adds up to 6.5 like the rows above).
+        FuncKey(Modifier.weight(1.0f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
             KeyLabel("ABC", 16.sp)
         }
-        NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 20.sp, 0.65f)
-        FuncKey(Modifier.weight(0.65f), color = IosColors.keyOr(3, IosColors.fn), onTap = { actions.onPage(Page.SYMBOLS) }) {
-            KeyLabel("!?#", 15.sp)
+        NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 26.sp, 0.875f)
+        FuncKey(Modifier.weight(0.875f), color = IosColors.keyOr(3, IosColors.fn), onTap = { actions.onPage(Page.SYMBOLS) }) {
+            KeyLabel("!?#", 17.sp)
         }
-        NumKey("0", actions, IosColors.keyOr(9, IosColors.key), 28.sp, 1.3f)
-        NumKey("=", actions, IosColors.keyOr(6, IosColors.fn), 20.sp, 0.65f)
-        NumKey(".", actions, IosColors.keyOr(8, IosColors.fn), 20.sp, 0.65f)
-        ReturnKey(Modifier.weight(1.3f), enterLabel, actions, pill = true, rainbow = 7)
+        NumKey("0", actions, IosColors.keyOr(9, IosColors.key), 28.sp, 1.0f)
+        NumKey("=", actions, IosColors.keyOr(6, IosColors.fn), 24.sp, 0.875f)
+        NumKey(".", actions, IosColors.keyOr(8, IosColors.fn), 28.sp, 0.875f)
+        ReturnKey(Modifier.weight(1.0f), enterLabel, actions, pill = true, rainbow = 7)
     }
 }
 
@@ -467,9 +469,9 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 🌐 = settings (long-press: choose another keyboard)
-        StripButton(onTap = { actions.onOpenSettings() }, onLongPress = { actions.onShowImePicker() }) {
-            Icon(Symbols.globe, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(32.dp))
+        // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
+        StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
+            Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.text, modifier = Modifier.size(32.dp))
         }
         if (state.prefs.showSuggestions && state.emojiSearch == null) {
             Spacer(Modifier.width(20.dp))

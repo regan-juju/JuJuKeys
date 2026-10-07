@@ -620,7 +620,20 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onOpenSettings() {
         commitWord()
-        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        // Opened from the keyboard: a fresh settings screen that does not stay in Recents, so it
+        // never shows up again by itself until JuJuKeys is opened (from the launcher or this button).
+        startActivity(
+            Intent(this, MainActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            )
+        )
+    }
+
+    override fun onNextKeyboard() {
+        commitWord()
+        val switched = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+            runCatching { switchToNextInputMethod(false) }.getOrDefault(false) else false
+        if (!switched) onShowImePicker()
     }
 
     override fun onKeyFeedback(kind: KeyKind) {
