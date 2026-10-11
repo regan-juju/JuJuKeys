@@ -342,8 +342,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             } else {
                 // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
                 // bright top edge; pressed keys swell a little
-                val kr = if (down) r.inflate(2.dp.toPx()) else r
-                drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
+                val kr = if (down) r.inflate(1.5.dp.toPx()).translate(0f, 1.dp.toPx()) else r
+                if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
+                else drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 when {
                     down -> drawRoundRect(tc?.second ?: IosColors.keyPressed, kr.topLeft, kr.size, cr)
                     k.type == KType.SPACE && rainbowSpace != null -> drawRoundRect(rainbowSpace, kr.topLeft, kr.size, cr, alpha = 0.80f)
@@ -352,7 +353,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 }
                 looks.sheens.getOrNull(i)?.let { drawRoundRect(it, kr.topLeft, kr.size, cr) }
                 val rim = looks.rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
-                drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = 0.9.dp.toPx()))
+                if (k.type == KType.SHIFT && state.shift != ShiftState.OFF)   // shift is on: clearly lit
+                    drawRoundRect(Color.White.copy(alpha = if (state.shift == ShiftState.LOCK) 0.34f else 0.22f), kr.topLeft, kr.size, cr)
+                drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = if (down) 1.5.dp.toPx() else 0.9.dp.toPx()))
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
