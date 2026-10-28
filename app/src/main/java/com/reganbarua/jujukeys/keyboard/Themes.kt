@@ -14,7 +14,7 @@ internal class KbTheme(
     val id: String,
     val name: String,
     val bg: Color,
-    val blobs: List<Blob>,
+    @Suppress("UNUSED_PARAMETER") blobs: List<Blob>,
     val key: Color,
     val keyPressed: Color,
     val fn: Color,
@@ -38,13 +38,16 @@ internal class KbTheme(
     val rainbow: List<Color>? = null,
     /** Colour for the 123 key in the rainbow theme. */
     val accent: Color? = null,
-)
+) {
+    /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
+    val blobs: List<Blob> = emptyList()
+}
 
 internal object Themes {
     val all: List<KbTheme> = listOf(
         KbTheme(
             "current", "Glass",
-            bg = Color(0xF0171917),
+            bg = Color(0xF21C1C1E),
             blobs = listOf(
                 Blob(0.18f, 0.80f, Color(0x38286E3C), 0.55f), Blob(0.62f, 0.72f, Color(0x29822D2D), 0.50f),
                 Blob(0.88f, 0.28f, Color(0x1F3C3C8C), 0.50f), Blob(0.30f, 0.18f, Color(0x1A6E6432), 0.45f),
@@ -167,11 +170,16 @@ internal object IosColors {
     private fun glassBrush(t: KbTheme) = glassBrush(t, 0f, Float.POSITIVE_INFINITY)
 
     /** Glass rim for ONE key from [top] to [bottom]: bright top edge, faint ring all round — same on every row. */
-    fun glassBrush(t: KbTheme, top: Float, bottom: Float): Brush = Brush.verticalGradient(
-        0f to t.glassTop,
-        0.35f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.36f),
-        0.85f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.18f),
-        1f to t.glassTop.copy(alpha = t.glassTop.alpha * 0.34f),     // faint light along the bottom edge too
+    fun glassBrush(t: KbTheme, top: Float, bottom: Float): Brush = glassBrushOf(t.glassTop.copy(alpha = t.glassTop.alpha * RIM), top, bottom)
+
+    /** Bright white rim strength (1 = old look); a little softer, like the iPhone keyboard. */
+    private const val RIM = 0.55f
+
+    private fun glassBrushOf(g: Color, top: Float, bottom: Float): Brush = Brush.verticalGradient(
+        0f to g,
+        0.35f to g.copy(alpha = g.alpha * 0.36f),
+        0.85f to g.copy(alpha = g.alpha * 0.18f),
+        1f to g.copy(alpha = g.alpha * 0.34f),     // faint light along the bottom edge too
         startY = top, endY = bottom
     )
 
