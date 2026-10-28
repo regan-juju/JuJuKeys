@@ -343,7 +343,12 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
                 // bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(1.5.dp.toPx()).translate(0f, 1.dp.toPx()) else r
-                if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
+                val gc = if (down) pressGlow(k, i) else null
+                if (gc != null) {
+                    // soft glow in this key's own rainbow colour, rising from below the key
+                    val g = kr.inflate(2.dp.toPx()).translate(0f, 2.5.dp.toPx())
+                    drawRoundRect(gc.copy(alpha = 0.22f), g.topLeft, g.size, CornerRadius(corner + 2.dp.toPx()))
+                } else if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
                 else drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 when {
                     down -> drawRoundRect(tc?.second ?: IosColors.keyPressed, kr.topLeft, kr.size, cr)
@@ -356,6 +361,17 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 if (k.type == KType.SHIFT && state.shift != ShiftState.OFF)   // shift is on: clearly lit
                     drawRoundRect(Color.White.copy(alpha = if (state.shift == ShiftState.LOCK) 0.34f else 0.22f), kr.topLeft, kr.size, cr)
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = if (down) 1.5.dp.toPx() else 0.9.dp.toPx()))
+                if (gc != null) {
+                    // light from the bottom: fills the key faintly and runs up the border, fading out
+                    drawRoundRect(
+                        Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color.Transparent, 1f to gc.copy(alpha = 0.20f), startY = kr.top, endY = kr.bottom),
+                        kr.topLeft, kr.size, cr
+                    )
+                    drawRoundRect(
+                        Brush.verticalGradient(0f to gc.copy(alpha = 0.12f), 0.6f to gc.copy(alpha = 0.30f), 1f to gc.copy(alpha = 0.62f), startY = kr.top, endY = kr.bottom),
+                        kr.topLeft, kr.size, cr, style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }
@@ -413,3 +429,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawIcon(
         with(painter) { draw(Size(px, px), colorFilter = ColorFilter.tint(color)) }
     }
 }
+
+
+/** Rainbow colours for the press light: each key has its own (letters by column). */
+private val PressRainbow = listOf(
+    Color(0xFFFF4D4D), Color(0xFFFF8A3C), Color(0xFFFFD23C), Color(0xFF7BE04A), Color(0xFF2FD38A),
+    Color(0xFF2FC8FF), Color(0xFF4D7DFF), Color(0xFF9A5AFF), Color(0xFFE05AFF), Color(0xFFFF5AA8),
+)
+
+private fun pressGlow(k: GKey, index: Int): Color =
+    PressRainbow[((if (k.type == KType.CHAR && k.col >= 0) k.col else index) % PressRainbow.size + PressRainbow.size) % PressRainbow.size]
