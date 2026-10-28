@@ -15,7 +15,8 @@ object AvroPhonetic {
     private const val HASANTA = "্"
     private const val CASE_SENSITIVE = "oiudgjnrstyz"
 
-    private enum class Ctx { START, CONSONANT, VOWEL, REPH }
+    /** SEP = right after the accent key (`), which separates sounds: no conjunct / fola is formed. */
+    private enum class Ctx { START, CONSONANT, VOWEL, REPH, SEP }
 
     private sealed class Tok {
         class Cons(val bn: String) : Tok()
@@ -64,6 +65,7 @@ object AvroPhonetic {
     private val specialConsonants: List<Pair<String, String>> = listOf(
         "x" to "ক্স",
         "kSh" to "ক্ষ", "kkh" to "ক্ষ",
+        "kkhm" to "ক্ষ্ম", "kxm" to "ক্ষ্ম", "kkhN" to "ক্ষ্ণ", "kxN" to "ক্ষ্ণ",
         "gg" to "জ্ঞ",
         "ngk" to "ঙ্ক", "ngkh" to "ঙ্খ", "ngg" to "ঙ্গ", "nggh" to "ঙ্ঘ",
         "nc" to "ঞ্চ", "nch" to "ঞ্ছ", "nj" to "ঞ্জ", "njh" to "ঞ্ঝ",
@@ -89,6 +91,8 @@ object AvroPhonetic {
         "t``" to Tok.Plain("ৎ", Ctx.VOWEL),
         "." to Tok.Plain("।", Ctx.START),
         ".." to Tok.Plain(".", Ctx.START),
+        ".`" to Tok.Plain(".", Ctx.START),   // Avro: ".`" writes a real dot
+        ":`" to Tok.Plain(":", Ctx.START),   // Avro: ":`" writes a real colon (not bisarga)
         "$" to Tok.Plain("৳", Ctx.START),
         ",," to Tok.Plain("্‌", Ctx.START),
         "0" to Tok.Plain("০", Ctx.START), "1" to Tok.Plain("১", Ctx.START),
@@ -147,9 +151,13 @@ object AvroPhonetic {
         val out = StringBuilder()
         var ctx = Ctx.START
         var lastWasR = false
+        var prevVowel = false   // previous output was a vowel / kar (not ং ঃ ঁ)
         var i = 0
 
         while (i < s.length) {
+            val pv = prevVowel
+            prevVowel = false
+
             // 1) longest table match
             var matched: Tok? = null
             var len = 0
@@ -163,18 +171,34 @@ object AvroPhonetic {
             if (len <= 1 && c in "oryZw`") {
                 when (c) {
                     'o' -> {
-                        val atWordEnd = i + 1 >= s.length || !s[i + 1].isLetter()
-                        when (ctx) {
-                            // Word-final o after a single consonant is written: bhalo → ভালো.
-                            // After a conjunct it stays inherent: dhormo → ধর্ম, golpo → গল্প.
-                            Ctx.CONSONANT -> if (atWordEnd && !endsWithCluster(out)) out.append("ো")
-                            else -> out.append(if (ctx == Ctx.START) "অ" else "ও")
+                        if (s.getOrNull(i + 1) == '`') {
+                            // o` : forced kar of "o" = nothing is written (Avro manual, rule 1)
+                            i++
+                        } else {
+                            val atWordEnd = i + 1 >= s.length || !s[i + 1].isLetter()
+                            when (ctx) {
+                                // Word-final o after a single consonant is written: bhalo → ভালো.
+                                // After a conjunct it stays inherent: dhormo → ধর্ম, golpo → গল্প.
+                                Ctx.CONSONANT -> if (atWordEnd && !endsWithCluster(out)) out.append("ো")
+                                // `o at word start / after the accent key is the vowel অ
+                                Ctx.START, Ctx.SEP -> out.append("অ")
+                                else -> out.append("ও")
+                            }
                         }
                         ctx = Ctx.VOWEL
+                        prevVowel = true
                     }
                     'r' -> {
                         val next = s.getOrNull(i + 1)
+                        val after = s.getOrNull(i + 2)
                         when {
+                            // rr before a consonant is always reph: orrko → অর্ক, arrtonad → আর্তনাদ
+                            next == 'r' && after != null && isConsonantLetter(after) && after != 'r' -> {
+                                out.append("র" + HASANTA); ctx = Ctx.REPH
+                                lastWasR = false
+                                i += 2
+                                continue
+                            }
                             ctx == Ctx.CONSONANT && !lastWasR -> { out.append(HASANTA + "র"); ctx = Ctx.CONSONANT }
                             next != null && isConsonantLetter(next) && next != 'r' && ctx != Ctx.START ->
                                 { out.append("র" + HASANTA); ctx = Ctx.REPH }       // dhormo → ধর্ম
@@ -188,7 +212,8 @@ object AvroPhonetic {
                         when (ctx) {
                             Ctx.CONSONANT -> out.append(HASANTA + "য")   // byabosha → ব্যাবসা
                             Ctx.REPH -> out.append("য")                   // karyo → কার্য
-                            else -> out.append("য়")
+                            // word-initial y is ইয় (yahoo → ইয়াহু); elsewhere য় (hoy → হয়)
+                            else -> out.append(if (i == 0) "ইয়" else "য়")
                         }
                         ctx = Ctx.CONSONANT
                     }
@@ -200,12 +225,15 @@ object AvroPhonetic {
                         if (ctx == Ctx.CONSONANT) {
                             out.append(HASANTA + "ব"); ctx = Ctx.CONSONANT
                         } else if (s.getOrNull(i + 1) == 'a') {
-                            out.append("ওয়া"); ctx = Ctx.VOWEL; i += 2; lastWasR = false; continue
+                            out.append("ওয়া"); ctx = Ctx.VOWEL; prevVowel = true
+                            i += 2; lastWasR = false; continue
                         } else {
-                            out.append("ও"); ctx = Ctx.VOWEL
+                            out.append("ও"); ctx = Ctx.VOWEL; prevVowel = true
                         }
                     }
-                    '`' -> { /* separator: prevents conjuncts, outputs nothing */ }
+                    // Accent key: writes nothing, but separates sounds. Before a vowel it forces the
+                    // full vowel (ek`i → একই); between consonants it stops a conjunct (am`ra → আমরা).
+                    '`' -> ctx = Ctx.SEP
                 }
                 lastWasR = false
                 i++
@@ -216,12 +244,21 @@ object AvroPhonetic {
             when (val t = matched) {
                 is Tok.Cons -> { out.append(t.bn); ctx = Ctx.CONSONANT }
                 is Tok.Vowel -> {
-                    out.append(if (ctx == Ctx.CONSONANT) t.kar else t.independent)
+                    when {
+                        // vowel + ` : forced kar, whatever comes before (a` → া, i` → ি)
+                        s.getOrNull(i + len) == '`' -> { out.append(t.kar); len++ }
+                        ctx == Ctx.CONSONANT -> out.append(t.kar)
+                        // "a" right after a vowel / kar is য়া (samia → সামিয়া)
+                        pv && t.independent == "আ" && ctx == Ctx.VOWEL -> out.append("য়া")
+                        else -> out.append(t.independent)
+                    }
                     ctx = Ctx.VOWEL
+                    prevVowel = true
                 }
                 is Tok.Plain -> {
                     out.append(t.bn)
                     if (t.bn != "ঁ") ctx = t.ctx   // chandrabindu does not change context
+                    else prevVowel = pv
                 }
                 null -> { out.append(c); ctx = Ctx.START; len = 1 }  // unknown char: pass through
             }

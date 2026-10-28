@@ -28,6 +28,32 @@ class AvroPhoneticTest {
         assertEquals(failures.joinToString("\n"), 0, failures.size)
     }
 
+    /** Rules from the Avro Keyboard 4.5 manual ("Bangla Typing with Avro Phonetic"). */
+    private val manualCases = linkedMapOf(
+        // accent key: forced full vowel / forced kar / stops a conjunct
+        "ek`i" to "একই", "ek`Ta" to "একটা", "am`ra" to "আমরা", "ag`lano" to "আগলানো",
+        "`o" to "অ", "`a" to "আ", "ka`" to "কা", "ki`" to "কি", "ko`" to "ক", "eki" to "একি",
+        // rr = reph
+        "orrko" to "অর্ক", "arrtonad" to "আর্তনাদ", "orrthohIn" to "অর্থহীন",
+        // a after a vowel/kar = য়া; word-initial y = ইয়
+        "samia" to "সামিয়া", "yahoo" to "ইয়াহু", "niyom" to "নিয়ম",
+        // dot / colon kept literal with the accent key
+        ".`" to ".", ":`" to ":", "ami.`" to "আমি.",
+        // examples straight from the manual
+        "okkhor" to "অক্ষর", "bybohar" to "ব্যবহার", "prosonno" to "প্রসন্ন",
+        "protidin" to "প্রতিদিন", "bishwo" to "বিশ্ব", "lokkhmI" to "লক্ষ্মী", "brahmoN" to "ব্রাহ্মণ",
+        "sombol" to "সম্বল", "grrih" to "গৃহ",
+    )
+
+    @Test
+    fun convertsManualRules() {
+        val failures = manualCases.mapNotNull { (roman, expected) ->
+            val got = AvroPhonetic.convert(roman)
+            if (got != expected) "$roman → $got (expected $expected)" else null
+        }
+        assertEquals(failures.joinToString("\n"), 0, failures.size)
+    }
+
     @Test
     fun caseRule() {
         // Only o i u d g j n r s t y z are case-sensitive.
