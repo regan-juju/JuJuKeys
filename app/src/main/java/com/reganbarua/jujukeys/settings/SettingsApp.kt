@@ -266,7 +266,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     }
     Item("Languages", "Bangla (Avro), English", Icons.Outlined.Language) { open(Screen.LANGUAGES) }
     Item("Preferences", "Keys, layout, sound & vibration", Icons.Outlined.Tune) { open(Screen.PREFERENCES) }
-    Item("Themes", "8 liquid glass themes", Icons.Outlined.Palette) { open(Screen.THEME) }
+    Item("Themes", "9 liquid glass themes", Icons.Outlined.Palette) { open(Screen.THEME) }
     Item("Text correction", "Auto-correct, capitals, suggestions", Icons.Outlined.Spellcheck) { open(Screen.TEXT) }
     Item("Voice typing", "Google voice typing", Icons.Outlined.Mic) { open(Screen.VOICE) }
     Item("Clipboard", "History, pin, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
