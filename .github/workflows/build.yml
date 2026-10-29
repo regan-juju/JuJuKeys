@@ -155,11 +155,14 @@ jobs:
         run: |
           if [ "$(cat signed/key-kind.txt)" != "real" ]; then echo "::error::Not signed with the real key — no release."; exit 1; fi
           cp signed/app-release.apk JuJuKeys-v${{ env.VNAME }}.apk
+          cp signed/app-release.apk JuJuKeys.apk   # same file, fixed name: releases/latest/download/JuJuKeys.apk
       - name: Publish to Releases (phone download link)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VNAME }}
           name: JuJuKeys v${{ env.VNAME }}
           body: "JuJuKeys কীবোর্ড — ফোনে APK ডাউনলোড করে ইনস্টল করুন।"
-          files: JuJuKeys-v${{ env.VNAME }}.apk
+          files: |
+            JuJuKeys-v${{ env.VNAME }}.apk
+            JuJuKeys.apk
           make_latest: true
