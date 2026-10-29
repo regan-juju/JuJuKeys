@@ -24,14 +24,12 @@ shot 14 page-Preferences
 shot 15 page-Themes
 shot 16 page-Text_correction
 shot 17 page-Clipboard
-no node: 
 shot 18 page-Translate
 shot 19 page-Dictionary
 no node: 
 no node: 
 shot 20 page-Emoji___stickers
 shot 21 page-Privacy
-no node: 
 no node: 
 shot 22 page-About
 no node: 
@@ -66,4 +64,4 @@ mInputShown=true
 shot 32 kb-english
     mViewVisibility=0x0 mHaveFrame=true mObscured=false
     mTouchableInsets=3 mGivenInsetsPending=false
-    touchable region=SkRegion((0,1517,1080,2400))
+    touchable region=SkRegion((0,1413,1080,2400))
