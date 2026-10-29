@@ -40,6 +40,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -84,7 +87,6 @@ internal fun fontOf(text: String): FontFamily? =
     if (text.any { it in 'ঀ'..'৿' }) BanglaFont else null
 
 internal val KeyShape = RoundedCornerShape(8.dp)
-private val PillShape = RoundedCornerShape(50)
 // Row = key + gap. 49.1 × Normal(1.1) = 54 dp: key ≈ 36 × 45 dp with a 9 dp gap between rows.
 private val BaseRowHeight = 49.1.dp
 // Gaps around each key: big, nearly square keys (≈36 × 45 dp at Normal) with small gaps.
@@ -125,6 +127,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
     // key(theme): a theme change rebuilds the keyboard once so every part picks up the new colours
     key(theme.id) {
     CompositionLocalProvider(
+        LocalIndication provides RainbowIndication,
         LocalKeyFeedback provides feedback,
         LocalPopupEnabled provides prefs.popup,
         LocalRowHeight provides BaseRowHeight * prefs.heightScale,
@@ -258,15 +261,23 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
     var pressed by remember { mutableStateOf(false) }
     val feedback = LocalKeyFeedback.current
     val act by rememberUpdatedState(actions)
+    val spaceGlow = remember { rainbowFor(5) }
     Box(
         modifier
             .keyPadding()
+            .then(if (pressed) Modifier.drawBehind {
+                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false)
+            } else Modifier)
             .clip(KeyShape)
             .then(
                 IosColors.rainbowBrush()?.takeIf { !pressed }?.let { Modifier.background(it, alpha = 0.8f) }
                     ?: Modifier.background(if (pressed) IosColors.keyPressed else IosColors.key)
             )
             .border(0.8.dp, IosColors.glassEdge, KeyShape)
+            .then(if (pressed) Modifier.drawWithContent {
+                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false)
+                drawContent()
+            } else Modifier)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
@@ -356,7 +367,7 @@ private fun NumberPad(enterLabel: String, actions: KeyboardActions) {
     KeyRow {
         // , !?# = . were half-width keys; ABC / 0 / return give some room so they are ~35% bigger
         // (the row still adds up to 6.5 like the rows above).
-        FuncKey(Modifier.weight(1.0f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+        FuncKey(Modifier.weight(1.0f), color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
             KeyLabel("ABC", 16.sp)
         }
         NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 26.sp, 0.875f)
@@ -398,7 +409,7 @@ private fun SymbolPage(more: Boolean, bangla: Boolean, enterLabel: String, actio
         BackspaceKey(actions, 1.4f, IosColors.keyOr(9, IosColors.fn))
     }
     KeyRow {
-        FuncKey(Modifier.weight(1.3f), shape = PillShape, color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
+        FuncKey(Modifier.weight(1.3f), color = IosColors.theme.accent ?: IosColors.fn, onTap = { actions.onPage(Page.LETTERS) }) {
             KeyLabel("ABC", 16.sp)
         }
         NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 20.sp, 0.8f)
@@ -539,6 +550,10 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
 
 // ------------------------------------------------------------------ pressable box
 
+/** A stable colour seed for a key: its label/kind, so the same key always lights in the same colour. */
+private var seedCounter = 0
+private fun seedOf(kind: KeyKind, @Suppress("UNUSED_PARAMETER") tap: Any): Int = kind.ordinal * 3 + (seedCounter++)
+
 /**
  * A pressable rounded box. [fireOnDown] types the instant the finger touches (no waiting
  * for release — feels instant). Optional long-press and auto-repeat (backspace).
@@ -604,8 +619,15 @@ internal fun PressBox(
     }
 
     val glass = color.alpha > 0.1f && color != Color.Transparent && color != IosColors.faded
+    // press light: this key's own rainbow colour; return / backspace glow more
+    val glowColor = remember { rainbowFor(seedOf(kind, onTap)) }
+    val strong = kind == KeyKind.RETURN || kind == KeyKind.DELETE
+    val corner = with(LocalDensity.current) { if (shape == KeyShape) 8.dp.toPx() else 12.dp.toPx() }
     Box(
         modifier
+            .then(if (pressed) Modifier.drawBehind {
+                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong)
+            } else Modifier)
             .clip(shape)
             .background(if (pressed) pressedColor else color)
             .then(if (glass) Modifier.drawWithCache {
@@ -618,6 +640,10 @@ internal fun PressBox(
                 onDrawBehind { drawRect(body); drawRect(sheen) }
             } else Modifier)
             .then(if (glass) Modifier.border(0.8.dp, IosColors.glassEdge, shape) else Modifier)
+            .then(if (pressed) Modifier.drawWithContent {
+                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong)
+                drawContent()
+            } else Modifier)
             .then(gestures),
         contentAlignment = Alignment.Center,
         content = content
