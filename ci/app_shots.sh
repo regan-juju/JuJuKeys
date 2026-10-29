@@ -20,6 +20,7 @@ prefs() {   # $1 theme  $2 bangla(true/false)
     <boolean name="last_bangla" value="$2" />
     <boolean name="default_bangla" value="$2" />
     <boolean name="auto_hide" value="false" />
+    <boolean name="long_press_symbols" value="false" />
 </map>
 X
   adb push /tmp/p.xml /data/local/tmp/p.xml >/dev/null; sh chmod 644 /data/local/tmp/p.xml >/dev/null
@@ -87,6 +88,23 @@ for t in current deep midnight emerald aurora amoled puredark rainbow white; do
   prefs $t true; open_kb; shot "kb-$t"
 done
 prefs current false; open_kb; shot kb-english
+
+# ---- pressed keys (the press light): hold a key while photographing
+hold() { adb shell "input swipe $1 $2 $1 $2 2500" & sleep 1.0; shot "$3"; wait; sleep 1; }
+prefs current false; open_kb
+hold 540 1756 press-letters-G
+hold 967 2035 press-letters-return
+hold 977 1472 press-top-backspace
+sh input tap 77 2035; sleep 2; shot symbols-page
+hold 486 1612 press-symbols-5
+hold 990 1896 press-symbols-backspace
+hold 80 2035 press-symbols-ABC
+hold 990 2035 press-symbols-return
+sh input tap 270 2035; sleep 2; shot numpad-page
+hold 540 1756 press-numpad-5
+hold 965 1896 press-numpad-backspace
+hold 990 2035 press-numpad-return
+hold 80 2035 press-numpad-ABC
 
 # ---- typing in Bangla, tools, stickers (1080x2400, keyboard as photographed)
 prefs current true; open_kb
