@@ -10,8 +10,6 @@ APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
 adb install -r "$APK" >> $LOG 2>&1
 sh settings put secure show_ime_with_hard_keyboard 1 >> $LOG
 sh settings put system screen_off_timeout 1800000
-for i in 1 2 3 4 5; do sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
-  sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4; done
 echo "wm: $(sh wm size) $(sh wm density)" >> $LOG
 
 prefs() {   # $1 theme  $2 bangla(true/false)
@@ -35,6 +33,24 @@ tap_text() {   # tap the first node whose text contains $1
   sh input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 )) >/dev/null
 }
 home() { sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; }
+
+
+# ---- how to install & turn on (fresh phone, keyboard not on yet)
+sh am start -a android.intent.action.VIEW -d https://github.com/regan-juju/JuJuKeys/releases/latest >/dev/null; sleep 15
+shot setup-a-github-page
+sh input swipe 540 1900 540 700 400; sleep 3; shot setup-b-github-assets
+sh am start -a android.settings.MANAGE_UNKNOWN_APP_SOURCES >/dev/null; sleep 4; shot setup-c-unknown-apps
+sh input keyevent KEYCODE_HOME; sleep 1
+prefs current true; home; shot setup-1-app-turn-on
+tap_text "Open settings"; sleep 4; shot setup-2-keyboard-list
+tap_text "JuJuKeys"; sleep 3; shot setup-3-warning
+tap_text "OK"; sleep 3; shot setup-4-switched-on
+home; shot setup-5-app-choose
+tap_text "Choose keyboard"; sleep 3; shot setup-6-picker
+tap_text "JuJuKeys"; sleep 3
+for i in 1 2 3 4 5; do sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
+  sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4; done
+home; shot setup-7-app-ready
 
 # ---- settings app
 prefs current true; home
