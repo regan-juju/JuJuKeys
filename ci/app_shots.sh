@@ -32,6 +32,12 @@ tap_text() {   # tap the first node whose text contains $1
   set -- $b; [ $# -eq 4 ] || { echo "no node: $*" >> $LOG; return 1; }
   sh input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 )) >/dev/null
 }
+tap_class() {
+  sh uiautomator dump /sdcard/u.xml >/dev/null
+  local b; b=$(sh cat /sdcard/u.xml | tr '>' '\n' | grep -F "class=\"$1\"" | head -1 | grep -o 'bounds="[^"]*"' | grep -o '[0-9]\+' | tr '\n' ' ')
+  set -- $b; [ $# -eq 4 ] || { echo "no class node" >> $LOG; return 1; }
+  sh input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 )) >/dev/null
+}
 home() { sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
 
@@ -54,7 +60,6 @@ home; shot setup-7-app-ready
 
 # ---- settings app
 prefs current true; home
-sh input keyevent KEYCODE_BACK; home   # dismiss anything
 shot settings-home
 sh input swipe 540 1800 540 700 400; sleep 2; shot settings-home2
 for item in "Languages" "Preferences" "Themes" "Text correction" "Clipboard" "Translate" "Dictionary" "Emoji & stickers" "Privacy" "About"; do
@@ -65,7 +70,7 @@ done
 
 # ---- keyboard in every theme (Bangla), plus English
 open_kb() { home; tap_text "Try it" || { sh input swipe 540 1800 540 700 400; sleep 2; tap_text "Try it"; }; sleep 3
-  tap_text "Type here" ; sleep 4
+  tap_class android.widget.EditText; sleep 4
   sh dumpsys input_method | grep -m1 -o 'mInputShown=[a-z]*' >> $LOG; }
 for t in current deep midnight emerald aurora amoled puredark rainbow white; do
   prefs $t true; open_kb; shot "kb-$t"
