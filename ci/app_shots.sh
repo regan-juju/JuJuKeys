@@ -89,6 +89,13 @@ for t in current deep midnight emerald aurora amoled puredark rainbow white; do
 done
 prefs current false; open_kb; shot kb-english
 
+# ---- light round the keyboard when it opens (photographed right after opening, twice → two colours)
+for t in 1 2; do
+  home; tap_text "Try it" || { sh input swipe 540 1800 540 700 400; sleep 2; tap_text "Try it"; }; sleep 3
+  tap_class android.widget.EditText; sleep 0.25; shot "open-glow-$t"
+  sh input keyevent KEYCODE_BACK; sleep 1; sh input keyevent KEYCODE_BACK; sleep 1
+done
+
 # ---- pressed keys (the press light): hold a key while photographing
 hold() { adb shell "input swipe $1 $2 $1 $2 2500" & sleep 1.0; shot "$3"; wait; sleep 1; }
 prefs current false; open_kb
