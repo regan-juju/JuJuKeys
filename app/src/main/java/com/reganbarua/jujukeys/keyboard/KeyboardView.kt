@@ -1,7 +1,9 @@
 package com.reganbarua.jujukeys.keyboard
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -124,6 +126,16 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
     val theme = Themes.byId(prefs.theme)
     IosColors.apply(theme)
 
+    // keyboard opened: the light round it comes up (0.3 s) and fades away (0.9 s)
+    val openLight = remember { Animatable(0f) }
+    LaunchedEffect(state.openFlash) {
+        if (state.openFlash > 0) {
+            openLight.snapTo(0f)
+            openLight.animateTo(1f, tween(300))
+            openLight.animateTo(0f, tween(900))
+        }
+    }
+
     // key(theme): a theme change rebuilds the keyboard once so every part picks up the new colours
     key(theme.id) {
     CompositionLocalProvider(
@@ -153,6 +165,22 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     }
                 }
                 .border(1.dp, IosColors.topEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                .drawWithContent {
+                    drawContent()
+                    val a = openLight.value
+                    if (a > 0.01f) {
+                        // light round the keyboard when it opens: one rainbow colour, fades in and out
+                        val c = OpenColors[state.openColor % OpenColors.size]
+                        val edge = 14.dp.toPx()
+                        drawRect(Brush.verticalGradient(listOf(c.copy(alpha = 0.32f * a), Color.Transparent), startY = 0f, endY = edge))
+                        drawRect(Brush.horizontalGradient(listOf(c.copy(alpha = 0.26f * a), Color.Transparent), startX = 0f, endX = edge))
+                        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.26f * a)), startX = size.width - edge, endX = size.width))
+                        drawRoundRect(
+                            c.copy(alpha = 0.62f * a), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                        )
+                    }
+                }
                 .onGloballyPositioned { rootWidth = it.size.width.toFloat() }
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -547,6 +575,12 @@ private fun KeyPreviewBubble(preview: KeyPreview, rootWidth: Float) {
         }
     }
 }
+
+/** Rainbow order for the light round the keyboard when it opens: one colour per opening. */
+private val OpenColors = listOf(
+    Color(0xFFFF3B3B), Color(0xFFFF8A1F), Color(0xFFFFD21F), Color(0xFF3DDC5A),
+    Color(0xFF2F8BFF), Color(0xFF5B4DFF), Color(0xFFB04DFF),
+)
 
 // ------------------------------------------------------------------ pressable box
 

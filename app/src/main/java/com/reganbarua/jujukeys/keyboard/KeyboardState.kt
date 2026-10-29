@@ -27,6 +27,9 @@ class KeyboardState {
     var language by mutableStateOf(Language.BANGLA)
     var shift by mutableStateOf(ShiftState.OFF)
     var page by mutableStateOf(Page.LETTERS)
+    /** Counts keyboard openings: each one flashes a light round the keyboard in [openColor] (0..6, rainbow order). */
+    var openFlash by mutableStateOf(0)
+    var openColor by mutableStateOf(0)
     var panel by mutableStateOf(Panel.KEYS)
 
     /** Settings chosen in the app (Gboard-style settings screen). */
