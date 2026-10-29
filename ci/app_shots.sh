@@ -25,6 +25,7 @@ X
   adb push /tmp/p.xml /data/local/tmp/p.xml >/dev/null; sh chmod 644 /data/local/tmp/p.xml >/dev/null
   sh am force-stop $PKG
   sh run-as $PKG sh -c "'mkdir -p shared_prefs && cp /data/local/tmp/p.xml shared_prefs/jujukeys_settings.xml'" >> $LOG
+  [ "${KB_ON:-0}" = 1 ] && { sh ime enable $IME >/dev/null; sh ime set $IME >/dev/null; }
 }
 tap_text() {   # tap the first node whose text contains $1
   sh uiautomator dump /sdcard/u.xml >/dev/null
@@ -41,6 +42,9 @@ tap_class() {
 home() { sh am start -W -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
 
+# Chrome: skip its first-run screens
+sh "echo 'chrome --disable-fre --no-default-browser-check --no-first-run' > /data/local/tmp/chrome-command-line"
+sh am set-debug-app --persistent com.android.chrome >/dev/null
 # ---- how to install & turn on (fresh phone, keyboard not on yet)
 sh am start -a android.intent.action.VIEW -d https://github.com/regan-juju/JuJuKeys/releases/latest >/dev/null; sleep 15
 shot setup-a-github-page
@@ -49,13 +53,14 @@ sh am start -a android.settings.MANAGE_UNKNOWN_APP_SOURCES >/dev/null; sleep 4; 
 sh input keyevent KEYCODE_HOME; sleep 1
 prefs current true; home; shot setup-1-app-turn-on
 tap_text "Open settings"; sleep 4; shot setup-2-keyboard-list
-tap_text "JuJuKeys"; sleep 3; shot setup-3-warning
-tap_text "OK"; sleep 3; shot setup-4-switched-on
+tap_text "JuJuKeys"; sleep 5; shot setup-3-warning
+tap_text "OK"; sleep 4; shot setup-4-switched-on
 home; shot setup-5-app-choose
-tap_text "Choose keyboard"; sleep 3; shot setup-6-picker
+tap_text "Choose keyboard"; sleep 5; shot setup-6-picker
 tap_text "JuJuKeys"; sleep 3
 for i in 1 2 3 4 5; do sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
   sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4; done
+KB_ON=1
 home; shot setup-7-app-ready
 
 # ---- settings app
