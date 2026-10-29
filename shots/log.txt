@@ -1,40 +1,37 @@
-10-29 04:48:55.761  9775  9775 W nbarua.jujukeys: Known variants: atom, sandybridge, silvermont, kabylake, default
-10-29 04:48:55.978   485   509 W ActivityTaskManager: Current config: {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h842dp 420dpi nrml long port finger qwerty/v/v -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBounds=Rect(0, 128 - 1080, 2337) mMaxBounds=Rect(0, 0 - 1080, 2400) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0} as.3 s.113 fontWeightAdjustment=0} unchanged for IME proc com.reganbarua.jujukeys
-10-29 04:48:56.013  9775  9775 W ziparchive: Unable to open '/data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/base.dm': No such file or directory
-10-29 04:48:56.013  9775  9775 W ziparchive: Unable to open '/data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/base.dm': No such file or directory
-10-29 04:48:56.567  9775  9775 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/lib/x86_64:/data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.reganbarua.jujukeys
-10-29 04:48:56.574  9775  9775 V GraphicsEnvironment: ANGLE Developer option for 'com.reganbarua.jujukeys' set to: 'default'
-10-29 04:48:56.574  9775  9775 V GraphicsEnvironment: ANGLE GameManagerService for com.reganbarua.jujukeys: false
-10-29 04:48:56.629  9775  9799 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-29 04:48:56.629  9775  9799 W nbarua.jujukeys: Common causes for lock verification issues are non-optimized dex code
-10-29 04:48:56.629  9775  9799 W nbarua.jujukeys: and incorrect proguard optimizations.
-10-29 04:48:56.630  9775  9799 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
-10-29 04:48:56.630  9775  9799 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-29 04:48:56.630  9775  9799 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-29 04:48:56.630  9775  9799 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
-10-29 04:48:56.656   485   509 D CoreBackPreview: Window{6837191 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1d8e4f7, mPriority=0}
-10-29 04:48:57.681   485   513 W ziparchive: Unable to open '/data/app/~~bSCZYYsdGwfG7dekMJqmjA==/com.reganbarua.jujukeys-K5EHlcp2u0RRTgccPbzmYA==/base.dm': No such file or directory
-10-29 04:48:57.685   485   513 I ActivityTaskManager: Displayed com.reganbarua.jujukeys/.MainActivity: +2s320ms
-10-29 04:48:57.710   485   509 W InputManager-JNI: Input channel object '299d8ca Splash Screen com.reganbarua.jujukeys (client)' was disposed without first being removed with the input manager!
-10-29 04:48:57.713   485  1066 D CoreBackPreview: Window{299d8ca u0 Splash Screen com.reganbarua.jujukeys EXITING}: Setting back callback null
-10-29 04:48:57.733   485  1066 W ActivityTaskManager: Current config: {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h842dp 420dpi nrml long port finger qwerty/v/v -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBounds=Rect(0, 128 - 1080, 2337) mMaxBounds=Rect(0, 0 - 1080, 2400) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0} as.3 s.113 fontWeightAdjustment=0} unchanged for IME proc com.reganbarua.jujukeys
-10-29 04:48:57.733   485  1066 W ActivityTaskManager: Current config: {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h842dp 420dpi nrml long port finger qwerty/v/v -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBounds=Rect(0, 128 - 1080, 2337) mMaxBounds=Rect(0, 0 - 1080, 2400) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0} as.3 s.113 fontWeightAdjustment=0} unchanged for IME proc com.reganbarua.jujukeys
-10-29 04:48:57.922  9775  9786 I nbarua.jujukeys: Background concurrent copying GC freed 2255385(48MB) AllocSpace objects, 7(204KB) LOS objects, 49% free, 11MB/22MB, paused 34us,9us total 167.126ms
-10-29 04:49:01.843  9813  9813 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-29 04:49:01.855  9813  9813 I AndroidRuntime: Using default boot image
-10-29 04:49:01.855  9813  9813 I AndroidRuntime: Leaving lock profiling enabled
-10-29 04:49:01.980  9813  9813 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-29 04:49:02.714  9775  9828 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
-10-29 04:49:03.079  9813  9813 D AndroidRuntime: Shutting down VM
-10-29 04:49:06.403  9838  9838 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-29 04:49:06.406  9838  9838 I AndroidRuntime: Using default boot image
-10-29 04:49:06.406  9838  9838 I AndroidRuntime: Leaving lock profiling enabled
-10-29 04:49:06.479  9838  9838 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-29 04:49:07.525  9838  9838 D AndroidRuntime: Shutting down VM
-10-29 04:49:11.429  9862  9862 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-29 04:49:11.431  9862  9862 I AndroidRuntime: Using default boot image
-10-29 04:49:11.431  9862  9862 I AndroidRuntime: Leaving lock profiling enabled
-10-29 04:49:11.501  9862  9862 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-29 04:49:12.526  9862  9862 D AndroidRuntime: Shutting down VM
-10-29 04:49:14.496   485  1962 D CoreBackPreview: Window{6837191 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@a0c65a7, mPriority=0}
-10-29 04:49:14.810  9775  9785 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+10-29 05:01:49.014  9831  9831 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~wnQ7M5Z_jRsi6GU8ncu86g==/com.reganbarua.jujukeys-ARFEeOasWLZsN87-7hp58Q==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~wnQ7M5Z_jRsi6GU8ncu86g==/com.reganbarua.jujukeys-ARFEeOasWLZsN87-7hp58Q==/lib/x86_64:/data/app/~~wnQ7M5Z_jRsi6GU8ncu86g==/com.reganbarua.jujukeys-ARFEeOasWLZsN87-7hp58Q==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.reganbarua.jujukeys
+10-29 05:01:49.024  9831  9831 V GraphicsEnvironment: ANGLE Developer option for 'com.reganbarua.jujukeys' set to: 'default'
+10-29 05:01:49.024  9831  9831 V GraphicsEnvironment: ANGLE GameManagerService for com.reganbarua.jujukeys: false
+10-29 05:01:49.075  9831  9856 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-29 05:01:49.075  9831  9856 W nbarua.jujukeys: Common causes for lock verification issues are non-optimized dex code
+10-29 05:01:49.075  9831  9856 W nbarua.jujukeys: and incorrect proguard optimizations.
+10-29 05:01:49.076  9831  9856 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-29 05:01:49.076  9831  9856 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-29 05:01:49.076  9831  9856 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+10-29 05:01:49.076  9831  9856 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+10-29 05:01:49.101   483  1953 D CoreBackPreview: Window{27d8eee u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ff2e21c, mPriority=0}
+10-29 05:01:49.903   483   505 W ziparchive: Unable to open '/data/app/~~wnQ7M5Z_jRsi6GU8ncu86g==/com.reganbarua.jujukeys-ARFEeOasWLZsN87-7hp58Q==/base.dm': No such file or directory
+10-29 05:01:49.904   483   505 I ActivityTaskManager: Displayed com.reganbarua.jujukeys/.MainActivity: +1s901ms
+10-29 05:01:49.952   483  1953 D CoreBackPreview: Window{4f8f18c u0 Splash Screen com.reganbarua.jujukeys EXITING}: Setting back callback null
+10-29 05:01:49.952   483  1952 W InputManager-JNI: Input channel object '4f8f18c Splash Screen com.reganbarua.jujukeys (client)' was disposed without first being removed with the input manager!
+10-29 05:01:49.962   483  1039 W ActivityTaskManager: Current config: {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h842dp 420dpi nrml long port finger qwerty/v/v -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBounds=Rect(0, 128 - 1080, 2337) mMaxBounds=Rect(0, 0 - 1080, 2400) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0} as.5 s.113 fontWeightAdjustment=0} unchanged for IME proc com.reganbarua.jujukeys
+10-29 05:01:49.962   483  1039 W ActivityTaskManager: Current config: {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h842dp 420dpi nrml long port finger qwerty/v/v -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBounds=Rect(0, 128 - 1080, 2337) mMaxBounds=Rect(0, 0 - 1080, 2400) mDisplayRotation=ROTATION_0 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_0} as.5 s.113 fontWeightAdjustment=0} unchanged for IME proc com.reganbarua.jujukeys
+10-29 05:01:53.968  9869  9869 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 05:01:53.971  9869  9869 I AndroidRuntime: Using default boot image
+10-29 05:01:53.971  9869  9869 I AndroidRuntime: Leaving lock profiling enabled
+10-29 05:01:54.057  9869  9869 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 05:01:54.938  9831  9884 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
+10-29 05:01:55.149  9869  9869 D AndroidRuntime: Shutting down VM
+10-29 05:01:58.485  9894  9894 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 05:01:58.487  9894  9894 I AndroidRuntime: Using default boot image
+10-29 05:01:58.487  9894  9894 I AndroidRuntime: Leaving lock profiling enabled
+10-29 05:01:58.560  9894  9894 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 05:01:59.608  9894  9894 D AndroidRuntime: Shutting down VM
+10-29 05:02:03.523  9918  9918 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 05:02:03.526  9918  9918 I AndroidRuntime: Using default boot image
+10-29 05:02:03.526  9918  9918 I AndroidRuntime: Leaving lock profiling enabled
+10-29 05:02:03.597  9918  9918 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 05:02:04.622  9918  9918 D AndroidRuntime: Shutting down VM
+10-29 05:02:06.648   483   503 D CoreBackPreview: Window{27d8eee u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@5f87f5b, mPriority=0}
+10-29 05:02:06.997  9831  9838 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+10-29 05:02:12.495  9831  9838 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
+10-29 05:02:28.217   483  1994 D CoreBackPreview: Window{27d8eee u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ecd6f66, mPriority=0}
