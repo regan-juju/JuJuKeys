@@ -280,6 +280,14 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (!restarting) {
+            // light round the keyboard on every opening — the next rainbow colour each time
+            val sp = com.reganbarua.jujukeys.settings.Prefs.sp(this)
+            val n = sp.getInt("open_glow_i", 0)
+            sp.edit().putInt("open_glow_i", (n + 1) % 7).apply()
+            state.openColor = n % 7
+            state.openFlash = state.openFlash + 1
+        }
         if (!restarting && state.translateOn) stopTranslate()
         roman.clear(); enWord.clear(); lastWord = null
         state.shift = ShiftState.OFF
