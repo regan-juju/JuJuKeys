@@ -89,11 +89,14 @@ for t in current deep midnight emerald aurora amoled puredark rainbow white; do
 done
 prefs current false; open_kb; shot kb-english
 
-# ---- light round the keyboard when it opens (photographed right after opening, twice → two colours)
+# ---- light round the keyboard when it opens: hide the keyboard, open it again, photograph in a burst
+sh settings put global animator_duration_scale 1; sh settings put global window_animation_scale 1; sh settings put global transition_animation_scale 1
+prefs current true; open_kb; shot open-before
 for t in 1 2; do
-  home; tap_text "Try it" || { sh input swipe 540 1800 540 700 400; sleep 2; tap_text "Try it"; }; sleep 3
-  tap_class android.widget.EditText; sleep 0.25; shot "open-glow-$t"
-  sh input keyevent KEYCODE_BACK; sleep 1; sh input keyevent KEYCODE_BACK; sleep 1
+  sh input keyevent KEYCODE_BACK; sleep 3
+  tap_class android.widget.EditText
+  for b in 1 2 3 4; do adb exec-out screencap -p > "shots/open-glow-$t-$b.png"; done
+  echo "burst $t done" >> $LOG; sleep 2
 done
 
 # ---- pressed keys (the press light): hold a key while photographing
@@ -105,13 +108,14 @@ hold 977 1472 press-top-backspace
 sh input tap 77 2035; sleep 2; shot symbols-page
 hold 486 1612 press-symbols-5
 hold 990 1896 press-symbols-backspace
-hold 80 2035 press-symbols-ABC
 hold 990 2035 press-symbols-return
-sh input tap 270 2035; sleep 2; shot numpad-page
+sh input tap 298 2037; sleep 2; shot numpad-page
 hold 540 1756 press-numpad-5
 hold 965 1896 press-numpad-backspace
 hold 990 2035 press-numpad-return
 hold 80 2035 press-numpad-ABC
+sleep 2; sh input tap 77 2035; sleep 2
+hold 80 2035 press-symbols-ABC
 
 # ---- typing in Bangla, tools, stickers (1080x2400, keyboard as photographed)
 prefs current true; open_kb
