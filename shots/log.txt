@@ -1,15 +1,23 @@
-10-29 14:18:16.425 11027 11027 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-29 14:18:16.428 11027 11027 I AndroidRuntime: Using default boot image
-10-29 14:18:16.428 11027 11027 I AndroidRuntime: Leaving lock profiling enabled
-10-29 14:18:16.504 11027 11027 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-29 14:18:17.558 11027 11027 D AndroidRuntime: Shutting down VM
-10-29 14:18:21.465 11051 11051 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-29 14:18:21.467 11051 11051 I AndroidRuntime: Using default boot image
-10-29 14:18:21.468 11051 11051 I AndroidRuntime: Leaving lock profiling enabled
-10-29 14:18:21.542 11051 11051 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-29 14:18:22.564 11051 11051 D AndroidRuntime: Shutting down VM
-10-29 14:18:24.787   483  2286 D CoreBackPreview: Window{d89f4cf u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@bb81176, mPriority=0}
-10-29 14:18:25.180 10962 10968 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
-10-29 14:18:30.582 10962 10968 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
-10-29 14:18:35.515 10962 10968 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
-10-29 14:18:46.068   483   855 D CoreBackPreview: Window{d89f4cf u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@40ce4df, mPriority=0}
+10-29 14:34:03.012   487  1888 W InputManager-JNI: Input channel object 'd944e83 Splash Screen com.reganbarua.jujukeys (client)' was disposed without first being removed with the input manager!
+10-29 14:34:03.019   487  1901 D CoreBackPreview: Window{d944e83 u0 Splash Screen com.reganbarua.jujukeys EXITING}: Setting back callback null
+10-29 14:34:06.358 11114 11223 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
+10-29 14:34:06.394 11221 11221 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 14:34:06.398 11221 11221 I AndroidRuntime: Using default boot image
+10-29 14:34:06.398 11221 11221 I AndroidRuntime: Leaving lock profiling enabled
+10-29 14:34:06.482 11221 11221 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 14:34:07.600 11221 11221 D AndroidRuntime: Shutting down VM
+10-29 14:34:11.316 11248 11248 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 14:34:11.319 11248 11248 I AndroidRuntime: Using default boot image
+10-29 14:34:11.319 11248 11248 I AndroidRuntime: Leaving lock profiling enabled
+10-29 14:34:11.405 11248 11248 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 14:34:12.438 11248 11248 D AndroidRuntime: Shutting down VM
+10-29 14:34:16.371 11272 11272 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-29 14:34:16.374 11272 11272 I AndroidRuntime: Using default boot image
+10-29 14:34:16.374 11272 11272 I AndroidRuntime: Leaving lock profiling enabled
+10-29 14:34:16.456 11272 11272 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-29 14:34:17.479 11272 11272 D AndroidRuntime: Shutting down VM
+10-29 14:34:19.556   487  1617 D CoreBackPreview: Window{197be12 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@10bff8a, mPriority=0}
+10-29 14:34:19.604 11114 11123 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+10-29 14:34:22.980 11114 11124 I nbarua.jujukeys: Background young concurrent copying GC freed 98411(3735KB) AllocSpace objects, 6(248KB) LOS objects, 12% free, 29MB/33MB, paused 1.897ms,7us total 118.462ms
+10-29 14:34:25.644 11114 11123 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
+10-29 14:34:42.273   487  2082 D CoreBackPreview: Window{197be12 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@b907912, mPriority=0}

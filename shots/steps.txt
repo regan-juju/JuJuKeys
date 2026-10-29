@@ -24,12 +24,14 @@ shot 14 page-Preferences
 shot 15 page-Themes
 shot 16 page-Text_correction
 shot 17 page-Clipboard
+no node: 
 shot 18 page-Translate
 shot 19 page-Dictionary
 no node: 
 no node: 
 shot 20 page-Emoji___stickers
 shot 21 page-Privacy
+no node: 
 no node: 
 shot 22 page-About
 no node: 
@@ -62,30 +64,32 @@ shot 31 kb-white
 no node: 
 mInputShown=true
 shot 32 kb-english
-shot 33 open-glow-1
-no node: 
-shot 34 open-glow-2
 no node: 
 mInputShown=true
-shot 35 press-letters-G
-shot 36 press-letters-return
-shot 37 press-top-backspace
-shot 38 symbols-page
-shot 39 press-symbols-5
-shot 40 press-symbols-backspace
-shot 41 press-symbols-ABC
-shot 42 press-symbols-return
-shot 43 numpad-page
-shot 44 press-numpad-5
-shot 45 press-numpad-backspace
-shot 46 press-numpad-return
-shot 47 press-numpad-ABC
+shot 33 open-before
+burst 1 done
+burst 2 done
 no node: 
 mInputShown=true
-shot 48 type-bangla
-shot 49 type-bangla2
-shot 50 tools-hold
-shot 51 stickers-panel
+shot 34 press-letters-G
+shot 35 press-letters-return
+shot 36 press-top-backspace
+shot 37 symbols-page
+shot 38 press-symbols-5
+shot 39 press-symbols-backspace
+shot 40 press-symbols-return
+shot 41 numpad-page
+shot 42 press-numpad-5
+shot 43 press-numpad-backspace
+shot 44 press-numpad-return
+shot 45 press-numpad-ABC
+shot 46 press-symbols-ABC
+no node: 
+mInputShown=true
+shot 47 type-bangla
+shot 48 type-bangla2
+shot 49 tools-hold
+shot 50 stickers-panel
     mViewVisibility=0x8 mHaveFrame=true mObscured=false
     mTouchableInsets=3 mGivenInsetsPending=false
     touchable region=SkRegion((0,1413,1080,2400))
