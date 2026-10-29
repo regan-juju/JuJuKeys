@@ -347,7 +347,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 if (gc != null) {
                     // soft glow in this key's own rainbow colour, rising from below the key
                     val g = kr.inflate(2.dp.toPx()).translate(0f, 2.5.dp.toPx())
-                    drawRoundRect(gc.copy(alpha = 0.38f), g.topLeft, g.size, CornerRadius(corner + 2.dp.toPx()))
+                    drawRoundRect(gc.copy(alpha = 0.60f), g.topLeft, g.size, CornerRadius(corner + 2.dp.toPx()))
                 } else if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
                 else drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 when {
@@ -364,11 +364,11 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 if (gc != null) {
                     // light from the bottom: fills the key faintly and runs up the border, fading out
                     drawRoundRect(
-                        Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color.Transparent, 1f to gc.copy(alpha = 0.34f), startY = kr.top, endY = kr.bottom),
+                        Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color.Transparent, 1f to gc.copy(alpha = 0.55f), startY = kr.top, endY = kr.bottom),
                         kr.topLeft, kr.size, cr
                     )
                     drawRoundRect(
-                        Brush.verticalGradient(0f to gc.copy(alpha = 0.22f), 0.6f to gc.copy(alpha = 0.48f), 1f to gc.copy(alpha = 0.88f), startY = kr.top, endY = kr.bottom),
+                        Brush.verticalGradient(0f to gc.copy(alpha = 0.40f), 0.6f to gc.copy(alpha = 0.72f), 1f to gc.copy(alpha = 1f), startY = kr.top, endY = kr.bottom),
                         kr.topLeft, kr.size, cr, style = Stroke(width = 1.5.dp.toPx())
                     )
                 }

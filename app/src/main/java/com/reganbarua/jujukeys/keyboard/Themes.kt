@@ -108,6 +108,16 @@ internal object Themes {
             glassTop = Color(0x9EFFFFFF), panel = Color(0xFF000000), nav = 0xFF000000.toInt(),
         ),
         KbTheme(
+            "puredark", "Pure Dark",
+            bg = Color(0xFF000000), blobs = emptyList(),
+            key = Color(0xFF111113), keyPressed = Color(0xFF242428), fn = Color(0xFF0A0A0B),
+            text = Color(0xFFE6E6E6), dim = Color(0xFF8A8A8E), suggestion = Color(0xFFB4B4B8),
+            faded = Color(0x0DFFFFFF), fadedPressed = Color(0x22FFFFFF), fadedIcon = Color(0x80FFFFFF),
+            divider = Color(0x1FFFFFFF), chip = Color(0x33FFFFFF), card = Color(0x22FFFFFF), bubble = Color(0xFF1C1C1E),
+            shadow = Color(0x00000000), glassTop = Color(0x40FFFFFF), edge = Color(0x26FFFFFF),
+            panel = Color(0xFF000000), nav = 0xFF000000.toInt(),
+        ),
+        KbTheme(
             "rainbow", "Rainbow glass",
             bg = Color(0xF716161C),
             blobs = listOf(Blob(0.15f, 0.85f, Color(0x1FF03C3C), 0.55f), Blob(0.85f, 0.20f, Color(0x1F505ADC), 0.55f)),
