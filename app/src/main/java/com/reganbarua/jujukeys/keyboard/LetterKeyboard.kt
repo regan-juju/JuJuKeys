@@ -224,6 +224,17 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val photo = ImageBitmap.imageResource(com.reganbarua.jujukeys.R.drawable.photo_mini)
 
     val pressed = remember { mutableStateListOf<Int>() }
+    // afterglow: a released key keeps its light a moment and fades out (a quick tap is otherwise invisible)
+    val released = remember { androidx.compose.runtime.mutableStateMapOf<Int, Long>() }
+    var glowClock by remember { mutableStateOf(0L) }
+    androidx.compose.runtime.LaunchedEffect(released.size) {
+        while (released.isNotEmpty()) {
+            androidx.compose.runtime.withFrameMillis { }
+            val now = android.os.SystemClock.uptimeMillis()
+            glowClock = now
+            released.keys.filter { now - (released[it] ?: 0L) > GlowHoldMs + GlowFadeMs }.forEach { released.remove(it) }
+        }
+    }
     val act by rememberUpdatedState(actions)
     val longDelay by rememberUpdatedState(prefs.longPressDelay.toLong())
     val enterLabel = state.enterLabel
@@ -270,6 +281,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     val t = Touch(i)
                                     touches[c.id] = t
                                     pressed.add(i)
+                                    released.remove(i)
                                     feedback(
                                         when (k.type) {
                                             KType.SPACE -> KeyKind.SPACE
@@ -296,6 +308,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     c.consume()
                                     t.job?.cancel()
                                     pressed.remove(t.key)
+                                    released[t.key] = android.os.SystemClock.uptimeMillis()
                                     val k = flat[t.key]
                                     when (k.type) {
                                         KType.CHAR -> if (bubble?.first == t.key) bubble = null
@@ -334,23 +347,27 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             if (k.type == KType.GAP) continue
             val r = keyRects.getOrNull(i) ?: continue
             val down = i in pressed
+            val glowLevel = if (down) 1f else released[i]?.let { t ->
+                val age = glowClock - t - GlowHoldMs
+                if (age <= 0) 1f else (1f - age / GlowFadeMs.toFloat()).coerceIn(0f, 1f)
+            } ?: 0f
             val cr = CornerRadius(corner, corner)
             val tc = tint.getOrNull(i)
             if (k.type == KType.RETURN && tc == null) {
                 // return / search: plain and faded (like iPhone) — coloured only in the rainbow theme
                 val rc = rainbowFor(6)
-                if (down) drawGlowBehind(r, corner, rc, strong = true)
+                if (glowLevel > 0.01f) drawGlowBehind(r, corner, rc, strong = true, level = glowLevel)
                 drawRoundRect(if (down) IosColors.fadedPressed else IosColors.faded, r.topLeft, r.size, cr)
-                if (down) drawGlowInside(r, corner, rc, strong = true)
+                if (glowLevel > 0.01f) drawGlowInside(r, corner, rc, strong = true, level = glowLevel)
             } else {
                 // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
                 // bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(1.5.dp.toPx()).translate(0f, 1.dp.toPx()) else r
-                val gc = if (down) pressGlow(k, i) else null
+                val gc = if (glowLevel > 0.01f) pressGlow(k, i) else null
                 val strongKey = k.type == KType.RETURN
                 if (gc != null) {
                     // glow in this key's own rainbow colour, rising from below the key
-                    drawGlowBehind(kr, corner, gc, strongKey)
+                    drawGlowBehind(kr, corner, gc, strongKey, glowLevel)
                 } else if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
                 else drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 when {
@@ -364,7 +381,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 if (k.type == KType.SHIFT && state.shift != ShiftState.OFF)   // shift is on: clearly lit
                     drawRoundRect(Color.White.copy(alpha = if (state.shift == ShiftState.LOCK) 0.34f else 0.22f), kr.topLeft, kr.size, cr)
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = if (down) 1.5.dp.toPx() else 0.9.dp.toPx()))
-                if (gc != null) drawGlowInside(kr, corner, gc, strongKey)
+                if (gc != null) drawGlowInside(kr, corner, gc, strongKey, glowLevel)
             }
             when (k.type) {
                 KType.CHAR -> layouts["c:" + k.label]?.let { drawCentered(it, r) }

@@ -171,13 +171,13 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     if (a > 0.01f) {
                         // light round the keyboard when it opens: one rainbow colour, fades in and out
                         val c = OpenColors[state.openColor % OpenColors.size]
-                        val edge = 14.dp.toPx()
-                        drawRect(Brush.verticalGradient(listOf(c.copy(alpha = 0.32f * a), Color.Transparent), startY = 0f, endY = edge))
-                        drawRect(Brush.horizontalGradient(listOf(c.copy(alpha = 0.26f * a), Color.Transparent), startX = 0f, endX = edge))
-                        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.26f * a)), startX = size.width - edge, endX = size.width))
+                        val edge = 24.dp.toPx()
+                        drawRect(Brush.verticalGradient(listOf(c.copy(alpha = 0.55f * a), Color.Transparent), startY = 0f, endY = edge))
+                        drawRect(Brush.horizontalGradient(listOf(c.copy(alpha = 0.45f * a), Color.Transparent), startX = 0f, endX = edge))
+                        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.45f * a)), startX = size.width - edge, endX = size.width))
                         drawRoundRect(
-                            c.copy(alpha = 0.62f * a), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                            c.copy(alpha = 0.95f * a), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
                         )
                     }
                 }
@@ -290,11 +290,12 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
     val feedback = LocalKeyFeedback.current
     val act by rememberUpdatedState(actions)
     val spaceGlow = remember { rainbowFor(5) }
+    val spaceLevel = rememberGlowLevel(pressed)
     Box(
         modifier
             .keyPadding()
-            .then(if (pressed) Modifier.drawBehind {
-                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false)
+            .then(if (spaceLevel > 0.01f) Modifier.drawBehind {
+                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false, spaceLevel)
             } else Modifier)
             .clip(KeyShape)
             .then(
@@ -302,8 +303,8 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
                     ?: Modifier.background(if (pressed) IosColors.keyPressed else IosColors.key)
             )
             .border(0.8.dp, IosColors.glassEdge, KeyShape)
-            .then(if (pressed) Modifier.drawWithContent {
-                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false)
+            .then(if (spaceLevel > 0.01f) Modifier.drawWithContent {
+                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 8.dp.toPx(), spaceGlow, false, spaceLevel)
                 drawContent()
             } else Modifier)
             .pointerInput(Unit) {
@@ -656,11 +657,12 @@ internal fun PressBox(
     // press light: this key's own rainbow colour; return / backspace glow more
     val glowColor = remember { rainbowFor(seedOf(kind, onTap)) }
     val strong = kind == KeyKind.RETURN || kind == KeyKind.DELETE
+    val glowLevel = rememberGlowLevel(pressed)
     val corner = with(LocalDensity.current) { if (shape == KeyShape) 8.dp.toPx() else 12.dp.toPx() }
     Box(
         modifier
-            .then(if (pressed) Modifier.drawBehind {
-                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong)
+            .then(if (glowLevel > 0.01f) Modifier.drawBehind {
+                drawGlowBehind(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong, glowLevel)
             } else Modifier)
             .clip(shape)
             .background(if (pressed) pressedColor else color)
@@ -674,8 +676,8 @@ internal fun PressBox(
                 onDrawBehind { drawRect(body); drawRect(sheen) }
             } else Modifier)
             .then(if (glass) Modifier.border(0.8.dp, IosColors.glassEdge, shape) else Modifier)
-            .then(if (pressed) Modifier.drawWithContent {
-                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong)
+            .then(if (glowLevel > 0.01f) Modifier.drawWithContent {
+                drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong, glowLevel)
                 drawContent()
             } else Modifier)
             .then(gestures),
