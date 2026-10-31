@@ -24,14 +24,12 @@ shot 14 page-Preferences
 shot 15 page-Themes
 shot 16 page-Text_correction
 shot 17 page-Clipboard
-no node: 
 shot 18 page-Translate
 shot 19 page-Dictionary
 no node: 
 no node: 
 shot 20 page-Emoji___stickers
 shot 21 page-Privacy
-no node: 
 no node: 
 shot 22 page-About
 no node: 
@@ -69,6 +67,12 @@ mInputShown=true
 shot 33 open-before
 burst 1 done
 burst 2 done
+no node: 
+mInputShown=true
+quick letters-G
+quick letters-return
+quick symbols-5
+quick symbols-backspace
 no node: 
 mInputShown=true
 shot 34 press-letters-G
