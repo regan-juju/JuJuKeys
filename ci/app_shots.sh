@@ -99,6 +99,15 @@ for t in 1 2; do
   echo "burst $t done" >> $LOG; sleep 2
 done
 
+# ---- quick taps (like real typing): photograph right after the finger is lifted
+qtap() { sh input tap $1 $2 >/dev/null; adb exec-out screencap -p > "shots/quick-$3.png"; echo "quick $3" >> $LOG; sleep 1.5; }
+prefs current false; open_kb
+qtap 540 1756 letters-G
+qtap 967 2035 letters-return
+sh input tap 77 2035; sleep 2
+qtap 486 1612 symbols-5
+qtap 990 1896 symbols-backspace
+
 # ---- pressed keys (the press light): hold a key while photographing
 hold() { adb shell "input swipe $1 $2 $1 $2 2500" & sleep 1.0; shot "$3"; wait; sleep 1; }
 prefs current false; open_kb
