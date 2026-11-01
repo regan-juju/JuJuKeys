@@ -307,7 +307,8 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
             val e = bangla[i]
             if (e.key != key || e.freq < need || e.word == c) continue
             val d = distance(c, e.word)
-            if (d > 3) continue
+            // a typed conjunct (kkh → ক্ষ) is never "fixed" into an unrelated word: the change must be small for the length
+            if (d > 3 || d * 2 > c.length) continue
             val b = best
             if (b == null || d < bestD || (d == bestD && e.freq > b.freq)) { best = e; bestD = d }
         }
