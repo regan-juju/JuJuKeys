@@ -172,11 +172,11 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                         // light round the keyboard when it opens: one rainbow colour, fades in and out
                         val c = OpenColors[state.openColor % OpenColors.size]
                         val edge = 24.dp.toPx()
-                        drawRect(Brush.verticalGradient(listOf(c.copy(alpha = 0.55f * a), Color.Transparent), startY = 0f, endY = edge))
-                        drawRect(Brush.horizontalGradient(listOf(c.copy(alpha = 0.45f * a), Color.Transparent), startX = 0f, endX = edge))
-                        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.45f * a)), startX = size.width - edge, endX = size.width))
+                        drawRect(Brush.verticalGradient(listOf(c.copy(alpha = 0.44f * a), Color.Transparent), startY = 0f, endY = edge))
+                        drawRect(Brush.horizontalGradient(listOf(c.copy(alpha = 0.36f * a), Color.Transparent), startX = 0f, endX = edge))
+                        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, c.copy(alpha = 0.36f * a)), startX = size.width - edge, endX = size.width))
                         drawRoundRect(
-                            c.copy(alpha = 0.95f * a), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
+                            c.copy(alpha = 0.76f * a), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
                             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
                         )
                     }

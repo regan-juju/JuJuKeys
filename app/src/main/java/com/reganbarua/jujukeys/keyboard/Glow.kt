@@ -30,28 +30,32 @@ internal val PressRainbow = listOf(
 internal const val GlowHoldMs = 90L
 internal const val GlowFadeMs = 380
 
+/** How strong the press light is, 1 = full. Lowered a little (v1.0.55) — it was too bright. */
+internal const val PressLightScale = 0.75f
+
 internal fun rainbowFor(seed: Int): Color = PressRainbow[((seed % PressRainbow.size) + PressRainbow.size) % PressRainbow.size]
 
 /** Light around and below the key — drawn BEFORE the key body (outside its edge). */
 internal fun DrawScope.drawGlowBehind(r: Rect, corner: Float, c: Color, strong: Boolean, level: Float = 1f) {
+    val lv = level * PressLightScale
     val d = density
     if (strong) {
         // big halo: three soft layers
         for ((grow, a) in listOf(9f to 0.22f, 6f to 0.38f, 3f to 0.62f)) {
             val g = r.inflate(grow * d).translate(0f, 2.5f * d)
-            drawRoundRect(c.copy(alpha = a * level), g.topLeft, g.size, CornerRadius(corner + grow * d))
+            drawRoundRect(c.copy(alpha = a * lv), g.topLeft, g.size, CornerRadius(corner + grow * d))
         }
     } else {
         for ((grow, a) in listOf(5f to 0.30f, 2.5f to 0.62f)) {
             val g = r.inflate(grow * d).translate(0f, 2.5f * d)
-            drawRoundRect(c.copy(alpha = a * level), g.topLeft, g.size, CornerRadius(corner + grow * d))
+            drawRoundRect(c.copy(alpha = a * lv), g.topLeft, g.size, CornerRadius(corner + grow * d))
         }
     }
 }
 
 /** Light inside the key: fills from the bottom and runs up the border — drawn OVER the key body. */
 internal fun DrawScope.drawGlowInside(r: Rect, corner: Float, c: Color, strong: Boolean, level: Float = 1f) {
-    val L = level.coerceIn(0f, 1f)
+    val L = (level * PressLightScale).coerceIn(0f, 1f)
     val cr = CornerRadius(corner, corner)
     val fill = if (strong) listOf(0f to c.copy(alpha = (0.40f) * L), 0.45f to c.copy(alpha = (0.65f) * L), 1f to c.copy(alpha = (0.95f) * L))
                else listOf(0f to Color.Transparent, 0.30f to Color.Transparent, 1f to c.copy(alpha = (0.80f) * L))
@@ -103,7 +107,7 @@ private class RainbowNode(private val source: InteractionSource) : Modifier.Node
         if (level > 0.01f) {
             val r = Rect(Offset.Zero, size)
             val corner = 8f * density
-            drawRoundRect(color.copy(alpha = 0.22f * level), r.topLeft, r.size, CornerRadius(corner))
+            drawRoundRect(color.copy(alpha = 0.22f * level * PressLightScale), r.topLeft, r.size, CornerRadius(corner))
             drawGlowInside(r, corner, color, strong = false, level = level)
         }
         drawContent()
