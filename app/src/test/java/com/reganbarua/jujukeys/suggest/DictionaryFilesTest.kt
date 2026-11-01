@@ -31,7 +31,7 @@ class DictionaryFilesTest {
     @Test fun extraListIsKeyedAndSorted() {
         val ex = extraRows()
         ex.forEach { (w, _, k) -> assertEquals("key out of date for $w", Suggester.skeleton(Suggester.nfc(w)), k) }
-        assertTrue("not sorted by key", ex.zipWithNext().all { (a, b) -> a.third <= b.third })
+        assertTrue("not sorted by key", ex.zipWithNext().all { (a, b) -> a.third < b.third || (a.third == b.third && a.second >= b.second) })
     }
 
     @Test fun formatDuplicatesAndOrder() {
@@ -40,7 +40,7 @@ class DictionaryFilesTest {
         assertEquals("duplicate Bangla words", bnWords.size, bnWords.toSet().size)
         assertEquals("duplicate English words", en.size, en.map { it.first }.toSet().size)
         listOf(bn, en).forEach { list -> assertTrue("not sorted by frequency", list.zipWithNext().all { (a, b) -> a.second >= b.second }) }
-        assertTrue(av.all { it.second == 1L })
+        assertTrue(av.all { it.second >= 1L })
         (bn + av).forEach { (w, _) -> assertTrue("not Bangla: $w", w.all { it in 'ঀ'..'৿' || it == '‌' || it == '‍' }) }
         println("DICT dict_bn=${bn.size} dict_bn_avro=${av.size} bangla_total=${bnWords.size} english=${en.size}")
     }
@@ -51,7 +51,7 @@ class DictionaryFilesTest {
             File("src/main/assets/dict_bn.txt").readLines().asSequence()
         )
         s.loadExtra(File("src/main/assets/dict_bn_avro.txt").readLines().asSequence())
-        assertEquals(191366, s.extraSize)
+        assertEquals(333429, s.extraSize)
         assertTrue("জামানত" in s.bangla("জামানত", 6))
         assertTrue("ফুচকা" in s.bangla("ফুছকা", 6))
         assertTrue("bkash" in s.english("bka", 5))
@@ -109,5 +109,10 @@ class DictionaryFilesTest {
         s.loadExtra(File("src/main/assets/dict_bn_avro.txt").readLines().asSequence())
         assertTrue(s.known("অ্যালার্ম"))
         assertTrue(s.banglaFreq("আভিজাত্যের") == 1L)
+        // Wikipedia counts rank the extra words: the common one comes first
+        val ex = extraRows().associate { it.first to it.second }
+        assertTrue("ranking missing", ex.values.count { it > 1 } > 50_000)
+        assertTrue("new frequent words missing", ex.size - 191366 > 100_000)
+        assertTrue(ex.entries.filter { it.value > 1 }.all { it.value >= 1 })
     }
 }

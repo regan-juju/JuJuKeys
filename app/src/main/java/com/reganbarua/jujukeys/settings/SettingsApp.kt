@@ -597,6 +597,7 @@ private fun AboutPage() {
     Header("Sources & licences")
     Item("Word frequency list", "FrequencyWords — github.com/hermitdave/FrequencyWords (rev 525f9b5, content/2018) · CC BY-SA 4.0")
     Item("Extra Bangla words", "Avro Phonetic dictionary — github.com/sarim/ibus-avro (rev dd521a1) · Mozilla Public License 2.0 · assets/dict_bn_avro.txt")
+    Item("Word counts & new Bangla words", "Bangla Wikipedia and Wiktionary text dumps (1 Oct 2026) — dumps.wikimedia.org · only word counts are used · CC BY-SA 4.0")
     Item("Extra English words", "Android Open Source Project keyboard dictionary (appears to be main_en.dict, 2012) · Apache 2.0 · assets/dict_en_extra.txt")
     Item("Emoji list", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
     Item("Bangla font", "Noto Sans Bengali · SIL Open Font License 1.1")

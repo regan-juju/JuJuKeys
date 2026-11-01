@@ -37,17 +37,22 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     @Volatile private var extraKeys: Array<String> = emptyArray()
     @Volatile private var extraWords: Array<String> = emptyArray()
+    @Volatile private var extraCounts: IntArray = IntArray(0)   // how often each word occurs in Bangla Wikipedia
     val extraSize: Int get() = extraWords.size
 
-    /** Lines "word<TAB>freq<TAB>key", sorted by key (made by the build, see DictionaryFilesTest). */
+    /** Lines "word<TAB>count<TAB>key", sorted by key then count (made by the build, see DictionaryFilesTest). */
     fun loadExtra(lines: Sequence<String>) {
-        val keys = ArrayList<String>(150_000); val words = ArrayList<String>(150_000)
+        val keys = ArrayList<String>(340_000); val words = ArrayList<String>(340_000)
+        var counts = IntArray(340_000); var n = 0
         for (line in lines) {
             if (line.isEmpty() || line[0] == '#') continue
             val a = line.indexOf('\t'); if (a <= 0) continue
             val b = line.indexOf('\t', a + 1); if (b <= 0) continue
             words.add(line.substring(0, a)); keys.add(line.substring(b + 1))
+            if (n == counts.size) counts = counts.copyOf(n * 2)
+            counts[n++] = line.substring(a + 1, b).toIntOrNull() ?: 1
         }
+        extraCounts = counts.copyOf(n)
         extraWords = words.toTypedArray(); extraKeys = keys.toTypedArray()
     }
 
@@ -88,10 +93,12 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         if (ks.isEmpty() || max <= 0) return emptyList()
         var lo = 0; var hi = ks.size
         while (lo < hi) { val mid = (lo + hi) ushr 1; if (ks[mid] < key) lo = mid + 1 else hi = mid }
-        val out = ArrayList<String>(max)
+        // the most common words among those that start with [key] (up to 400 are looked at)
+        val cs = extraCounts
+        val idx = ArrayList<Int>(64)
         var i = lo
-        while (i < ks.size && out.size < max && ks[i].startsWith(key)) { out.add(ws[i]); i++ }
-        return out
+        while (i < ks.size && idx.size < 400 && ks[i].startsWith(key)) { idx.add(i); i++ }
+        return idx.sortedByDescending { cs[it] }.take(max).map { ws[it] }
     }
 
     private inline fun parse(line: String, keyOf: (String) -> String): Entry? {

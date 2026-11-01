@@ -193,7 +193,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     .putInt("bench_words_en", en.count { '\t' in it })
                     .apply()
             }
-            // The 191k rare Bangla and 90k rare English words come a few seconds later, at the lowest priority, so
+            // The 333k rare Bangla and 90k rare English words come a few seconds later, at the lowest priority, so
             // opening the keyboard does not cause a burst of work (less heat).
             main.postDelayed({ worker.execute { loadExtraWords() } }, 5000)
             main.post { refreshSuggestions() }
