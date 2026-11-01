@@ -1,25 +1,21 @@
-10-31 16:37:51.677 11196 11196 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-31 16:37:51.680 11196 11196 I AndroidRuntime: Using default boot image
-10-31 16:37:51.680 11196 11196 I AndroidRuntime: Leaving lock profiling enabled
-10-31 16:37:51.760 11196 11196 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-31 16:37:51.914 11082 11211 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
-10-31 16:37:52.875 11196 11196 D AndroidRuntime: Shutting down VM
-10-31 16:37:56.554 11224 11224 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-31 16:37:56.557 11224 11224 I AndroidRuntime: Using default boot image
-10-31 16:37:56.557 11224 11224 I AndroidRuntime: Leaving lock profiling enabled
-10-31 16:37:56.631 11224 11224 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-31 16:37:57.680 11224 11224 D AndroidRuntime: Shutting down VM
-10-31 16:38:01.589 11248 11248 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-10-31 16:38:01.591 11248 11248 I AndroidRuntime: Using default boot image
-10-31 16:38:01.591 11248 11248 I AndroidRuntime: Leaving lock profiling enabled
-10-31 16:38:01.666 11248 11248 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-10-31 16:38:02.688 11248 11248 D AndroidRuntime: Shutting down VM
-10-31 16:38:03.680 11082 11082 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateMap.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-31 16:38:03.681 11082 11082 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateMap.update(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-31 16:38:03.681 11082 11082 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateMap.removeIf$runtime_release(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-10-31 16:38:03.842 11082 11092 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
-10-31 16:38:04.716   486  1970 D CoreBackPreview: Window{75ba341 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@a5bf789, mPriority=0}
-10-31 16:38:09.530 11082 11092 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
-10-31 16:38:10.904 11082 11092 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
-10-31 16:38:13.164 11082 11092 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
-10-31 16:38:26.109   486  1139 D CoreBackPreview: Window{75ba341 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@2c7b1be, mPriority=0}
+11-01 07:00:58.741 11094 11220 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
+11-01 07:00:59.341 11205 11205 D AndroidRuntime: Shutting down VM
+11-01 07:01:02.925 11234 11234 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-01 07:01:02.927 11234 11234 I AndroidRuntime: Using default boot image
+11-01 07:01:02.927 11234 11234 I AndroidRuntime: Leaving lock profiling enabled
+11-01 07:01:02.998 11234 11234 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-01 07:01:04.053 11234 11234 D AndroidRuntime: Shutting down VM
+11-01 07:01:07.965 11258 11258 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-01 07:01:07.968 11258 11258 I AndroidRuntime: Using default boot image
+11-01 07:01:07.968 11258 11258 I AndroidRuntime: Leaving lock profiling enabled
+11-01 07:01:08.041 11258 11258 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-01 07:01:09.070 11258 11258 D AndroidRuntime: Shutting down VM
+11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateMap.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateMap.update(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateMap.removeIf$runtime_release(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 07:01:10.226 11094 11107 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+11-01 07:01:11.066   485  2368 D CoreBackPreview: Window{4ebc104 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ccaf069, mPriority=0}
+11-01 07:01:15.793 11094 11107 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
+11-01 07:01:19.856 11094 11107 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
+11-01 07:01:19.896 11094 11107 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
+11-01 07:01:33.059   485   833 D CoreBackPreview: Window{4ebc104 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@621e8b6, mPriority=0}
