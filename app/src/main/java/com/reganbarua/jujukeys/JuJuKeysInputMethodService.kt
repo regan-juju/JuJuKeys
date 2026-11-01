@@ -193,7 +193,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     .putInt("bench_words_en", en.count { '\t' in it })
                     .apply()
             }
-            // The 141k rare Bangla words come a few seconds later, at the lowest priority, so
+            // The 333k rare Bangla and 90k rare English words come a few seconds later, at the lowest priority, so
             // opening the keyboard does not cause a burst of work (less heat).
             main.postDelayed({ worker.execute { loadExtraWords() } }, 5000)
             main.post { refreshSuggestions() }
@@ -343,6 +343,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         if (state.translateOn) return
+        // The cursor sits at the end of the word we are composing: that is our own typing, not a tap
+        // somewhere else. Checked by position, so it also holds when the phone is slow and the
+        // callback arrives late (a late callback used to cut the word in the middle).
+        if (roman.isNotEmpty() && candidatesStart >= 0 && newSelStart == newSelEnd && newSelStart == candidatesEnd) return
         // Our own typing also moves the cursor — ignore that (it is already tracked here).
         if (SystemClock.uptimeMillis() - lastEditTime < 500) return
         bumpAutoHide()      // the user is working in the text (tap, select, paste…)
@@ -694,10 +698,12 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (s.extraSize > 0) return
         runCatching {
             val t0 = SystemClock.elapsedRealtime()
-            assets.open("dict_bn_avro.txt").bufferedReader().useLines { s.loadExtra(it) }
+            s.loadExtraBytes(assets.open("dict_bn_avro.txt").use { it.readBytes() })
+            s.loadExtraEnglishBytes(assets.open("dict_en_extra.txt").use { it.readBytes() })
             Prefs.sp(this).edit()
                 .putLong("bench_extra_ms", SystemClock.elapsedRealtime() - t0)
                 .putInt("bench_words_bn", Prefs.sp(this).getInt("bench_words_bn", 0) + s.extraSize)
+                .putInt("bench_words_en", Prefs.sp(this).getInt("bench_words_en", 0) + s.extraEnglishSize)
                 .apply()
         }
     }
