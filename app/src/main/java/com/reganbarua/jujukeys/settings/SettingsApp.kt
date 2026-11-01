@@ -282,7 +282,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
 private fun LanguagesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     Header("Installed languages")
-    Item("Bangla", "Avro phonetic — type in English letters, get Bangla (ami → আমি)")
+    Item("Bangla", "Phonetic typing, Ridmik style — type in English letters, get Bangla (ami → আমি, caqqd → চাঁদ, duHHkh → দুঃখ)")
     Item("English", "QWERTY")
     Header("Starting language")
     ChoiceItem(

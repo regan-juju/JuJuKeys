@@ -1,19 +1,23 @@
 package com.reganbarua.jujukeys.bengali
 
 /**
- * Offline Avro-style phonetic engine: converts Roman (English-letter) input into Bengali.
+ * Offline phonetic engine (Avro / Ridmik style): converts Roman (English-letter) input into Bengali.
  *
- *   ami → আমি, bhalo → ভালো, bangladesh → বাংলাদেশ, kromo → ক্রম, dhormo → ধর্ম
+ *   ami → আমি, bhalo → ভালো, bangladesh → বাংলাদেশ, kromo → ক্রম, dhorrmo → ধর্ম
  *
  * Rule-based (no word list). Pure Kotlin, no Android dependency, so it is unit-testable.
  *
- * Case: like Avro, only the letters o i u d g j n r s t y z are case-sensitive
- * (e.g. t→ত, T→ট, n→ন, N→ণ). Every other letter is treated as lowercase.
+ * v1.0.60: the typing rules follow Ridmik Keyboard's phonetic mode: rr = reph (a single r never is),
+ * HH = ঃ, qq / cb = ঁ, hs = ্, TH = ৎ, ng = ং always (sng → সং), z after a consonant = ্য, Z = ্য,
+ * o after ং ঃ ঁ is silent, and only the conjunct pairs Ridmik really joins are joined automatically.
+ *
+ * Case: only the letters o i u d g j n r s t y z h are case-sensitive
+ * (e.g. t→ত, T→ট, n→ন, N→ণ, HH→ঃ). Every other letter is treated as lowercase.
  */
 object AvroPhonetic {
 
     private const val HASANTA = "্"
-    private const val CASE_SENSITIVE = "oiudgjnrstyz"
+    private const val CASE_SENSITIVE = "oiudgjnrstyzh"
 
     /** SEP = right after the accent key (`), which separates sounds: no conjunct / fola is formed. */
     private enum class Ctx { START, CONSONANT, VOWEL, REPH, SEP }
@@ -38,26 +42,26 @@ object AvroPhonetic {
         "p" to "প", "ph" to "ফ", "f" to "ফ",
         "b" to "ব", "bh" to "ভ", "v" to "ভ", "m" to "ম",
         "z" to "য", "l" to "ল",
-        "sh" to "শ", "S" to "শ", "Sh" to "ষ", "s" to "স", "h" to "হ",
-        "R" to "ড়", "Rh" to "ঢ়", "Y" to "য়",
+        "sh" to "শ", "S" to "শ", "Sh" to "ষ", "SH" to "ষ", "s" to "স", "h" to "হ",
+        "R" to "ড়", "Rh" to "ঢ়", "Y" to "য়", "H" to "হ",
     )
 
     /** Conjuncts that are formed automatically when two consonants are typed together. */
     private val conjunctPairs: List<String> = listOf(
-        "কক", "কট", "কত", "কম", "কল", "কষ", "কস",
-        "গধ", "গন", "গম", "গল",
+        "কত", "কষ",
+        "গধ", "গন", "গল",
         "ঙক", "ঙখ", "ঙগ", "ঙঘ",
         "চচ", "চছ", "জজ", "জঝ", "জঞ", "ঞচ", "ঞছ", "ঞজ",
         "টট", "ডড", "ণট", "ণঠ", "ণড", "ণণ",
-        "তত", "তথ", "তন", "তম", "দদ", "দধ", "দভ", "দম", "ধন", "ধম",
-        "নত", "নথ", "নদ", "নধ", "নন", "নট", "নড", "নম", "নস",
+        "তত", "তম", "দদ", "দধ", "দভ", "দম", "ধম",
+        "নত", "নথ", "নদ", "নধ", "নন", "নট", "নড", "নম",
         "পত", "পন", "পপ", "পল", "পস",
-        "বজ", "বদ", "বধ", "বব", "বল",
-        "মন", "মপ", "মফ", "মব", "মভ", "মম", "মল",
-        "লক", "লগ", "লট", "লড", "লপ", "লফ", "লম", "লল",
-        "শচ", "শন", "শম", "শল",
-        "ষক", "ষট", "ষঠ", "ষণ", "ষপ", "ষফ", "ষম",
-        "সক", "সখ", "সট", "সত", "সথ", "সন", "সপ", "সফ", "সম", "সল",
+        "বদ", "বধ",
+        "মপ", "মফ", "মব", "মভ", "মল",
+        "লগ", "লট", "লড", "লপ", "লফ", "লম", "লল",
+        "শচ", "শল",
+        "ষট", "ষঠ", "ষণ", "ষফ",
+        "সক", "সখ", "সট", "সত", "সথ", "সপ", "সফ", "সম", "সল",
         "হন", "হম", "হল",
     )
 
@@ -67,7 +71,6 @@ object AvroPhonetic {
         "kSh" to "ক্ষ", "kkh" to "ক্ষ",
         "kkhm" to "ক্ষ্ম", "kxm" to "ক্ষ্ম", "kkhN" to "ক্ষ্ণ", "kxN" to "ক্ষ্ণ",
         "gg" to "জ্ঞ",
-        "ngk" to "ঙ্ক", "ngkh" to "ঙ্খ", "ngg" to "ঙ্গ", "nggh" to "ঙ্ঘ",
         "nc" to "ঞ্চ", "nch" to "ঞ্ছ", "nj" to "ঞ্জ", "njh" to "ঞ্ঝ",
     )
 
@@ -87,6 +90,11 @@ object AvroPhonetic {
     private val others: List<Pair<String, Tok.Plain>> = listOf(
         "ng" to Tok.Plain("ং", Ctx.VOWEL),
         ":" to Tok.Plain("ঃ", Ctx.VOWEL),
+        "hs" to Tok.Plain(HASANTA, Ctx.CONSONANT),   // Ridmik: hs = হসন্ত
+        "HH" to Tok.Plain("ঃ", Ctx.VOWEL),   // Ridmik: HH = বিসর্গ
+        "qq" to Tok.Plain("ঁ", Ctx.VOWEL),   // Ridmik: qq / cb = চন্দ্রবিন্দু
+        "cb" to Tok.Plain("ঁ", Ctx.VOWEL),
+        "TH" to Tok.Plain("ৎ", Ctx.VOWEL),   // Ridmik: TH = ৎ
         "^" to Tok.Plain("ঁ", Ctx.VOWEL), // context kept, see convert()
         "t``" to Tok.Plain("ৎ", Ctx.VOWEL),
         "." to Tok.Plain("।", Ctx.START),
@@ -152,26 +160,33 @@ object AvroPhonetic {
         var ctx = Ctx.START
         var lastWasR = false
         var prevVowel = false   // previous output was a vowel / kar (not ং ঃ ঁ)
+        var afterMark = false   // previous output was ং ঃ ঁ : a following "o" is silent (singoh → সিংহ)
         var i = 0
 
         while (i < s.length) {
             val pv = prevVowel
             prevVowel = false
+            val am = afterMark
+            afterMark = false
 
             // 1) longest table match
             var matched: Tok? = null
             var len = 0
             for (l in minOf(maxLen, s.length - i) downTo 1) {
                 val t = patterns[s.substring(i, i + l)]
+                // "sng" is স + ং (সংস্থা), not স্ন + গ: a conjunct never takes the n of "ng"
+                if (t is Tok.Cons && l > 1 && t.bn.contains(HASANTA) && s[i + l - 1] == 'n' && s.getOrNull(i + l) == 'g') continue
                 if (t != null) { matched = t; len = l; break }
             }
             val c = s[i]
 
             // 2) context-sensitive single letters (only when nothing longer matched)
-            if (len <= 1 && c in "oryZw`") {
+            if (len <= 1 && c in "oryzZw`") {
                 when (c) {
                     'o' -> {
-                        if (s.getOrNull(i + 1) == '`') {
+                        if (am) {
+                            // o after ং ঃ ঁ is silent: singoh → সিংহ, sngozOjn → সংযোজন
+                        } else if (s.getOrNull(i + 1) == '`') {
                             // o` : forced kar of "o" = nothing is written (Avro manual, rule 1)
                             i++
                         } else {
@@ -200,8 +215,6 @@ object AvroPhonetic {
                                 continue
                             }
                             ctx == Ctx.CONSONANT && !lastWasR -> { out.append(HASANTA + "র"); ctx = Ctx.CONSONANT }
-                            next != null && isConsonantLetter(next) && next != 'r' && ctx != Ctx.START ->
-                                { out.append("র" + HASANTA); ctx = Ctx.REPH }       // dhormo → ধর্ম
                             else -> { out.append("র"); ctx = Ctx.CONSONANT }
                         }
                         lastWasR = true
@@ -217,8 +230,9 @@ object AvroPhonetic {
                         }
                         ctx = Ctx.CONSONANT
                     }
-                    'Z' -> {
-                        out.append(if (ctx == Ctx.CONSONANT) HASANTA + "য" else "য")
+                    'Z' -> { out.append(HASANTA + "য"); ctx = Ctx.CONSONANT }   // oZa → অ্যা
+                    'z' -> {
+                        out.append(if (ctx == Ctx.CONSONANT && !lastWasR) HASANTA + "য" else "য")   // bakz → বাক্য, przukti → প্রযুক্তি
                         ctx = Ctx.CONSONANT
                     }
                     'w' -> {
@@ -259,12 +273,14 @@ object AvroPhonetic {
                     out.append(t.bn)
                     if (t.bn != "ঁ") ctx = t.ctx   // chandrabindu does not change context
                     else prevVowel = pv
+                    afterMark = t.bn == "ং" || t.bn == "ঃ" || t.bn == "ঁ"
                 }
                 null -> { out.append(c); ctx = Ctx.START; len = 1 }  // unknown char: pass through
             }
             lastWasR = false
             i += len
         }
+        if (out.endsWith(HASANTA)) out.append('\u200c')   // allahhs → আল্লাহ্‌
         return out.toString()
     }
 

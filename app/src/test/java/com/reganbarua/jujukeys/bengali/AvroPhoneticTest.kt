@@ -9,7 +9,7 @@ class AvroPhoneticTest {
         "ami" to "আমি", "amar" to "আমার", "tumi" to "তুমি", "bhalo" to "ভালো", "valo" to "ভালো",
         "kemon" to "কেমন", "acho" to "আছো", "bangla" to "বাংলা", "bangladesh" to "বাংলাদেশ",
         "ekhon" to "এখন", "boi" to "বই", "ki" to "কি", "kori" to "করি",
-        "prem" to "প্রেম", "krom" to "ক্রম", "dhormo" to "ধর্ম", "karyo" to "কার্য",
+        "prem" to "প্রেম", "krom" to "ক্রম", "dhorrmo" to "ধর্ম", "karyo" to "কার্য",
         "rokto" to "রক্ত", "golpo" to "গল্প", "shanti" to "শান্তি", "uttor" to "উত্তর",
         "buddhi" to "বুদ্ধি", "iccha" to "ইচ্ছা", "anondo" to "আনন্দ", "sombhob" to "সম্ভব",
         "jonmo" to "জন্ম", "atma" to "আত্মা", "bishwas" to "বিশ্বাস", "krriShi" to "কৃষি",
@@ -48,6 +48,24 @@ class AvroPhoneticTest {
     @Test
     fun convertsManualRules() {
         val failures = manualCases.mapNotNull { (roman, expected) ->
+            val got = AvroPhonetic.convert(roman)
+            if (got != expected) "$roman → $got (expected $expected)" else null
+        }
+        assertEquals(failures.joinToString("\n"), 0, failures.size)
+    }
+
+    /** Ridmik-style rules (v1.0.60), everyday words only. */
+    private val ridmikCases = linkedMapOf(
+        "caqqd" to "চাঁদ", "ca^d" to "চাঁদ", "chOqqya" to "ছোঁয়া", "duHHkh" to "দুঃখ", "niHHshbd" to "নিঃশব্দ",
+        "allahhs" to "আল্লাহ্\u200c", "singoh" to "সিংহ", "sngkkhipt" to "সংক্ষিপ্ত", "sngstha" to "সংস্থা",
+        "shreNisnggram" to "শ্রেণিসংগ্রাম", "korN" to "করণ", "darrshnik" to "দার্শনিক", "nirrvorta" to "নির্ভরতা",
+        "oZanimeSon" to "অ্যানিমেশন", "nzay" to "ন্যায়", "tothZ" to "তথ্য", "przukti" to "প্রযুক্তি",
+        "bOISHomz" to "বৈষম্য", "sadhna" to "সাধনা", "TH" to "ৎ", "vbiSHzTH" to "ভবিষ্যৎ",
+    )
+
+    @Test
+    fun convertsRidmikRules() {
+        val failures = ridmikCases.mapNotNull { (roman, expected) ->
             val got = AvroPhonetic.convert(roman)
             if (got != expected) "$roman → $got (expected $expected)" else null
         }
