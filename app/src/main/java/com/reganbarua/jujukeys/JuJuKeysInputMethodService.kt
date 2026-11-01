@@ -343,6 +343,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         if (state.translateOn) return
+        // The cursor sits at the end of the word we are composing: that is our own typing, not a tap
+        // somewhere else. Checked by position, so it also holds when the phone is slow and the
+        // callback arrives late (a late callback used to cut the word in the middle).
+        if (roman.isNotEmpty() && candidatesStart >= 0 && newSelStart == newSelEnd && newSelStart == candidatesEnd) return
         // Our own typing also moves the cursor — ignore that (it is already tracked here).
         if (SystemClock.uptimeMillis() - lastEditTime < 500) return
         bumpAutoHide()      // the user is working in the text (tap, select, paste…)
