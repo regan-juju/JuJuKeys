@@ -30,75 +30,126 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
 
     private val cache = HashMap<String, List<Entry>>()
 
-    // ------------------------------------------------------------------ extra (rare) Bangla words
-    // 141k correctly spelled but rare words (Avro dictionary). Stored lean — two plain arrays,
-    // ALREADY sorted by sound-alike key in the asset file (no work at load time), and used only
-    // to fill the list when the common words are not enough. Loaded a few seconds after start.
+    // ------------------------------------------------------------------ extra (rare) words
+    // 333k Bangla and 90k English rare words. Each list is kept as the raw UTF-8 bytes of its
+    // asset file plus a few int arrays (where each line starts) — NO String per word. That is about
+    // 4x less memory and creates no garbage while loading, so the keyboard does not stutter.
+    // The files are already sorted, so lookups are a binary search on the bytes.
+    // Loaded a few seconds after start and used only to fill the list when common words are not enough.
 
-    @Volatile private var extraKeys: Array<String> = emptyArray()
-    @Volatile private var extraWords: Array<String> = emptyArray()
-    @Volatile private var extraCounts: IntArray = IntArray(0)   // how often each word occurs in Bangla Wikipedia
-    val extraSize: Int get() = extraWords.size
+    private class ByteTable(private val bytes: ByteArray, private val cols: Int) {
+        private val start: IntArray
+        private val tab1: IntArray
+        private val tab2: IntArray
+        private val end: IntArray
+        val size: Int
 
-    /** Lines "word<TAB>count<TAB>key", sorted by key then count (made by the build, see DictionaryFilesTest). */
-    fun loadExtra(lines: Sequence<String>) {
-        val keys = ArrayList<String>(340_000); val words = ArrayList<String>(340_000)
-        var counts = IntArray(340_000); var n = 0
-        for (line in lines) {
-            if (line.isEmpty() || line[0] == '#') continue
-            val a = line.indexOf('\t'); if (a <= 0) continue
-            val b = line.indexOf('\t', a + 1); if (b <= 0) continue
-            words.add(line.substring(0, a)); keys.add(line.substring(b + 1))
-            if (n == counts.size) counts = counts.copyOf(n * 2)
-            counts[n++] = line.substring(a + 1, b).toIntOrNull() ?: 1
+        init {
+            var n = 0
+            scan { _, _, _, _ -> n++ }
+            size = n
+            start = IntArray(n); tab1 = IntArray(n); tab2 = IntArray(if (cols >= 3) n else 0); end = IntArray(n)
+            var i = 0
+            scan { st, t1, t2, e -> start[i] = st; tab1[i] = t1; if (cols >= 3) tab2[i] = t2; end[i] = e; i++ }
         }
-        extraCounts = counts.copyOf(n)
-        extraWords = words.toTypedArray(); extraKeys = keys.toTypedArray()
-    }
 
-    // ------------------------------------------------------------------ extra (rare) English words
-    // Lines "word<TAB>1", sorted by word in the asset file. Used only to fill the list when the
-    // common words are not enough (shortest first), and so a real rare word is not called a typo.
-    @Volatile private var extraEnWords: Array<String> = emptyArray()
-    val extraEnglishSize: Int get() = extraEnWords.size
-
-    fun loadExtraEnglish(lines: Sequence<String>) {
-        val words = ArrayList<String>(100_000)
-        for (line in lines) {
-            if (line.isEmpty() || line[0] == '#') continue
-            val a = line.indexOf('\t'); if (a <= 0) continue
-            words.add(line.substring(0, a))
+        /** Calls [f] for every data line: start, first tab, second tab (or -1), end. Skips comments and bad lines. */
+        private inline fun scan(f: (Int, Int, Int, Int) -> Unit) {
+            val len = bytes.size
+            var p = 0
+            while (p < len) {
+                var e = p
+                while (e < len && bytes[e] != 10.toByte()) e++
+                if (e > p && bytes[p] != 35.toByte()) {            // not empty, not '#'
+                    var t1 = p
+                    while (t1 < e && bytes[t1] != 9.toByte()) t1++
+                    var t2 = -1
+                    if (cols >= 3 && t1 < e) { t2 = t1 + 1; while (t2 < e && bytes[t2] != 9.toByte()) t2++ }
+                    val ok = t1 > p && t1 < e && (cols < 3 || (t2 in (t1 + 1) until e))
+                    if (ok) f(p, t1, t2, e)
+                }
+                p = e + 1
+            }
         }
-        extraEnWords = words.toTypedArray()
+
+        private fun keyStart(i: Int) = if (cols >= 3) tab2[i] + 1 else start[i]
+        private fun keyEnd(i: Int) = if (cols >= 3) end[i] else tab1[i]
+        fun keyLength(i: Int) = keyEnd(i) - keyStart(i)
+
+        fun word(i: Int): String = String(bytes, start[i], tab1[i] - start[i], Charsets.UTF_8)
+
+        fun count(i: Int): Int {
+            if (cols < 3) return 1
+            var v = 0
+            for (j in tab1[i] + 1 until tab2[i]) { val d = bytes[j] - 48; if (d !in 0..9 || v > 100_000_000) return 1; v = v * 10 + d }
+            return if (v < 1) 1 else v
+        }
+
+        /** <0 if the key of line [i] sorts before [p], 0 if equal, >0 if after. */
+        fun compare(i: Int, p: ByteArray): Int {
+            var a = keyStart(i); val e = keyEnd(i); var b = 0
+            while (a < e && b < p.size) {
+                val x = bytes[a].toInt() and 0xff; val y = p[b].toInt() and 0xff
+                if (x != y) return x - y
+                a++; b++
+            }
+            return (e - a) - (p.size - b)
+        }
+
+        fun startsWith(i: Int, p: ByteArray): Boolean {
+            var a = keyStart(i)
+            if (keyEnd(i) - a < p.size) return false
+            for (b in p.indices) { if (bytes[a] != p[b]) return false; a++ }
+            return true
+        }
+
+        /** First line whose key is >= [p]. */
+        fun lowerBound(p: ByteArray): Int {
+            var lo = 0; var hi = size
+            while (lo < hi) { val mid = (lo + hi) ushr 1; if (compare(mid, p) < 0) lo = mid + 1 else hi = mid }
+            return lo
+        }
     }
 
-    private fun extraEnglishIndex(w: String): Int {
-        val ws = extraEnWords
-        var lo = 0; var hi = ws.size
-        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ws[mid] < w) lo = mid + 1 else hi = mid }
-        return lo
-    }
+    @Volatile private var xBn: ByteTable? = null
+    @Volatile private var xEn: ByteTable? = null
+    val extraSize: Int get() = xBn?.size ?: 0
+    val extraEnglishSize: Int get() = xEn?.size ?: 0
+
+    /** Bangla list: lines "word<TAB>count<TAB>key", sorted by key then count (made by the build, see DictionaryFilesTest). */
+    fun loadExtra(lines: Sequence<String>) = loadExtraBytes(lines.joinToString("\n").toByteArray(Charsets.UTF_8))
+    fun loadExtraBytes(bytes: ByteArray) { xBn = ByteTable(bytes, 3) }
+
+    /** English list: lines "word<TAB>1", sorted by word. */
+    fun loadExtraEnglish(lines: Sequence<String>) = loadExtraEnglishBytes(lines.joinToString("\n").toByteArray(Charsets.UTF_8))
+    fun loadExtraEnglishBytes(bytes: ByteArray) { xEn = ByteTable(bytes, 2) }
 
     private fun extraEnglishMatches(prefix: String, max: Int): List<String> {
-        val ws = extraEnWords
-        if (ws.isEmpty() || max <= 0) return emptyList()
-        val found = ArrayList<String>(64)
-        var i = extraEnglishIndex(prefix)
-        while (i < ws.size && found.size < 300 && ws[i].startsWith(prefix)) { found.add(ws[i]); i++ }
-        return found.sortedBy { it.length }.take(max)   // the shortest completions are the likeliest
+        val t = xEn ?: return emptyList()
+        if (t.size == 0 || max <= 0) return emptyList()
+        val p = prefix.toByteArray(Charsets.UTF_8)
+        val found = ArrayList<Int>(64)
+        var i = t.lowerBound(p)
+        while (i < t.size && found.size < 300 && t.startsWith(i, p)) { found.add(i); i++ }
+        return found.sortedBy { t.keyLength(it) }.take(max).map { t.word(it) }   // the shortest completions are the likeliest
+    }
+
+    private fun extraEnglishKnown(w: String): Boolean {
+        val t = xEn ?: return false
+        val p = w.toByteArray(Charsets.UTF_8)
+        val i = t.lowerBound(p)
+        return i < t.size && t.compare(i, p) == 0
     }
 
     private fun extraMatches(key: String, max: Int): List<String> {
-        val ks = extraKeys; val ws = extraWords
-        if (ks.isEmpty() || max <= 0) return emptyList()
-        var lo = 0; var hi = ks.size
-        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ks[mid] < key) lo = mid + 1 else hi = mid }
+        val t = xBn ?: return emptyList()
+        if (t.size == 0 || max <= 0) return emptyList()
+        val p = key.toByteArray(Charsets.UTF_8)
         // the most common words among those that start with [key] (up to 400 are looked at)
-        val cs = extraCounts
         val idx = ArrayList<Int>(64)
-        var i = lo
-        while (i < ks.size && idx.size < 400 && ks[i].startsWith(key)) { idx.add(i); i++ }
-        return idx.sortedByDescending { cs[it] }.take(max).map { ws[it] }
+        var i = t.lowerBound(p)
+        while (i < t.size && idx.size < 400 && t.startsWith(i, p)) { idx.add(i); i++ }
+        return idx.sortedByDescending { t.count(it) }.take(max).map { t.word(it) }
     }
 
     private inline fun parse(line: String, keyOf: (String) -> String): Entry? {
@@ -198,8 +249,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         val w = word.lowercase()
         val r = range(english, w)
         for (i in r) if (english[i].key == w) return english[i].freq
-        val ws = extraEnWords; val j = extraEnglishIndex(w)
-        return if (j < ws.size && ws[j] == w) 1 else 0
+        return if (extraEnglishKnown(w)) 1 else 0
     }
 
     /**
@@ -233,10 +283,10 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
     fun banglaFreq(word: String): Long {
         val w = nfc(word); val key = skeleton(w)
         for (i in range(bangla, key)) if (bangla[i].key == key && bangla[i].word == w) return bangla[i].freq
-        val ks = extraKeys; val ws = extraWords
-        var lo = 0; var hi = ks.size
-        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ks[mid] < key) lo = mid + 1 else hi = mid }
-        while (lo < ks.size && ks[lo] == key) { if (ws[lo] == w) return 1; lo++ }
+        val t = xBn ?: return 0
+        val p = key.toByteArray(Charsets.UTF_8)
+        var i = t.lowerBound(p)
+        while (i < t.size && t.compare(i, p) == 0) { if (t.word(i) == w) return 1; i++ }
         return 0
     }
 

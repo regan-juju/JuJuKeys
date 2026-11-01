@@ -694,8 +694,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (s.extraSize > 0) return
         runCatching {
             val t0 = SystemClock.elapsedRealtime()
-            assets.open("dict_bn_avro.txt").bufferedReader().useLines { s.loadExtra(it) }
-            assets.open("dict_en_extra.txt").bufferedReader().useLines { s.loadExtraEnglish(it) }
+            s.loadExtraBytes(assets.open("dict_bn_avro.txt").use { it.readBytes() })
+            s.loadExtraEnglishBytes(assets.open("dict_en_extra.txt").use { it.readBytes() })
             Prefs.sp(this).edit()
                 .putLong("bench_extra_ms", SystemClock.elapsedRealtime() - t0)
                 .putInt("bench_words_bn", Prefs.sp(this).getInt("bench_words_bn", 0) + s.extraSize)
