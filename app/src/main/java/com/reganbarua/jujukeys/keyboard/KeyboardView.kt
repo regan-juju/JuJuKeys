@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -76,13 +77,27 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Noto Sans Bengali, bundled with the app, for all Bangla text on the keyboard. */
-internal val BanglaFont = FontFamily(
+private val NotoBangla = FontFamily(
     Font(R.font.noto_bengali_regular, FontWeight.Normal),
     Font(R.font.noto_bengali_medium, FontWeight.Medium),
     Font(R.font.noto_bengali_semibold, FontWeight.SemiBold),
     Font(R.font.noto_bengali_bold, FontWeight.Bold),
 )
+
+/** Nikosh BAN has one weight; every weight maps to it. */
+private val NikoshBangla = FontFamily(
+    Font(R.font.nikosh_ban_regular, FontWeight.Normal),
+    Font(R.font.nikosh_ban_regular, FontWeight.Medium),
+    Font(R.font.nikosh_ban_regular, FontWeight.SemiBold),
+    Font(R.font.nikosh_ban_regular, FontWeight.Bold),
+)
+
+/** 0 = Noto Sans Bengali (default), 1 = Nikosh BAN. Set from the "Bangla font" setting. */
+internal val banglaFontChoice = mutableStateOf(0)
+
+/** The Bangla font for all Bangla text on the keyboard; reading it in a composable follows the setting. */
+internal val BanglaFont: FontFamily
+    get() = if (banglaFontChoice.value == 1) NikoshBangla else NotoBangla
 
 /** Bangla text → Noto Sans Bengali; other text keeps the phone's normal font. */
 internal fun fontOf(text: String): FontFamily? =
@@ -151,6 +166,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
         LocalSpaceCursor provides (prefs.spaceCursorDelay to prefs.spaceCursorSpeed),
     ) {
+        SideEffect { if (banglaFontChoice.value != prefs.banglaFont) banglaFontChoice.value = prefs.banglaFont }
         Box(
             Modifier
                 .fillMaxWidth()

@@ -24,6 +24,7 @@ data class KeyboardPrefs(
     val longPressSymbols: Boolean = true,
     val longPressDelay: Int = 300,          // ms
     val spaceCursorDelay: Int = 900,        // ms: hold the space bar this long, then slide to move the cursor (0 = at once)
+    val banglaFont: Int = 0,                // 0 = Noto Sans Bengali, 1 = Nikosh BAN
     val spaceCursorSpeed: Int = 75,         // 1..100: higher = the cursor moves farther for the same slide
     // লেখা সংশোধন
     val showSuggestions: Boolean = true,    // সাজেশন বার
@@ -72,6 +73,7 @@ object Prefs {
             longPressDelay = p.getInt("long_press_delay", d.longPressDelay),
             spaceCursorDelay = p.getInt("space_cursor_delay", d.spaceCursorDelay).coerceIn(0, 2000),
             spaceCursorSpeed = p.getInt("space_cursor_speed", d.spaceCursorSpeed).coerceIn(1, 100),
+            banglaFont = p.getInt("bangla_font", d.banglaFont).coerceIn(0, 1),
             showSuggestions = p.getBoolean("suggestions", d.showSuggestions),
             wordSuggestions = p.getBoolean("word_suggestions", d.wordSuggestions),
             nextWordSuggestions = p.getBoolean("next_word", d.nextWordSuggestions),

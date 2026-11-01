@@ -8,6 +8,7 @@
 | Extra English words | `app/src/main/assets/dict_en_extra.txt` | Word list of a third-party keyboard dictionary that appears to be the stock Android Open Source Project keyboard dictionary (`main_en.dict`, 2012); not verified against the AOSP source | Apache License 2.0 (`assets/licenses/Apache-2.0.txt`) |
 | Emoji list and order | `app/src/main/assets/emoji.txt` | https://github.com/googlefonts/emoji-metadata — commit `173b9b26e8fcbcbe64e1ecbf073a21a96b95c6b1`, `emoji_16_0_ordering.json` | Apache License 2.0 |
 | Bangla font | `app/src/main/res/font/noto_bengali_*.ttf` | Noto Sans Bengali (Google Fonts) | SIL Open Font License 1.1 (`assets/NotoSansBengali-OFL.txt`) |
+| Bangla font (optional, Settings → Bangla font) | `app/src/main/res/font/nikosh_ban_regular.ttf` | Nikosh BAN (Bangladesh Election Commission; Latin glyphs from DejaVu Serif), file unmodified | CC BY-NC-ND 3.0 (https://creativecommons.org/licenses/by-nc-nd/3.0/) — non-commercial use only; JuJuKeys is free, ad-free and not sold |
 | Icons | `keyboard/Symbols.kt` | Material Symbols (Google) | Apache License 2.0 |
 | Offline translation | Google ML Kit Translate | https://developers.google.com/ml-kit | Google APIs Terms |
 | Sticker background removal | Google ML Kit Subject Segmentation (beta, via Google Play services) | https://developers.google.com/ml-kit/vision/subject-segmentation | Google APIs Terms |

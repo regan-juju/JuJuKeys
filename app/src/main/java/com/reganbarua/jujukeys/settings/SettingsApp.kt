@@ -352,6 +352,10 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
         "Space cursor speed",
         listOf(25 to "25", 50 to "50", 75 to "75", 100 to "100"), p.spaceCursorSpeed
     ) { Prefs.setInt(context, "space_cursor_speed", it); refresh() }
+    ChoiceItem(
+        "Bangla font",
+        listOf(0 to "Noto Sans Bengali", 1 to "Nikosh BAN"), p.banglaFont
+    ) { Prefs.setInt(context, "bangla_font", it); refresh() }
 }
 
 @Composable
@@ -610,6 +614,7 @@ private fun AboutPage() {
     Item("Extra English words", "Android Open Source Project keyboard dictionary (appears to be main_en.dict, 2012) · Apache 2.0 · assets/dict_en_extra.txt")
     Item("Emoji list", "Google emoji-metadata — github.com/googlefonts/emoji-metadata (rev 173b9b2) · Apache 2.0")
     Item("Bangla font", "Noto Sans Bengali · SIL Open Font License 1.1")
+    Item("Bangla font (optional)", "Nikosh BAN — Election Commission of Bangladesh · CC BY-NC-ND 3.0 · unmodified, non-commercial use")
     Item("Translation", "Google ML Kit")
     Item("Sticker background removal", "Google ML Kit Subject Segmentation (beta) — runs on the phone")
     Note("Details: github.com/regan-juju/JuJuKeys → THIRD_PARTY_NOTICES.md")
