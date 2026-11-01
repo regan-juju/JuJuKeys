@@ -23,6 +23,8 @@ data class KeyboardPrefs(
     val popup: Boolean = true,
     val longPressSymbols: Boolean = true,
     val longPressDelay: Int = 300,          // ms
+    val spaceCursorDelay: Int = 900,        // ms: hold the space bar this long, then slide to move the cursor (0 = at once)
+    val spaceCursorSpeed: Int = 75,         // 1..100: higher = the cursor moves farther for the same slide
     // লেখা সংশোধন
     val showSuggestions: Boolean = true,    // সাজেশন বার
     val wordSuggestions: Boolean = true,    // লেখার সময় শব্দ
@@ -67,6 +69,8 @@ object Prefs {
             popup = p.getBoolean("popup", d.popup),
             longPressSymbols = p.getBoolean("long_press_symbols", d.longPressSymbols),
             longPressDelay = p.getInt("long_press_delay", d.longPressDelay),
+            spaceCursorDelay = p.getInt("space_cursor_delay", d.spaceCursorDelay).coerceIn(0, 2000),
+            spaceCursorSpeed = p.getInt("space_cursor_speed", d.spaceCursorSpeed).coerceIn(1, 100),
             showSuggestions = p.getBoolean("suggestions", d.showSuggestions),
             wordSuggestions = p.getBoolean("word_suggestions", d.wordSuggestions),
             nextWordSuggestions = p.getBoolean("next_word", d.nextWordSuggestions),

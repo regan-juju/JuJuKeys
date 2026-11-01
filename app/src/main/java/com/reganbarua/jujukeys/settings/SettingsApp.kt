@@ -344,6 +344,14 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
         "Long press delay",
         listOf(200 to "200 ms", 300 to "300 ms", 400 to "400 ms", 500 to "500 ms"), p.longPressDelay
     ) { Prefs.setInt(context, "long_press_delay", it); refresh() }
+    ChoiceItem(
+        "Space cursor long press delay",
+        listOf(0 to "At once", 500 to "500 ms", 700 to "700 ms", 900 to "900 ms", 1200 to "1200 ms"), p.spaceCursorDelay
+    ) { Prefs.setInt(context, "space_cursor_delay", it); refresh() }
+    ChoiceItem(
+        "Space cursor speed",
+        listOf(25 to "25", 50 to "50", 75 to "75", 100 to "100"), p.spaceCursorSpeed
+    ) { Prefs.setInt(context, "space_cursor_speed", it); refresh() }
 }
 
 @Composable

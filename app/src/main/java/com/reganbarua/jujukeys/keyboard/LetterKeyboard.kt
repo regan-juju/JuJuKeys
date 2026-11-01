@@ -237,6 +237,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     }
     val act by rememberUpdatedState(actions)
     val longDelay by rememberUpdatedState(prefs.longPressDelay.toLong())
+    val spaceDelay by rememberUpdatedState(prefs.spaceCursorDelay.toLong())
+    val spaceSpeed by rememberUpdatedState(prefs.spaceCursorSpeed)
     val enterLabel = state.enterLabel
 
     Canvas(
@@ -264,9 +266,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                     }
                     return best
                 }
-                class Touch(val key: Int, var job: Job? = null, var dragging: Boolean = false, var acc: Float = 0f)
+                class Touch(val key: Int, val downAt: Long = 0L, var job: Job? = null, var dragging: Boolean = false, var acc: Float = 0f)
                 val touches = HashMap<PointerId, Touch>()
-                val stepPx = 9.dp.toPx()
                 coroutineScope {
                     val scope = this
                     awaitPointerEventScope {
@@ -278,7 +279,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     if (i < 0) continue
                                     c.consume()
                                     val k = flat[i]
-                                    val t = Touch(i)
+                                    val t = Touch(i, c.uptimeMillis)
                                     touches[c.id] = t
                                     pressed.add(i)
                                     released.remove(i)
@@ -321,7 +322,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     }
                                 } else if (c.pressed) {
                                     val t = touches[c.id] ?: continue
-                                    if (flat[t.key].type == KType.SPACE) {
+                                    if (flat[t.key].type == KType.SPACE && (t.dragging || c.uptimeMillis - t.downAt >= spaceDelay)) {
+                                        val stepPx = spaceStepDp(spaceSpeed).dp.toPx()
                                         t.acc += c.positionChange().x
                                         if (!t.dragging && abs(t.acc) > viewConfiguration.touchSlop) {
                                             t.dragging = true; t.acc = 0f

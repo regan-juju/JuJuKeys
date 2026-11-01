@@ -102,6 +102,10 @@ internal val LocalKeyFeedback = staticCompositionLocalOf<(KeyKind) -> Unit> { {}
 internal val LocalPopupEnabled = staticCompositionLocalOf { true }
 internal val LocalRowHeight = staticCompositionLocalOf { BaseRowHeight }
 internal val LocalKeyWeight = staticCompositionLocalOf { FontWeight.Medium }
+/** Space-bar cursor: (hold delay in ms, speed 1..100). */
+internal val LocalSpaceCursor = staticCompositionLocalOf { 900 to 75 }
+/** Distance (dp) the finger travels per cursor step; speed 75 = 9 dp (as before), 100 = 6 dp, 25 = 15 dp. */
+internal fun spaceStepDp(speed: Int): Float = 18f - 0.12f * speed.coerceIn(1, 100)
 
 /** Height of the area used by keys / clipboard / emoji / suggestions. */
 internal fun keyAreaHeight(prefs: KeyboardPrefs): Dp =
@@ -145,6 +149,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalRowHeight provides BaseRowHeight * prefs.heightScale,
         LocalViewConfiguration provides viewConfig,
         LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
+        LocalSpaceCursor provides (prefs.spaceCursorDelay to prefs.spaceCursorSpeed),
     ) {
         Box(
             Modifier
@@ -291,6 +296,7 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
     val act by rememberUpdatedState(actions)
     val spaceGlow = remember { rainbowFor(5) }
     val spaceLevel = rememberGlowLevel(pressed)
+    val spaceCursor by rememberUpdatedState(LocalSpaceCursor.current)
     Box(
         modifier
             .keyPadding()
@@ -314,11 +320,13 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
                     feedback(KeyKind.SPACE)
                     var dragging = false
                     var acc = 0f
-                    val stepPx = 9.dp.toPx()
+                    val stepPx = spaceStepDp(spaceCursor.second).dp.toPx()
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) break
+                        // the cursor only follows the finger after the space bar was held long enough
+                        if (!dragging && change.uptimeMillis - down.uptimeMillis < spaceCursor.first) continue
                         acc += change.positionChange().x
                         if (!dragging && abs(acc) > viewConfiguration.touchSlop) {
                             dragging = true
