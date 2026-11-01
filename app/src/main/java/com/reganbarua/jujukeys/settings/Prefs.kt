@@ -30,6 +30,7 @@ data class KeyboardPrefs(
     val wordSuggestions: Boolean = true,    // লেখার সময় শব্দ
     val nextWordSuggestions: Boolean = true,
     val autoCorrect: Boolean = false,
+    val banglaAutoFix: Boolean = false,     // Bangla: replace a typed word by a common one that sounds the same (jemon → যেমন)
     val blockOffensive: Boolean = false,
     val autoCapitalize: Boolean = true,
     val doubleSpacePeriod: Boolean = true,
@@ -75,6 +76,7 @@ object Prefs {
             wordSuggestions = p.getBoolean("word_suggestions", d.wordSuggestions),
             nextWordSuggestions = p.getBoolean("next_word", d.nextWordSuggestions),
             autoCorrect = p.getBoolean("auto_correct", d.autoCorrect),
+            banglaAutoFix = p.getBoolean("bangla_auto_fix", d.banglaAutoFix),
             blockOffensive = p.getBoolean("block_offensive", d.blockOffensive),
             autoCapitalize = p.getBoolean("auto_cap", d.autoCapitalize),
             doubleSpacePeriod = p.getBoolean("double_space", d.doubleSpacePeriod),

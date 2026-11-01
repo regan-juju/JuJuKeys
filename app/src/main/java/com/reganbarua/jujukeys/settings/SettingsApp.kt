@@ -422,6 +422,7 @@ private fun TextPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     Header("Auto-correction")
     ToggleItem("Auto-correct", "Fix English spelling mistakes when you press space", "auto_correct", p.autoCorrect, refresh)
+    ToggleItem("Bangla auto-fix", "Off: exactly what you type appears (jemon → জেমন). On: a common word that sounds the same replaces it (যেমন)", "bangla_auto_fix", p.banglaAutoFix, refresh)
     ToggleItem("Auto-capitalisation", "English only: first letter of every sentence is a capital (never in Bangla)", "auto_cap", p.autoCapitalize, refresh)
     ToggleItem("Double-space full stop", "Bangla ।  English .", "double_space", p.doubleSpacePeriod, refresh)
     Header("Suggestions")

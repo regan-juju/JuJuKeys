@@ -1018,7 +1018,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     val conv = AvroPhonetic.convert(romanNow)
                     val list0 = s?.bangla(conv, 18) ?: listOf(conv)
                     // jemon → যেমন first (Avro's জেমন stays as the 2nd choice)
-                    val fix = if (romanNow.length >= 3) s?.autoFix(conv) else null
+                    val fix = if (romanNow.length >= 3 && p.banglaAutoFix) s?.autoFix(conv) else null
                     val base = if (fix != null) listOf(fix) + list0.filter { it != fix } else list0
                     if (fix != null) main.post {
                         if (seq == suggestionSeq && roman.toString() == romanNow) {
