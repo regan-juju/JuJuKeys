@@ -31,7 +31,7 @@ internal const val GlowHoldMs = 90L
 internal const val GlowFadeMs = 380
 
 /** How strong the press light is, 1 = full. Lowered a little (v1.0.55) — it was too bright. */
-internal const val PressLightScale = 0.45f
+internal const val PressLightScale = 0.35f
 
 internal fun rainbowFor(seed: Int): Color = PressRainbow[((seed % PressRainbow.size) + PressRainbow.size) % PressRainbow.size]
 

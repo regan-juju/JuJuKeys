@@ -95,6 +95,17 @@ private val NikoshBangla = FontFamily(
 /** 0 = Noto Sans Bengali (default), 1 = Nikosh BAN. Set from the "Bangla font" setting. */
 internal val banglaFontChoice = mutableStateOf(0)
 
+/** Size multiplier for Bangla text only (text-size setting × Nikosh's smaller glyphs). */
+internal val banglaTextScale = mutableStateOf(1f)
+
+/** A Bangla-text size, scaled by the "Bangla text size" setting. */
+internal fun TextUnit.bn(): TextUnit = this * banglaTextScale.value
+
+private fun isBangla(text: String) = text.any { it in 'ঀ'..'৿' }
+
+/** [size] scaled only when [text] is Bangla. */
+internal fun sizeFor(text: String, size: TextUnit): TextUnit = if (isBangla(text)) size.bn() else size
+
 /** The Bangla font for all Bangla text on the keyboard; reading it in a composable follows the setting. */
 internal val BanglaFont: FontFamily
     get() = if (banglaFontChoice.value == 1) NikoshBangla else NotoBangla
@@ -166,7 +177,11 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
         LocalSpaceCursor provides (prefs.spaceCursorDelay to prefs.spaceCursorSpeed),
     ) {
-        SideEffect { if (banglaFontChoice.value != prefs.banglaFont) banglaFontChoice.value = prefs.banglaFont }
+        SideEffect {
+            if (banglaFontChoice.value != prefs.banglaFont) banglaFontChoice.value = prefs.banglaFont
+            val s = listOf(1f, 1.1f, 1.2f, 1.3f)[prefs.banglaTextSize.coerceIn(0, 3)] * (if (prefs.banglaFont == 1) 1.2f else 1f)
+            if (banglaTextScale.value != s) banglaTextScale.value = s
+        }
         Box(
             Modifier
                 .fillMaxWidth()
@@ -364,12 +379,12 @@ private fun SpaceKey(modifier: Modifier, label: String, actions: KeyboardActions
     ) {
         if (centered) {
             Text(
-                label, color = IosColors.suggestion, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                label, color = IosColors.suggestion, fontSize = sizeFor(label, 15.sp), fontWeight = FontWeight.SemiBold,
                 fontFamily = fontOf(label), modifier = Modifier.align(Alignment.Center)
             )
         } else {
             Text(
-                label, color = IosColors.dim, fontSize = 10.5.sp, fontFamily = fontOf(label),
+                label, color = IosColors.dim, fontSize = sizeFor(label, 10.5.sp), fontFamily = fontOf(label),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 3.dp)
             )
         }
@@ -468,7 +483,7 @@ private fun SymbolPage(more: Boolean, bangla: Boolean, enterLabel: String, actio
         NumKey(",", actions, IosColors.keyOr(1, IosColors.fn), 20.sp, 0.8f)
         FuncKey(Modifier.weight(0.9f), color = IosColors.keyOr(3, IosColors.fn), onTap = { actions.onPage(Page.NUMPAD) }) {
             Text(
-                if (bangla) "১ ২\n৩ ৪" else "1 2\n3 4", color = IosColors.text, fontSize = 12.sp,
+                if (bangla) "১ ২\n৩ ৪" else "1 2\n3 4", color = IosColors.text, fontSize = if (bangla) 12.sp.bn() else 12.sp,
                 fontWeight = FontWeight.Bold, lineHeight = 13.sp, fontFamily = if (bangla) BanglaFont else null
             )
         }
@@ -519,7 +534,7 @@ internal fun FuncKey(
 @Composable
 internal fun KeyLabel(text: String, size: TextUnit) {
     Text(
-        text, color = IosColors.text, fontSize = size, fontWeight = LocalKeyWeight.current,
+        text, color = IosColors.text, fontSize = sizeFor(text, size), fontWeight = LocalKeyWeight.current,
         fontFamily = fontOf(text), maxLines = 1
     )
 }

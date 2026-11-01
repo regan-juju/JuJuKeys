@@ -566,6 +566,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onShift() {
         val now = SystemClock.uptimeMillis()
+        if (state.language == Language.BANGLA && !passwordField) {
+            // বাংলা: Shift works only while it is held — no tap-once, no caps lock.
+            state.shift = ShiftState.ONCE
+            shiftByUser = true
+            lastShiftTap = 0L
+            return
+        }
         state.shift = when {
             state.shift == ShiftState.LOCK -> ShiftState.OFF
             now - lastShiftTap < 350 -> ShiftState.LOCK          // double tap = caps lock
@@ -580,6 +587,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onShiftHeld(held: Boolean) {
         if (held) { shiftHeld = true; shiftChord = false; return }
         shiftHeld = false
+        if (state.language == Language.BANGLA && !passwordField) {
+            state.shift = ShiftState.OFF; shiftByUser = false; shiftChord = false
+            return
+        }
         if (shiftChord && state.shift != ShiftState.LOCK) state.shift = ShiftState.OFF
         shiftChord = false
     }

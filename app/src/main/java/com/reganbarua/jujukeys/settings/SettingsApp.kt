@@ -356,6 +356,10 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
         "Bangla font",
         listOf(0 to "Noto Sans Bengali", 1 to "Nikosh BAN"), p.banglaFont
     ) { Prefs.setInt(context, "bangla_font", it); refresh() }
+    ChoiceItem(
+        "Bangla text size",
+        listOf(0 to "Normal", 1 to "Large", 2 to "Larger", 3 to "Largest"), p.banglaTextSize
+    ) { Prefs.setInt(context, "bangla_text_size", it); refresh() }
 }
 
 @Composable

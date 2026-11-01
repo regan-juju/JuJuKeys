@@ -141,7 +141,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Keep-এ সেভ হয়েছে?", color = IosColors.text, fontSize = 14.sp,
+                            "Keep-এ সেভ হয়েছে?", color = IosColors.text, fontSize = 14.sp.bn(),
                             fontFamily = BanglaFont, maxLines = 1, modifier = Modifier.weight(1f)
                         )
                         ConfirmChip("হ্যাঁ", IosColors.keepYellow, Color.Black) { actions.onKeepConfirm(true) }
@@ -219,7 +219,7 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
         shape = RoundedCornerShape(16.dp),
         color = bg, pressedColor = IosColors.keyPressed,
         onTap = onTap
-    ) { Text(text, color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = BanglaFont) }
+    ) { Text(text, color = fg, fontSize = 14.sp.bn(), fontWeight = FontWeight.SemiBold, fontFamily = BanglaFont) }
 }
 
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
@@ -270,7 +270,7 @@ internal fun MoreSuggestionsPanel(state: KeyboardState, actions: KeyboardActions
         .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
     if (words.isEmpty()) {
         Box(sheet, contentAlignment = Alignment.Center) {
-            Text("লিখতে শুরু করুন — এখানে অনেক শব্দ দেখাবে", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+            Text("লিখতে শুরু করুন — এখানে অনেক শব্দ দেখাবে", color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
         }
         return
     }
@@ -388,7 +388,7 @@ internal fun LanguagePicker(state: KeyboardState, actions: KeyboardActions) {
             .border(0.7.dp, IosColors.glassEdge, RoundedCornerShape(16.dp))
     ) {
         Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("কোন ভাষায় অনুবাদ হবে?", color = IosColors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+            Text("কোন ভাষায় অনুবাদ হবে?", color = IosColors.text, fontSize = 16.sp.bn(), fontWeight = FontWeight.Bold,
                 fontFamily = BanglaFont, modifier = Modifier.weight(1f))
             SmallIcon(Icons.Filled.Close, "বন্ধ") { actions.onTranslatePicker(false) }
         }
@@ -401,12 +401,12 @@ internal fun LanguagePicker(state: KeyboardState, actions: KeyboardActions) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(l.native, color = IosColors.text, fontSize = 15.sp, fontFamily = fontOf(l.native))
-                        Text(l.bn, color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont)
+                        Text(l.native, color = IosColors.text, fontSize = sizeFor(l.native, 15.sp), fontFamily = fontOf(l.native))
+                        Text(l.bn, color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont)
                     }
                     Text(
                         if (l.offline) "অনলাইন · অফলাইন" else "শুধু অনলাইন",
-                        color = if (l.offline) IosColors.lightBlue else IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont
+                        color = if (l.offline) IosColors.lightBlue else IosColors.dim, fontSize = 11.sp.bn(), fontFamily = BanglaFont
                     )
                 }
             }
@@ -474,7 +474,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 if (pinMode) { picks.clear(); pinMode = false } else actions.onPanel(Panel.KEYS)
             }
             Spacer(Modifier.width(12.dp))
-            Text(if (pinMode) "পিন করুন" else "ক্লিপবোর্ড", color = IosColors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold, fontFamily = BanglaFont)
+            Text(if (pinMode) "পিন করুন" else "ক্লিপবোর্ড", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold, fontFamily = BanglaFont)
             Spacer(Modifier.weight(1f))
             if (enabled && clips.isNotEmpty()) {
                 PressBox(
@@ -495,7 +495,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                     Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFD54F))
                         .clickable { finishPins() }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
-                ) { Text("শেষ", color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = BanglaFont) }
+                ) { Text("শেষ", color = Color(0xFF111111), fontSize = 14.sp.bn(), fontWeight = FontWeight.Bold, fontFamily = BanglaFont) }
             } else {
                 SmallIcon(if (enabled) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff, "ক্লিপবোর্ড চালু/বন্ধ") {
                     actions.onClipEnabled(!enabled)
@@ -506,7 +506,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
         }
         if (pinMode) {
             Text(
-                "যেগুলো পিন করতে চান চাপুন — আবার চাপলে আনপিন", color = Color(0xFFFFD54F), fontSize = 12.5.sp,
+                "যেগুলো পিন করতে চান চাপুন — আবার চাপলে আনপিন", color = Color(0xFFFFD54F), fontSize = 12.5.sp.bn(),
                 fontFamily = BanglaFont,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp)).background(Color(0x24FFD54F)).padding(horizontal = 10.dp, vertical = 5.dp)
@@ -533,13 +533,13 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
 
         if (!enabled) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("ক্লিপবোর্ড বন্ধ আছে — উপরের টগল চাপলে চালু হবে", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+                Text("ক্লিপবোর্ড বন্ধ আছে — উপরের টগল চাপলে চালু হবে", color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
             }
         } else if (clips.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
                     "কিছু কপি করুন — সাথে সাথে এখানে আসবে।\n✎ চাপলে সব লেখা Google Keep-এ এক পাতায় সেভ হবে।",
-                    color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont
+                    color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont
                 )
             }
         } else {
@@ -580,7 +580,7 @@ private fun ClipGrid(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, color = IosColors.dim, fontSize = 14.sp, fontFamily = BanglaFont, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+    Text(text, color = IosColors.dim, fontSize = 14.sp.bn(), fontFamily = BanglaFont, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -604,7 +604,7 @@ private fun ClipTile(
         if (clip.sensitive && !unlocked) {
             // private text: preview hidden until the phone lock is given
             Text(
-                "🔒 ••••••••\nসংবেদনশীল লেখা", color = IosColors.dim, fontSize = 14.sp, maxLines = 2,
+                "🔒 ••••••••\nসংবেদনশীল লেখা", color = IosColors.dim, fontSize = 14.sp.bn(), maxLines = 2,
                 fontFamily = BanglaFont
             )
         } else {
@@ -657,7 +657,7 @@ internal fun EmojiTopBar(actions: KeyboardActions) {
         ) {
             Icon(Symbols.search, null, tint = IosColors.dim, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("ইমোজি খুঁজুন (English)", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+            Text("ইমোজি খুঁজুন (English)", color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
         }
         Spacer(Modifier.width(8.dp))
         BackKey(actions)
@@ -746,7 +746,7 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
                 StickerGrid(state, actions, Modifier.weight(1f).fillMaxWidth())
             } else if (sections.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("ইমোজি লোড হচ্ছে…", color = IosColors.dim, fontSize = 15.sp, fontFamily = BanglaFont)
+                    Text("ইমোজি লোড হচ্ছে…", color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
                 }
             } else {
                 LazyVerticalGrid(
@@ -758,7 +758,7 @@ internal fun EmojiPanel(state: KeyboardState, actions: KeyboardActions) {
                     sections.forEach { sec ->
                         item(span = { GridItemSpan(8) }, contentType = 1) {
                             Text(
-                                sec.title, color = IosColors.dim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                sec.title, color = IosColors.dim, fontSize = 12.sp.bn(), fontWeight = FontWeight.SemiBold,
                                 fontFamily = BanglaFont, modifier = Modifier.padding(start = 6.dp, top = 4.dp, bottom = 2.dp)
                             )
                         }
@@ -886,7 +886,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Tune, null, tint = IosColors.dim, modifier = Modifier.size(15.dp))
-                    Text(" সাজান", color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont)
+                    Text(" সাজান", color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont)
                 }
             }
             if (recent.isNotEmpty()) LazyRow(
@@ -895,7 +895,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
             ) {
                 items(recent, key = { it.id }) { p ->
                     Text(
-                        p.name, color = IosColors.text, fontSize = 12.sp, fontFamily = BanglaFont, maxLines = 1,
+                        p.name, color = IosColors.text, fontSize = 12.sp.bn(), fontFamily = BanglaFont, maxLines = 1,
                         modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(IosColors.key)
                             .clickable { actions.onStickerProfile(p.id) }.padding(horizontal = 10.dp, vertical = 3.dp)
                     )
@@ -929,7 +929,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                         else Icon(Icons.Filled.Folder, null, tint = IosColors.dim, modifier = Modifier.align(Alignment.Center).size(30.dp))
                         Icon(Icons.Filled.Folder, null, tint = IosColors.text.copy(alpha = 0.85f), modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(14.dp))
                         Text(
-                            p.name, color = IosColors.text, fontSize = 11.sp, fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            p.name, color = IosColors.text, fontSize = 11.sp.bn(), fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 4.dp, vertical = 1.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -952,7 +952,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                 if (here != null && stickers.isEmpty() && children.isEmpty()) item(key = "empty", span = { GridItemSpan(4) }) {
                     Text(
                         "এই প্রোফাইল খালি। “সাজান” চেপে স্টিকার বাছুন, অথবা “এখানে যোগ” দিয়ে গ্যালারি থেকে আনুন।",
-                        color = IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont, modifier = Modifier.padding(6.dp)
+                        color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont, modifier = Modifier.padding(6.dp)
                     )
                 }
             }
@@ -987,7 +987,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
                     if (bmp != null) Image(bmp, null, Modifier.size(44.dp), contentScale = ContentScale.Fit)
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "এই ঘরে কীবোর্ড থেকে সরাসরি ছবি যায় না", color = IosColors.text, fontSize = 13.5.sp,
+                        "এই ঘরে কীবোর্ড থেকে সরাসরি ছবি যায় না", color = IosColors.text, fontSize = 13.5.sp.bn(),
                         fontFamily = BanglaFont, modifier = Modifier.weight(1f)
                     )
                     Box(
@@ -1007,7 +1007,7 @@ private fun StickerGrid(state: KeyboardState, actions: KeyboardActions, modifier
 @Composable
 private fun Crumb(text: String, current: Boolean, onClick: () -> Unit) {
     Text(
-        text, color = if (current) IosColors.text else IosColors.dim, fontSize = 12.sp, fontFamily = BanglaFont,
+        text, color = if (current) IosColors.text else IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont,
         fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 2.dp)
     )
@@ -1024,7 +1024,7 @@ private fun AddTile(symbol: String?, label: String, onClick: () -> Unit) {
     ) {
         if (symbol != null) Text(symbol, color = IosColors.text, fontSize = 26.sp)
         else Icon(Icons.Filled.CreateNewFolder, null, tint = IosColors.text, modifier = Modifier.size(28.dp))
-        Text(label, color = IosColors.dim, fontSize = 11.sp, fontFamily = BanglaFont)
+        Text(label, color = IosColors.dim, fontSize = 11.sp.bn(), fontFamily = BanglaFont)
     }
 }
 
@@ -1037,7 +1037,7 @@ private fun StickerMenuRow(icon: ImageVector, text: String, danger: Boolean = fa
         val c = if (danger) Color(0xFFFF6B6B) else IosColors.text
         Icon(icon, null, tint = c, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
-        Text(text, color = c, fontSize = 15.sp, fontFamily = BanglaFont)
+        Text(text, color = c, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
     }
 }
 
@@ -1051,7 +1051,7 @@ private fun StickerSheetButton(icon: ImageVector, text: String, modifier: Modifi
     ) {
         Icon(icon, null, tint = IosColors.text, modifier = Modifier.size(19.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, color = IosColors.text, fontSize = 13.5.sp, fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, color = IosColors.text, fontSize = 13.5.sp.bn(), fontFamily = BanglaFont, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
