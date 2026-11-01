@@ -51,6 +51,38 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         extraWords = words.toTypedArray(); extraKeys = keys.toTypedArray()
     }
 
+    // ------------------------------------------------------------------ extra (rare) English words
+    // Lines "word<TAB>1", sorted by word in the asset file. Used only to fill the list when the
+    // common words are not enough (shortest first), and so a real rare word is not called a typo.
+    @Volatile private var extraEnWords: Array<String> = emptyArray()
+    val extraEnglishSize: Int get() = extraEnWords.size
+
+    fun loadExtraEnglish(lines: Sequence<String>) {
+        val words = ArrayList<String>(100_000)
+        for (line in lines) {
+            if (line.isEmpty() || line[0] == '#') continue
+            val a = line.indexOf('\t'); if (a <= 0) continue
+            words.add(line.substring(0, a))
+        }
+        extraEnWords = words.toTypedArray()
+    }
+
+    private fun extraEnglishIndex(w: String): Int {
+        val ws = extraEnWords
+        var lo = 0; var hi = ws.size
+        while (lo < hi) { val mid = (lo + hi) ushr 1; if (ws[mid] < w) lo = mid + 1 else hi = mid }
+        return lo
+    }
+
+    private fun extraEnglishMatches(prefix: String, max: Int): List<String> {
+        val ws = extraEnWords
+        if (ws.isEmpty() || max <= 0) return emptyList()
+        val found = ArrayList<String>(64)
+        var i = extraEnglishIndex(prefix)
+        while (i < ws.size && found.size < 300 && ws[i].startsWith(prefix)) { found.add(ws[i]); i++ }
+        return found.sortedBy { it.length }.take(max)   // the shortest completions are the likeliest
+    }
+
     private fun extraMatches(key: String, max: Int): List<String> {
         val ks = extraKeys; val ws = extraWords
         if (ks.isEmpty() || max <= 0) return emptyList()
@@ -150,15 +182,17 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         val learned = learnedCounts
         found.sortedByDescending { (learned[it.word] ?: 0) * 1_000_000_000L + it.freq }
             .forEach { if (out.size < n) out.add(it.word) }
+        if (out.size < n) extraEnglishMatches(p, n - out.size + 2).forEach { if (out.size < n) out.add(it) }
         return out.toList()
     }
 
-    /** Frequency of an English word, or 0 if it is not in the dictionary. */
+    /** Frequency of an English word: 1 if only in the extra list, 0 if it is not in the dictionary. */
     fun englishFreq(word: String): Long {
         val w = word.lowercase()
         val r = range(english, w)
         for (i in r) if (english[i].key == w) return english[i].freq
-        return 0
+        val ws = extraEnWords; val j = extraEnglishIndex(w)
+        return if (j < ws.size && ws[j] == w) 1 else 0
     }
 
     /**

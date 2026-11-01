@@ -193,7 +193,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     .putInt("bench_words_en", en.count { '\t' in it })
                     .apply()
             }
-            // The 141k rare Bangla words come a few seconds later, at the lowest priority, so
+            // The 191k rare Bangla and 90k rare English words come a few seconds later, at the lowest priority, so
             // opening the keyboard does not cause a burst of work (less heat).
             main.postDelayed({ worker.execute { loadExtraWords() } }, 5000)
             main.post { refreshSuggestions() }
@@ -695,9 +695,11 @@ class JuJuKeysInputMethodService : InputMethodService(),
         runCatching {
             val t0 = SystemClock.elapsedRealtime()
             assets.open("dict_bn_avro.txt").bufferedReader().useLines { s.loadExtra(it) }
+            assets.open("dict_en_extra.txt").bufferedReader().useLines { s.loadExtraEnglish(it) }
             Prefs.sp(this).edit()
                 .putLong("bench_extra_ms", SystemClock.elapsedRealtime() - t0)
                 .putInt("bench_words_bn", Prefs.sp(this).getInt("bench_words_bn", 0) + s.extraSize)
+                .putInt("bench_words_en", Prefs.sp(this).getInt("bench_words_en", 0) + s.extraEnglishSize)
                 .apply()
         }
     }
