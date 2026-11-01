@@ -1,21 +1,17 @@
-11-01 07:00:58.741 11094 11220 D ProfileInstaller: Installing profile for com.reganbarua.jujukeys
-11-01 07:00:59.341 11205 11205 D AndroidRuntime: Shutting down VM
-11-01 07:01:02.925 11234 11234 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-11-01 07:01:02.927 11234 11234 I AndroidRuntime: Using default boot image
-11-01 07:01:02.927 11234 11234 I AndroidRuntime: Leaving lock profiling enabled
-11-01 07:01:02.998 11234 11234 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-11-01 07:01:04.053 11234 11234 D AndroidRuntime: Shutting down VM
-11-01 07:01:07.965 11258 11258 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
-11-01 07:01:07.968 11258 11258 I AndroidRuntime: Using default boot image
-11-01 07:01:07.968 11258 11258 I AndroidRuntime: Leaving lock profiling enabled
-11-01 07:01:08.041 11258 11258 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
-11-01 07:01:09.070 11258 11258 D AndroidRuntime: Shutting down VM
-11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateMap.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateMap.update(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-11-01 07:01:10.061 11094 11094 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateMap.removeIf$runtime_release(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
-11-01 07:01:10.226 11094 11107 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
-11-01 07:01:11.066   485  2368 D CoreBackPreview: Window{4ebc104 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ccaf069, mPriority=0}
-11-01 07:01:15.793 11094 11107 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
-11-01 07:01:19.856 11094 11107 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
-11-01 07:01:19.896 11094 11107 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
-11-01 07:01:33.059   485   833 D CoreBackPreview: Window{4ebc104 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@621e8b6, mPriority=0}
+11-01 08:17:36.282 11238 11238 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-01 08:17:37.308 11238 11238 D AndroidRuntime: Shutting down VM
+11-01 08:17:41.184 11262 11262 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-01 08:17:41.186 11262 11262 I AndroidRuntime: Using default boot image
+11-01 08:17:41.186 11262 11262 I AndroidRuntime: Leaving lock profiling enabled
+11-01 08:17:41.237 11262 11262 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-01 08:17:42.255 11262 11262 D AndroidRuntime: Shutting down VM
+11-01 08:17:43.139 11172 11181 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+11-01 08:17:43.197 11172 11172 W nbarua.jujukeys: Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateMap.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 08:17:43.197 11172 11172 W nbarua.jujukeys: Method void androidx.compose.runtime.snapshots.SnapshotStateMap.update(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 08:17:43.198 11172 11172 W nbarua.jujukeys: Method boolean androidx.compose.runtime.snapshots.SnapshotStateMap.removeIf$runtime_release(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+11-01 08:17:43.737   482  1855 D CoreBackPreview: Window{5275f81 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ed8b0b1, mPriority=0}
+11-01 08:17:47.492 11172 11181 I nbarua.jujukeys: Compiler allocated 4355KB to compile void android.view.ViewRootImpl.performTraversals()
+11-01 08:17:47.935 11172 11182 I nbarua.jujukeys: Background concurrent copying GC freed 41541(1474KB) AllocSpace objects, 5(13MB) LOS objects, 41% free, 33MB/57MB, paused 29us,6us total 182.946ms
+11-01 08:17:48.194 11172 11181 I nbarua.jujukeys: Compiler allocated 4552KB to compile void com.reganbarua.jujukeys.keyboard.LetterKeyboardKt.LetterKeyboard(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, com.reganbarua.jujukeys.keyboard.KeyPreview, androidx.compose.runtime.Composer, int)
+11-01 08:17:49.326 11172 11181 I nbarua.jujukeys: Compiler allocated 4978KB to compile void com.reganbarua.jujukeys.keyboard.PanelsKt.SuggestionBar(com.reganbarua.jujukeys.keyboard.KeyboardState, com.reganbarua.jujukeys.keyboard.KeyboardActions, boolean, androidx.compose.runtime.Composer, int, int)
+11-01 08:18:03.186   482  2240 D CoreBackPreview: Window{5275f81 u0 com.reganbarua.jujukeys/com.reganbarua.jujukeys.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@54ddb9b, mPriority=0}
