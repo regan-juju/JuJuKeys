@@ -177,6 +177,31 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
         LocalSpaceCursor provides (prefs.spaceCursorDelay to prefs.spaceCursorSpeed),
     ) {
+        // border-glow clock: runs only while the tools are open (or fading out)
+        LaunchedEffect(state.toolsOpen) {
+            if (state.toolsOpen) {
+                state.glowT = 0f
+                val start = androidx.compose.runtime.withFrameMillis { it }
+                val fadeIn = Animatable(state.glowFade)
+                launch { fadeIn.animateTo(1f, tween(150)) { state.glowFade = value } }
+                while (true) {
+                    val now = androidx.compose.runtime.withFrameMillis { it }
+                    state.glowT = (now - start) / 1000f
+                }
+            } else if (state.glowFade > 0f) {
+                val fadeOut = Animatable(state.glowFade)
+                val start = androidx.compose.runtime.withFrameMillis { it }
+                launch {
+                    while (true) {
+                        val now = androidx.compose.runtime.withFrameMillis { it }
+                        state.glowT = state.glowT + 0.016f
+                        if (now - start > 600) break
+                    }
+                }
+                fadeOut.animateTo(0f, tween(450)) { state.glowFade = value }
+                state.glowFade = 0f
+            }
+        }
         SideEffect {
             if (banglaFontChoice.value != prefs.banglaFont) banglaFontChoice.value = prefs.banglaFont
             val s = listOf(1f, 1.1f, 1.2f, 1.3f)[prefs.banglaTextSize.coerceIn(0, 3)] * (if (prefs.banglaFont == 1) 1.2f else 1f)
@@ -563,6 +588,8 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
             }
         }
         Spacer(Modifier.weight(1f))
+        LangKey3D(state, actions)
+        Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
                 Icon(Symbols.mic, "ভয়েস", tint = IosColors.text, modifier = Modifier.size(32.dp))
@@ -570,6 +597,46 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         } else {
             Spacer(Modifier.width(52.dp))
         }
+    }
+}
+
+/** Two-part 3D language key "A | ক": the active half is lit green. Tap = switch language. */
+@Composable
+private fun LangKey3D(state: KeyboardState, actions: KeyboardActions) {
+    val bangla = state.language == Language.BANGLA
+    val green = Color(0xFF34D399)
+    val shape = RoundedCornerShape(10.dp)
+    PressBox(
+        Modifier.size(width = 65.dp, height = 33.dp)
+            .shadow(4.dp, shape)
+            .toolsGlow(state, 0.51f, 1f),
+        shape = shape,
+        color = Color(0xFF1C1C1E), pressedColor = Color(0xFF2C2C2E),
+        onTap = { actions.onToggleLanguage() }
+    ) {
+        Row(Modifier.fillMaxSize().padding(2.dp)) {
+            for (isEn in listOf(true, false)) {
+                val on = isEn != bangla
+                Box(
+                    Modifier.weight(1f).fillMaxHeight().padding(1.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (on) green else Color(0xFF3A3A3C)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (isEn) "A" else "ক", fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold, color = if (on) Color.Black else Color(0xFF8E8E93),
+                        fontFamily = if (isEn) null else BanglaFont
+                    )
+                }
+            }
+        }
+        // glossy highlight on the upper half + bright rim
+        Box(
+            Modifier.fillMaxSize().clip(shape).background(
+                Brush.verticalGradient(0f to Color.White.copy(alpha = 0.22f), 0.5f to Color.Transparent)
+            ).border(1.dp, Color.White.copy(alpha = 0.45f), shape)
+        )
     }
 }
 

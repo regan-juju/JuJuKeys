@@ -287,6 +287,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (!restarting) state.toolsOpen = false
         if (!restarting) {
             // light round the keyboard on every opening — the next rainbow colour each time
             val sp = com.reganbarua.jujukeys.settings.Prefs.sp(this)
@@ -338,6 +339,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        state.toolsOpen = false
         main.removeCallbacks(autoHideRunnable)
         state.emojiSearch = null
         if (state.translateOn) stopTranslate() else { commitWord(); endEnglishWord() }

@@ -108,8 +108,7 @@ import com.reganbarua.jujukeys.security.SensitiveAction
 @Composable
 internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, forceSuggestions: Boolean = false) {
     val bangla = state.language == Language.BANGLA
-    var toolsOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(toolsOpen) { if (toolsOpen) { delay(6000); toolsOpen = false } }
+    val toolsOpen = state.toolsOpen
     val toolsVisible = remember { MutableTransitionState(false) }
     toolsVisible.targetState = toolsOpen
 
@@ -117,17 +116,18 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
         Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // son's photo = the tools key: tap opens Keep / Translate / Settings (and lights the keyboard); tap again closes
         PressBox(
             Modifier.size(width = 44.dp, height = 38.dp)
-                .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier),
+                .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier)
+                .toolsGlow(state, 0.08f, 0f),
             shape = RoundedCornerShape(10.dp),
             color = IosColors.keyOr(0, IosColors.key), pressedColor = IosColors.rainbowAt(0)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
-            onTap = { toolsOpen = false; actions.onToggleLanguage() },
-            onLongPress = { toolsOpen = !toolsOpen }
+            onTap = { state.toolsOpen = !state.toolsOpen }
         ) {
-            Text(
-                if (bangla) "ক" else "A", color = IosColors.text, fontSize = 19.sp,
-                fontWeight = FontWeight.SemiBold, fontFamily = if (bangla) BanglaFont else null
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(com.reganbarua.jujukeys.R.drawable.logo),
+                contentDescription = "টুলস", modifier = Modifier.size(34.dp)
             )
         }
 
@@ -192,23 +192,23 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(8.dp))
-                    ToolButton(state.panel == Panel.CLIPBOARD, {
-                        toolsOpen = false
+                    ToolButton(state, 0.21f, state.panel == Panel.CLIPBOARD, {
+                        state.toolsOpen = false
                         actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD)
                     }) { KeepIcon() }
                     Spacer(Modifier.width(8.dp))
-                    ToolButton(state.translateOn, { toolsOpen = false; actions.onTranslateToggle() }) {
+                    ToolButton(state, 0.33f, state.translateOn, { state.toolsOpen = false; actions.onTranslateToggle() }) {
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
-                    ToolButton(false, { toolsOpen = false; actions.onOpenSettings() }) {
+                    ToolButton(state, 0.44f, false, { state.toolsOpen = false; actions.onOpenSettings() }) {
                         Icon(Icons.Filled.Settings, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                 }
             }
         }
-        BackKey(actions)
+        BackKey(actions, state)
     }
 }
 
@@ -224,9 +224,9 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
 @Composable
-internal fun BackKey(actions: KeyboardActions) {
+internal fun BackKey(actions: KeyboardActions, state: KeyboardState? = null) {
     PressBox(
-        Modifier.size(width = 62.dp, height = 38.dp),
+        Modifier.size(width = 62.dp, height = 38.dp).let { if (state != null) it.toolsGlow(state, 0.9f, 0f) else it },
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },
@@ -250,9 +250,9 @@ private fun KeepIcon() {
 }
 
 @Composable
-private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
+private fun ToolButton(state: KeyboardState, u: Float, active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 48.dp, height = 38.dp),
+        Modifier.size(width = 48.dp, height = 38.dp).toolsGlow(state, u, 0f),
         shape = RoundedCornerShape(10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,

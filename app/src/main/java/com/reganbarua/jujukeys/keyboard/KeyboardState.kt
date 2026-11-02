@@ -32,6 +32,12 @@ class KeyboardState {
     var openColor by mutableStateOf(0)
     var panel by mutableStateOf(Panel.KEYS)
 
+    /** Tools (Keep / Translate / Settings) are open: the photo key is lit and all key borders glow until closed. */
+    var toolsOpen by mutableStateOf(false)
+    /** Border-glow clock: seconds since the tools opened, and the fade 0..1 (driven in KeyboardView only while needed). */
+    var glowT by mutableStateOf(0f)
+    var glowFade by mutableStateOf(0f)
+
     /** Settings chosen in the app (Gboard-style settings screen). */
     var prefs by mutableStateOf(KeyboardPrefs())
     var recentEmoji by mutableStateOf<List<String>>(emptyList())

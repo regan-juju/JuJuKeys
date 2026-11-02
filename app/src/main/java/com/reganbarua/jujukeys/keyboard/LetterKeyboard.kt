@@ -414,6 +414,17 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 KType.GAP -> {}
             }
         }
+        // tools open: soft flowing border light on every key (ripple from the photo key)
+        if (state.glowFade > 0.01f) {
+            val tT = state.glowT; val tF = state.glowFade
+            for (i in flat.indices) {
+                if (flat[i].type == KType.GAP) continue
+                val r = keyRects.getOrNull(i) ?: continue
+                val u = (r.center.x / size.width).coerceIn(0f, 1f)
+                val v = 0.2f + 0.6f * (r.center.y / size.height).coerceIn(0f, 1f)
+                drawToolsGlow(r, corner, u, v, tT, tF)
+            }
+        }
         // bubble above the pressed letter
         bubble?.let { (i, label) ->
             val r = keyRects.getOrNull(i) ?: return@let
