@@ -127,13 +127,20 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var shiftChord = false
     /** Shift ONCE came from the user's own tap (never automatic in Bangla). */
     private var shiftByUser = false
+    /** Bangla Shift: tap = next letter only (off by itself after 2 s), hold = capitals while held, no lock. */
+    private val bShift = com.reganbarua.jujukeys.bengali.BanglaShiftModel()
+    private val shiftTimeout = Runnable {
+        if (bShift.expire(SystemClock.uptimeMillis()) && state.language == Language.BANGLA) {
+            state.shift = ShiftState.OFF; shiftByUser = false
+        }
+    }
     private var lastSpaceTime = 0L
     private var lastEditTime = 0L
     private var passwordField = false
     private var fieldWantsCaps = false
     /** The app asked for no learning here (incognito / private fields). */
     private var noLearn = false
-    private var suggestionSeq = 0
+    @Volatile private var suggestionSeq = 0
     private var ignoreNextClip = false
 
     // ---- translate box
@@ -291,6 +298,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (!restarting && state.translateOn) stopTranslate()
         roman.clear(); enWord.clear(); lastWord = null
         state.shift = ShiftState.OFF
+        bShift.reset(); main.removeCallbacks(shiftTimeout)
         state.panel = Panel.KEYS
         state.emojiSearch = null
         state.stickerSheet = null
@@ -435,9 +443,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
         // বাংলা
         val ch = if (c.isLetter()) {
-            if (state.shift == ShiftState.OFF && !shiftHeld) c.lowercaseChar() else c.uppercaseChar()
+            if (bShift.letter(SystemClock.uptimeMillis())) c.uppercaseChar() else c.lowercaseChar()
         } else c
-        afterShiftLetter(c)
+        if (c.isLetter() && !bShift.on) { state.shift = ShiftState.OFF; shiftByUser = false; main.removeCallbacks(shiftTimeout) }
 
         if (AvroPhonetic.isPhoneticChar(ch)) {
             roman.append(ch)
@@ -567,7 +575,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onShift() {
         val now = SystemClock.uptimeMillis()
         if (state.language == Language.BANGLA && !passwordField) {
-            // বাংলা: Shift works only while it is held — no tap-once, no caps lock.
+            // বাংলা: tap = next letter only, hold = capitals while held; never a caps lock.
+            bShift.press()
+            main.removeCallbacks(shiftTimeout)
             state.shift = ShiftState.ONCE
             shiftByUser = true
             lastShiftTap = 0L
@@ -588,7 +598,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
         if (held) { shiftHeld = true; shiftChord = false; return }
         shiftHeld = false
         if (state.language == Language.BANGLA && !passwordField) {
-            state.shift = ShiftState.OFF; shiftByUser = false; shiftChord = false
+            val now = SystemClock.uptimeMillis()
+            bShift.release(now)
+            if (bShift.on) {                                   // tapped, nothing typed yet: off by itself after 2 s
+                main.removeCallbacks(shiftTimeout)
+                main.postDelayed(shiftTimeout, bShift.expiresAt - now)
+            } else { state.shift = ShiftState.OFF; shiftByUser = false }
+            shiftChord = false
             return
         }
         if (shiftChord && state.shift != ShiftState.LOCK) state.shift = ShiftState.OFF
@@ -605,8 +621,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
     /** ENGLISH: capital letter at the start of a sentence — worked out here, no app round-trip. */
     private fun updateCaps() {
         // বাংলা: Shift is never switched on automatically — only by the user's own tap / hold
-        if (state.language == Language.BANGLA && state.shift == ShiftState.ONCE && !shiftByUser && !shiftHeld) {
-            state.shift = ShiftState.OFF
+        if (state.language == Language.BANGLA) {
+            val want = if (bShift.on) ShiftState.ONCE else ShiftState.OFF
+            if (state.shift != want) { state.shift = want; shiftByUser = bShift.on }
         }
         if (state.language != Language.ENGLISH || state.translateOn || passwordField || state.shift == ShiftState.LOCK) return
         if (!state.prefs.autoCapitalize || !fieldWantsCaps) {
@@ -1024,6 +1041,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
             state.suggestions = emptyList(); state.moreSuggestions = emptyList(); return
         }
         worker.execute {
+            // typing fast: a newer key press already made this answer out of date — skip the work
+            if (seq != suggestionSeq) return@execute
             val raw: List<String> = when {
                 bangla && romanNow.isNotEmpty() -> {
                     val conv = AvroPhonetic.convert(romanNow)

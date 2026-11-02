@@ -221,6 +221,15 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             }
         )
     }
+    class HitArrays(val l: FloatArray, val t: FloatArray, val r: FloatArray, val b: FloatArray)
+    val hitCache = remember(rows, rowPx, screenPx) { HashMap<Int, HitArrays>() }
+    fun hitArrays(width: Float): HitArrays = hitCache.getOrPut(usable(width).toInt()) {
+        val h = geometryFor(width).second
+        HitArrays(
+            FloatArray(h.size) { h[it].left }, FloatArray(h.size) { h[it].top },
+            FloatArray(h.size) { h[it].right }, FloatArray(h.size) { h[it].bottom }
+        )
+    }
     val photo = ImageBitmap.imageResource(com.reganbarua.jujukeys.R.drawable.photo_mini)
 
     val pressed = remember { mutableStateListOf<Int>() }
@@ -239,6 +248,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val longDelay by rememberUpdatedState(prefs.longPressDelay.toLong())
     val spaceDelay by rememberUpdatedState(prefs.spaceCursorDelay.toLong())
     val spaceSpeed by rememberUpdatedState(prefs.spaceCursorSpeed)
+    val touchOff by rememberUpdatedState(prefs.touchOffset)
     val enterLabel = state.enterLabel
 
     Canvas(
@@ -249,22 +259,13 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             .onGloballyPositioned { measured = Size(it.size.width.toFloat(), it.size.height.toFloat()); origin = it.positionInRoot() }
             .pointerInput(flat, geometry) {
                 pressed.clear()
+                val gapFlags = BooleanArray(flat.size) { flat[it].type == KType.GAP }
+                val charFlags = BooleanArray(flat.size) { flat[it].type == KType.CHAR }
                 fun hit(p: Offset): Int {
                     // the real width of this keyboard at the moment of the touch (never a stale or zero one)
-                    val hitRects = geometryFor(size.width.toFloat()).second
-                    for (i in hitRects.indices) {
-                        if (flat[i].type != KType.GAP && hitRects[i].contains(p)) return i
-                    }
-                    // touches in a gap go to the nearest key in that row
-                    var best = -1; var bestD = Float.MAX_VALUE
-                    for (i in hitRects.indices) {
-                        if (flat[i].type == KType.GAP) continue
-                        val r = hitRects[i]
-                        if (p.y < r.top || p.y > r.bottom) continue
-                        val d = abs(r.center.x - p.x)
-                        if (d < bestD) { bestD = d; best = i }
-                    }
-                    return best
+                    val hr = hitArrays(size.width.toFloat())
+                    val offPx = with(density) { touchOff.dp.toPx() }      // fingers land a little low: letters look a bit higher up
+                    return TouchPick.pick(hr.l, hr.t, hr.r, hr.b, gapFlags, charFlags, p.x, p.y, offPx)
                 }
                 class Touch(val key: Int, val downAt: Long = 0L, var job: Job? = null, var dragging: Boolean = false, var acc: Float = 0f)
                 val touches = HashMap<PointerId, Touch>()
