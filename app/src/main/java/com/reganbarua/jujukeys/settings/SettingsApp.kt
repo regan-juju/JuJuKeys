@@ -575,13 +575,13 @@ private fun GuidePage() {
         }
     }
     Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { index = (index - 1 + items.size) % items.size; typed = 0 }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+        Button(onClick = { val n = (index - 1 + items.size) % items.size; index = n; typed = if (playing) 0 else items[n].second.length }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
             Text("Back", color = Color(0xFF062E6F))
         }
         Button(onClick = { playing = !playing }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
             Text(if (playing) "Pause" else "Play", color = Color(0xFF062E6F))
         }
-        Button(onClick = { index = (index + 1) % items.size; typed = 0 }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+        Button(onClick = { val n = (index + 1) % items.size; index = n; typed = if (playing) 0 else items[n].second.length }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
             Text("Next", color = Color(0xFF062E6F))
         }
     }
