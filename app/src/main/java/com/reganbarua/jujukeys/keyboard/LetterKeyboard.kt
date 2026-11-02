@@ -83,9 +83,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             add(chars(KeyboardLayouts.lettersRow1, longPressOn))
             add(listOf(GKey(KType.GAP, 0.5f)) + chars(KeyboardLayouts.lettersRow2, longPressOn) + GKey(KType.GAP, 0.5f))
             add(
-                listOf(GKey(KType.SHIFT, 1.29f), GKey(KType.GAP, 0.21f)) +
+                listOf(GKey(KType.SHIFT, 1.5f)) +
                     chars(KeyboardLayouts.lettersRow3, longPressOn, colOffset = 1) +
-                    listOf(GKey(KType.GAP, 0.21f), GKey(KType.SHIFT, 1.29f))   // Shift on both sides (backspace is in the top bar)
+                    listOf(GKey(KType.SHIFT, 1.5f))   // wide Shift on both sides, no gap (backspace is in the top bar)
             )
             add(
                 buildList {
@@ -265,7 +265,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                     // the real width of this keyboard at the moment of the touch (never a stale or zero one)
                     val hr = hitArrays(size.width.toFloat())
                     val offPx = with(density) { touchOff.dp.toPx() }      // fingers land a little low: letters look a bit higher up
-                    return TouchPick.pick(hr.l, hr.t, hr.r, hr.b, gapFlags, charFlags, p.x, p.y, offPx)
+                    return TouchPick.pick(hr.l, hr.t, hr.r, hr.b, gapFlags, charFlags, p.x, p.y, offPx, keyPadV)
                 }
                 class Touch(val key: Int, val downAt: Long = 0L, var job: Job? = null, var dragging: Boolean = false, var acc: Float = 0f)
                 val touches = HashMap<PointerId, Touch>()
@@ -412,17 +412,6 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                     drawCircle(Color.White.copy(alpha = 0.35f), d / 2f, r.center, style = Stroke(width = 1.dp.toPx()))
                 }
                 KType.GAP -> {}
-            }
-        }
-        // tools open: soft flowing border light on every key (ripple from the photo key)
-        if (state.glowFade > 0.01f) {
-            val tT = state.glowT; val tF = state.glowFade
-            for (i in flat.indices) {
-                if (flat[i].type == KType.GAP) continue
-                val r = keyRects.getOrNull(i) ?: continue
-                val u = (r.center.x / size.width).coerceIn(0f, 1f)
-                val v = 0.2f + 0.6f * (r.center.y / size.height).coerceIn(0f, 1f)
-                drawToolsGlow(r, corner, u, v, tT, tF)
             }
         }
         // bubble above the pressed letter

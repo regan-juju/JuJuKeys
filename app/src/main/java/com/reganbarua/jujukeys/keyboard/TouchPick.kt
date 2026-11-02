@@ -24,13 +24,18 @@ internal object TouchPick {
         return best
     }
 
-    /** [hit], with the touch point moved up by [offset] when both the raw and the moved point are letter keys. */
+    /**
+     * [hit], with the touch point moved up by [offset] when both the raw and the moved point are letter keys.
+     * A touch that lands on the DRAWN key (inside its rectangle shrunk by [inset] top and bottom) is always that key:
+     * the offset only ever decides touches in the space between two rows (v1.0.64).
+     */
     fun pick(
         l: FloatArray, t: FloatArray, r: FloatArray, b: FloatArray, gap: BooleanArray, isChar: BooleanArray,
-        x: Float, y: Float, offset: Float
+        x: Float, y: Float, offset: Float, inset: Float = 0f
     ): Int {
         val raw = hit(l, t, r, b, gap, x, y)
         if (offset <= 0f || raw < 0 || !isChar[raw]) return raw
+        if (y >= t[raw] + inset && y <= b[raw] - inset) return raw
         val moved = hit(l, t, r, b, gap, x, if (y - offset < 0f) 0f else y - offset)
         return if (moved >= 0 && isChar[moved]) moved else raw
     }

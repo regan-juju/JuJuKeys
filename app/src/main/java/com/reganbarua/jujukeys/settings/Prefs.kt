@@ -24,7 +24,7 @@ data class KeyboardPrefs(
     val longPressSymbols: Boolean = true,
     val longPressDelay: Int = 300,          // ms
     val spaceCursorDelay: Int = 900,        // ms: hold the space bar this long, then slide to move the cursor (0 = at once)
-    val touchOffset: Int = 3,               // dp: letter keys are looked up this far above the touch point (0 = off)
+    val touchOffset: Int = 0,               // dp: touches between two rows lean this far upward (0 = off; default off since v1.0.64)
     val banglaTextSize: Int = 0,            // 0 normal, 1 large, 2 larger, 3 largest (Bangla text only)
     val banglaFont: Int = 0,                // 0 = Noto Sans Bengali, 1 = Nikosh BAN
     val spaceCursorSpeed: Int = 75,         // 1..100: higher = the cursor moves farther for the same slide

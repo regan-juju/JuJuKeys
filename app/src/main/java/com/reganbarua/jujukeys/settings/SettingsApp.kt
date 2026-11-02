@@ -87,7 +87,7 @@ private val Accent = Color(0xFFA8C7FA)
 enum class Screen(val title: String) {
     MAIN("JuJuKeys"), LANGUAGES("Languages"), PREFERENCES("Preferences"), THEME("Themes"),
     TEXT("Text correction"), VOICE("Voice typing"), CLIPBOARD("Clipboard"), TRANSLATE("Translate"),
-    DICTIONARY("Dictionary"), EMOJI("Emoji & stickers"), PRIVACY("Privacy"), ABOUT("About"), TEST("Try it"),
+    DICTIONARY("Dictionary"), GUIDE("Bangla typing guide"), EMOJI("Emoji & stickers"), PRIVACY("Privacy"), ABOUT("About"), TEST("Try it"),
 }
 
 /** Gboard-style settings. [enabled]/[selected] show the setup banner until the keyboard is on. */
@@ -113,6 +113,7 @@ fun SettingsApp(enabled: Boolean, selected: Boolean, onClose: () -> Unit) {
                 Screen.CLIPBOARD -> ClipboardPage(prefs, refresh)
                 Screen.TRANSLATE -> TranslatePage()
                 Screen.DICTIONARY -> DictionaryPage()
+                Screen.GUIDE -> GuidePage()
                 Screen.EMOJI -> EmojiPage(prefs, refresh)
                 Screen.PRIVACY -> PrivacyPage()
                 Screen.ABOUT -> AboutPage()
@@ -272,6 +273,7 @@ private fun MainList(enabled: Boolean, selected: Boolean, open: (Screen) -> Unit
     Item("Clipboard", "History, pin, Google Keep", Icons.Outlined.ContentPaste) { open(Screen.CLIPBOARD) }
     Item("Translate", "Languages, offline models, online API key", Icons.Outlined.Translate) { open(Screen.TRANSLATE) }
     Item("Dictionary", "Your words (added automatically)", Icons.AutoMirrored.Outlined.MenuBook) { open(Screen.DICTIONARY) }
+    Item("Bangla typing guide", "How to type conjuncts (যুক্তাক্ষর), animated", Icons.Outlined.Keyboard) { open(Screen.GUIDE) }
     Item("Emoji & stickers", "Recent emoji, add your stickers", Icons.Outlined.EmojiEmotions) { open(Screen.EMOJI) }
     Item("Privacy", "Your typing is never sent anywhere", Icons.Outlined.Shield) { open(Screen.PRIVACY) }
     Item("Try it", "Test the keyboard", Icons.Outlined.Keyboard) { open(Screen.TEST) }
@@ -537,6 +539,52 @@ private fun TranslatePage() {
     }
     ActionButton("Delete key", primary = false) { key = ""; Prefs.setCloudApiKey(context, ""); message = "Key deleted — offline translation only" }
     Note("The key is encrypted and stays on this phone (Android Keystore); not in phone backups.")
+}
+
+/** Animated typing guide: the English letters appear one by one and the Bengali conjunct builds up (made by the real typing engine). */
+@Composable
+private fun GuidePage() {
+    val items = com.reganbarua.jujukeys.bengali.TypingGuide.conjuncts
+    var index by remember { mutableStateOf(0) }
+    var typed by remember { mutableStateOf(0) }
+    var playing by remember { mutableStateOf(true) }
+    val roman = items[index].second
+    androidx.compose.runtime.LaunchedEffect(playing, index) {
+        if (playing) {
+            typed = 0
+            for (n in 1..roman.length) { kotlinx.coroutines.delay(380); typed = n }
+            kotlinx.coroutines.delay(1200)
+            index = (index + 1) % items.size
+        }
+    }
+    Note("Type the English letters; the Bengali conjunct builds up. Tap Next / Back to move, Pause to stop.")
+    Box(
+        Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()
+            .background(Color(0xFF2C2C2E), RoundedCornerShape(18.dp)).padding(18.dp)
+    ) {
+        Column {
+            Text("${index + 1} / ${items.size}", color = TextSub, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(roman.take(typed) + if (typed < roman.length) "|" else "", color = TextMain, fontSize = 30.sp)
+            Spacer(Modifier.height(12.dp))
+            val shown = com.reganbarua.jujukeys.bengali.TypingGuide.partial(roman, typed)
+            Text(
+                if (shown.isEmpty()) " " else shown,
+                color = if (typed >= roman.length) Color(0xFF34D399) else TextMain, fontSize = 52.sp
+            )
+        }
+    }
+    Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = { index = (index - 1 + items.size) % items.size; typed = 0 }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+            Text("Back", color = Color(0xFF062E6F))
+        }
+        Button(onClick = { playing = !playing }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+            Text(if (playing) "Pause" else "Play", color = Color(0xFF062E6F))
+        }
+        Button(onClick = { index = (index + 1) % items.size; typed = 0 }, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+            Text("Next", color = Color(0xFF062E6F))
+        }
+    }
 }
 
 @Composable

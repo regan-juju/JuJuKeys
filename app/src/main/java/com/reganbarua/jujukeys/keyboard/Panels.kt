@@ -113,12 +113,12 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
     toolsVisible.targetState = toolsOpen
 
     Row(
-        Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
+        Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 4.4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // son's photo = the tools key: tap opens Keep / Translate / Settings (and lights the keyboard); tap again closes
         PressBox(
-            Modifier.size(width = 44.dp, height = 38.dp)
+            Modifier.size(width = 44.dp, height = 36.dp)
                 .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier)
                 .toolsGlow(state, 0.08f, 0f),
             shape = RoundedCornerShape(10.dp),
@@ -226,7 +226,7 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 @Composable
 internal fun BackKey(actions: KeyboardActions, state: KeyboardState? = null) {
     PressBox(
-        Modifier.size(width = 62.dp, height = 38.dp).let { if (state != null) it.toolsGlow(state, 0.9f, 0f) else it },
+        Modifier.size(width = 62.dp, height = 36.dp),
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },
@@ -252,7 +252,7 @@ private fun KeepIcon() {
 @Composable
 private fun ToolButton(state: KeyboardState, u: Float, active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 48.dp, height = 38.dp).toolsGlow(state, u, 0f),
+        Modifier.size(width = 48.dp, height = 36.dp),
         shape = RoundedCornerShape(10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,

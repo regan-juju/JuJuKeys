@@ -19,13 +19,24 @@ class TouchPickTest {
         assertEquals(4, pick(150f, 150f, 0f))
     }
 
-    @Test fun offsetMovesATopEdgeTouchOfTheLowerRowUpToTheRowAbove() {
-        assertEquals(4, pick(150f, 105f, 0f))     // no offset: lower row
-        assertEquals(1, pick(150f, 105f, 12f))    // finger landed low: the key above
+    @Test fun offsetMovesAGapTouchOfTheLowerRowUpToTheRowAbove() {
+        assertEquals(4, pick(150f, 105f, 0f))                                          // no offset: lower row
+        assertEquals(1, TouchPick.pick(l, t, r, b, gap, isChar, 150f, 105f, 12f, 10f)) // in the gap, finger landed low: the key above
     }
 
     @Test fun offsetKeepsAMidKeyTouchOnItsKey() {
         assertEquals(4, pick(150f, 150f, 12f))
+    }
+
+    @Test fun aTouchOnTheDrawnKeyIsNeverMovedToTheRowAbove() {
+        // the drawn key starts 10 px inside its cell: y = 115 is on the key, y = 105 is in the gap
+        assertEquals(4, TouchPick.pick(l, t, r, b, gap, isChar, 150f, 115f, 12f, 10f))
+        assertEquals(1, TouchPick.pick(l, t, r, b, gap, isChar, 150f, 105f, 12f, 10f))
+    }
+
+    @Test fun withoutOffsetTheGapIsSplitAtTheRowLine() {
+        assertEquals(1, TouchPick.pick(l, t, r, b, gap, isChar, 150f, 99f, 0f, 10f))
+        assertEquals(4, TouchPick.pick(l, t, r, b, gap, isChar, 150f, 101f, 0f, 10f))
     }
 
     @Test fun nonLetterKeysKeepTheExactPoint() {
