@@ -97,20 +97,23 @@ class SecurityAndDataTest {
     }
 
     @Test fun keepNeedsConfirmation() {
-        val items = listOf(ClipItem(1, "a", false), ClipItem(2, "b", false), ClipItem(3, "pw", false, sensitive = true))
-        assertEquals(listOf(1L, 2L), KeepLedger.unsent(ctx, items).map { it.id })     // sensitive never automatic
-        KeepLedger.handOff(ctx, setOf(1L, 2L), creatingNote = true)
-        assertEquals(2, KeepLedger.pendingCount(ctx))
+        // the caller passes only PINNED items; pinned sensitive ones go too (after the phone lock)
+        val items = listOf(ClipItem(1, "a", true), ClipItem(2, "b", true), ClipItem(3, "pw", true, sensitive = true))
+        assertEquals(listOf(1L, 2L, 3L), KeepLedger.unsent(ctx, items).map { it.id })
+        KeepLedger.handOff(ctx, setOf(1L, 2L, 3L), creatingNote = true)
+        assertEquals(3, KeepLedger.pendingCount(ctx))
         KeepLedger.confirm(ctx, saved = false)                                         // cancelled / not saved
-        assertEquals(listOf(1L, 2L), KeepLedger.unsent(ctx, items).map { it.id })
+        assertEquals(listOf(1L, 2L, 3L), KeepLedger.unsent(ctx, items).map { it.id })
         assertFalse(Prefs.keepNoteCreated(ctx))
-        KeepLedger.handOff(ctx, setOf(1L, 2L), creatingNote = true)
+        KeepLedger.handOff(ctx, setOf(1L, 2L, 3L), creatingNote = true)
         KeepLedger.confirm(ctx, saved = true)
         assertTrue(KeepLedger.unsent(ctx, items).isEmpty())
         assertTrue(Prefs.keepNoteCreated(ctx))
         assertEquals(0, KeepLedger.pendingCount(ctx))
+        KeepLedger.markSent(ctx, setOf(9L))                                            // items imported from the note
+        assertEquals(0, KeepLedger.unsent(ctx, listOf(ClipItem(9, "x", true))).size)
         KeepLedger.resetSent(ctx)                                                      // "আবার পাঠান"
-        assertEquals(2, KeepLedger.unsent(ctx, items).size)
+        assertEquals(3, KeepLedger.unsent(ctx, items).size)
     }
 
     @Test fun sensitiveGate() {
