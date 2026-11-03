@@ -51,6 +51,7 @@ import com.reganbarua.jujukeys.clipboard.KeepLedger
 import com.reganbarua.jujukeys.keyboard.EmojiRepo
 import com.reganbarua.jujukeys.keyboard.KeyKind
 import com.reganbarua.jujukeys.keyboard.Themes
+import com.reganbarua.jujukeys.clipboard.KeepNote
 import com.reganbarua.jujukeys.security.AuthActivity
 import com.reganbarua.jujukeys.security.SensitiveAction
 import com.reganbarua.jujukeys.security.SensitiveGate
@@ -307,7 +308,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
         refreshSensitiveLock()
         // came back from the phone-lock screen: do what the user asked for
         SensitiveGate.takePending()?.let { (id, action) ->
-            clips.find(id)?.let { item ->
+            if (action == SensitiveAction.KEEP_ALL) main.post { onClipAllToKeep() }
+            else clips.find(id)?.let { item ->
                 if (action == SensitiveAction.VIEW) state.panel = Panel.CLIPBOARD
                 else main.post { runClipAction(item, action) }
             }
@@ -338,7 +340,39 @@ class JuJuKeysInputMethodService : InputMethodService(),
         refreshSuggestions()
     }
 
+    // ---- autofill (saved passwords) in the suggestion bar — Android 11+; the chips are drawn by the autofill app
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
+    override fun onCreateInlineSuggestionsRequest(uiExtras: android.os.Bundle): android.view.inputmethod.InlineSuggestionsRequest? {
+        val d = resources.displayMetrics.density
+        val min = android.util.Size((72 * d).toInt(), (30 * d).toInt())
+        val max = android.util.Size((resources.displayMetrics.widthPixels * 0.6f).toInt(), (44 * d).toInt())
+        val styles = androidx.autofill.inline.UiVersions.newStylesBuilder()
+            .addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder().build())
+            .build()
+        val spec = android.widget.inline.InlinePresentationSpec.Builder(min, max).setStyle(styles).build()
+        return android.view.inputmethod.InlineSuggestionsRequest.Builder(listOf(spec))
+            .setMaxSuggestionCount(3)
+            .build()
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
+    override fun onInlineSuggestionsResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean {
+        val list = response.inlineSuggestions
+        if (list.isEmpty()) { state.inlineViews = emptyList(); return false }
+        val views = arrayOfNulls<View>(list.size)
+        var left = list.size
+        val wrap = android.util.Size(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        list.forEachIndexed { i, s ->
+            s.inflate(this, wrap, mainExecutor) { v ->
+                views[i] = v
+                if (--left == 0) state.inlineViews = views.filterNotNull()
+            }
+        }
+        return true
+    }
+
     override fun onFinishInputView(finishingInput: Boolean) {
+        state.inlineViews = emptyList()
         state.toolsOpen = false
         main.removeCallbacks(autoHideRunnable)
         state.emojiSearch = null
@@ -1211,6 +1245,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             }
             SensitiveAction.KEEP -> onClipToKeep(item.text)          // only when the user picks it
             SensitiveAction.VIEW -> state.panel = Panel.CLIPBOARD
+            SensitiveAction.KEEP_ALL -> onClipAllToKeep()
         }
     }
 
@@ -1250,9 +1285,14 @@ class JuJuKeysInputMethodService : InputMethodService(),
      * Nothing counts as "sent" until the user answers "হ্যাঁ" to "Keep-এ সেভ হয়েছে?".
      */
     override fun onClipAllToKeep() {
-        // sensitive items never go along automatically — only one by one, after the phone lock
-        val items = clips.items.filter { !it.sensitive }
-        if (items.isEmpty()) { toast("পাঠানোর মতো লেখা নেই (সংবেদনশীল লেখা আলাদা করে পাঠাতে হয়)"); return }
+        // only PINNED items go to Keep (sensitive pinned ones too, after the phone lock)
+        val items = clips.items.filter { it.pinned }
+        if (items.isEmpty()) { toast("Keep-এ পাঠানোর জন্য আগে লেখা পিন করুন (📌 বাটন)"); return }
+        if (items.any { it.sensitive } && !SensitiveGate.isUnlocked()) {
+            SensitiveGate.setPending(-1L, SensitiveAction.KEEP_ALL)
+            AuthActivity.start(this)          // phone PIN / fingerprint, then back here
+            return
+        }
         if (!ClipHistory.isKeepInstalled(this)) {
             ClipHistory.openKeep(this)          // opens the Play Store page
             toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো। কিছুই পাঠানো হয়নি")
@@ -1272,12 +1312,49 @@ class JuJuKeysInputMethodService : InputMethodService(),
             return
         }
         ignoreNextClip = true
-        clipboard().setPrimaryClip(ClipData.newPlainText("JuJuKeys", fresh.joinToString("\n\n") { it.text }))
+        val data = ClipData.newPlainText("JuJuKeys", KeepNote.append(fresh.map { it.text }))
+        if (fresh.any { it.sensitive }) data.description.extras = PersistableBundle().apply { putBoolean(EXTRA_IS_SENSITIVE, true) }
+        clipboard().setPrimaryClip(data)
         KeepLedger.handOff(this, fresh.map { it.id }.toSet(), creatingNote = false)
         state.keepConfirm = fresh.size
         ClipHistory.openKeep(this)
         toast("${fresh.size}টি নতুন লেখা কপি হয়েছে — Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোটে লম্বা চেপে Paste করুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
     }
+
+    override fun onKeepSplitStart() {
+        val raw = try {
+            clipboard().primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+        } catch (e: Exception) { null }
+        if (raw.isNullOrBlank()) {
+            state.keepSplit = null
+            state.keepSplitMsg = "আগে Keep নোটের লেখা কপি করুন (নোট খুলে সব সিলেক্ট → কপি), তারপর এখানে ফিরে চাপুন"
+            return
+        }
+        splitSource = raw
+        val r = KeepNote.split(raw)
+        if (r.items.size < 2) {
+            state.keepSplit = null
+            state.keepSplitMsg = "কপি করা লেখায় আলাদা করার মতো একাধিক অংশ পাওয়া যায়নি"
+            return
+        }
+        state.keepSplitMsg = if (r.bySeparator) null else "——— দাগ নেই: ফাঁকা লাইন দেখে ভাগ হয়েছে"
+        state.keepSplit = r.items
+    }
+
+    private var splitSource: String? = null
+
+    override fun onKeepSplitApply() {
+        val list = state.keepSplit ?: return
+        // the whole copied note was caught by the clipboard as ONE item — drop it, the parts replace it
+        splitSource?.let { src -> clips.items.firstOrNull { it.text == src && !it.pinned }?.let { clips.delete(it.id) } }
+        splitSource = null
+        val (added, ids) = clips.addPinned(list)
+        KeepLedger.markSent(this, ids)          // these came from the note, so they are already in it
+        state.keepSplit = null; state.keepSplitMsg = null
+        toast("${list.size}টি লেখা আলাদা করে পিন হয়েছে (নতুন $added টি)")
+    }
+
+    override fun onKeepSplitCancel() { state.keepSplit = null; state.keepSplitMsg = null }
 
     override fun onKeepConfirm(saved: Boolean) {
         KeepLedger.confirm(this, saved)

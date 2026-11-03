@@ -12,11 +12,14 @@ object KeepLedger {
     /** Items that still need to go to Keep (sensitive ones never go automatically). */
     fun unsent(context: Context, items: List<ClipItem>): List<ClipItem> {
         val sent = Prefs.keepSentIds(context)
-        return items.filter { !it.sensitive && it.id !in sent }
+        return items.filter { it.id !in sent }
     }
 
     fun handOff(context: Context, ids: Set<Long>, creatingNote: Boolean) =
         Prefs.setKeepPending(context, ids, creatingNote)
+
+    /** Items that came FROM the Keep note are already in it. */
+    fun markSent(context: Context, ids: Set<Long>) = Prefs.setKeepSentIds(context, Prefs.keepSentIds(context) + ids)
 
     fun pendingCount(context: Context): Int = Prefs.keepPendingIds(context).size
 

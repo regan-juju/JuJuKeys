@@ -483,9 +483,11 @@ private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     ActionButton("Open Google Keep") { ClipHistory.openKeep(context) }
     Header("Sending to Google Keep (not an automatic sync)")
     Note("Keep does not let other apps add to a note, nor say whether it was saved. So it works like this:\n" +
-        "1. First ✎ opens a new Keep note \"JuJuKeys ক্লিপবোর্ড\" with everything — tap 'Save' in Keep.\n" +
-        "2. Later ✎ copies only the new items and opens Keep — open that note, hold and 'Paste'.\n" +
-        "3. Back in the keyboard answer 'হ্যাঁ' to \"Keep-এ সেভ হয়েছে?\". 'না' means they can be sent again later.")
+        "• Only PINNED items go to Keep (pinned sensitive ones too — after the phone lock).\n" +
+        "1. First ✎ opens a new Keep note \"JuJuKeys ক্লিপবোর্ড\" with the pinned items, a ——— line between items — tap 'Save' in Keep.\n" +
+        "2. Later ✎ copies only the new pinned items and opens Keep — open that note, hold and 'Paste'.\n" +
+        "3. Back in the keyboard answer 'হ্যাঁ' to \"Keep-এ সেভ হয়েছে?\". 'না' means they can be sent again later.\n" +
+        "• To bring a note back: in Keep select all text → Copy, then in the keyboard clipboard tap \"Keep নোট ভাগ করুন\" → \"যোগ করুন\". Each part becomes its own pinned item.")
     var sentCount by remember { mutableStateOf(Prefs.keepSentIds(context).size) }
     Item("Marked as sent", if (sentCount == 0) "None" else "$sentCount items")
     ActionButton("Clear the sent marks (send all again)", primary = false) {

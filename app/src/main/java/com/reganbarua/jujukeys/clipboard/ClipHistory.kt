@@ -52,6 +52,29 @@ class ClipHistory(private val context: Context) {
         if (i >= 0) { items[i] = items[i].copy(pinned = !items[i].pinned); save() }
     }
 
+    /**
+     * Puts texts cut out of a Keep note into the history as PINNED items.
+     * Existing identical text is only pinned. Returns (how many were new, ids of all these items).
+     */
+    fun addPinned(texts: List<String>): Pair<Int, Set<Long>> {
+        var added = 0
+        val ids = HashSet<Long>()
+        for (t in texts.asReversed()) {
+            if (t.isBlank()) continue
+            val norm = t.trim()
+            val i = items.indexOfFirst { it.text.trim() == norm }
+            if (i >= 0) {
+                if (!items[i].pinned) items[i] = items[i].copy(pinned = true)
+                ids.add(items[i].id)
+            } else {
+                val item = ClipItem(System.currentTimeMillis() + added, t, true, false)
+                items.add(0, item); ids.add(item.id); added++
+            }
+        }
+        save()
+        return added to ids
+    }
+
     fun delete(id: Long) {
         items.removeAll { it.id == id }
         save()
@@ -169,8 +192,7 @@ class ClipHistory(private val context: Context) {
          * (one page). Pinned items first, then recent.
          */
         fun sendAllToKeep(context: Context, items: List<ClipItem>): Boolean {
-            val ordered = items.filter { it.pinned } + items.filter { !it.pinned }
-            val text = ordered.joinToString("\n\n") { it.text }
+            val text = KeepNote.join(items.map { it.text })
             val intent = Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_SUBJECT, KEEP_NOTE_TITLE)

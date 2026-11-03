@@ -169,6 +169,21 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         ConfirmChip("না", IosColors.key, IosColors.text) { actions.onKeepConfirm(false) }
                         Spacer(Modifier.width(6.dp))
                     }
+                } else if (state.inlineViews.isNotEmpty() && !forceSuggestions) {
+                    // saved passwords / logins offered by the phone's autofill service (Google Password Manager …)
+                    androidx.compose.ui.viewinterop.AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx -> android.widget.LinearLayout(ctx).apply { gravity = android.view.Gravity.CENTER_VERTICAL } },
+                        update = { row ->
+                            row.removeAllViews()
+                            for (v in state.inlineViews) {
+                                (v.parent as? android.view.ViewGroup)?.removeView(v)
+                                row.addView(v, android.widget.LinearLayout.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                                ).apply { marginEnd = 6 })
+                            }
+                        }
+                    )
                 } else if (clip != null && !forceSuggestions) {
                     // Just copied → one tap pastes it (like Gboard)
                     Row(
@@ -521,7 +536,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                     actions.onClipEnabled(!enabled)
                 }
                 Spacer(Modifier.width(8.dp))
-                SmallIcon(Icons.Outlined.Edit, "সব Google Keep-এ সেভ") { actions.onClipAllToKeep() }
+                SmallIcon(Icons.Outlined.Edit, "পিন করা লেখা Google Keep-এ সেভ") { actions.onClipAllToKeep() }
             }
         }
         if (pinMode) {
@@ -531,6 +546,37 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp)).background(Color(0x24FFD54F)).padding(horizontal = 10.dp, vertical = 5.dp)
             )
+        }
+
+        if (enabled && !pinMode) {
+            val split = state.keepSplit
+            Row(
+                Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (split != null) {
+                    Text("${split.size}টি লেখা পাওয়া গেল", color = IosColors.text, fontSize = 13.sp.bn(), fontFamily = BanglaFont)
+                    ActionChip("যোগ করুন", null, IosColors.keepYellow) { actions.onKeepSplitApply() }
+                    ActionChip("✕", null) { actions.onKeepSplitCancel() }
+                } else {
+                    ActionChip("Keep নোট ভাগ করুন", null) { actions.onKeepSplitStart() }
+                    state.keepSplitMsg?.let {
+                        Text(it, color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont, maxLines = 1)
+                    }
+                }
+            }
+            if (split != null) {
+                Text(
+                    split.take(3).joinToString("  ·  ") { it.lineSequence().first().take(18) } + if (split.size > 3) "  …" else "",
+                    color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont, maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                state.keepSplitMsg?.let {
+                    Text(it, color = Color(0xFFFFD54F), fontSize = 12.sp.bn(), fontFamily = BanglaFont,
+                        modifier = Modifier.padding(horizontal = 12.dp))
+                }
+            }
         }
 
         val sel = clips.firstOrNull { it.id == selected }
@@ -558,7 +604,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
         } else if (clips.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "কিছু কপি করুন — সাথে সাথে এখানে আসবে।\n✎ চাপলে সব লেখা Google Keep-এ এক পাতায় সেভ হবে।",
+                    "কিছু কপি করুন — সাথে সাথে এখানে আসবে।\n✎ চাপলে শুধু পিন করা লেখা Google Keep-এ এক পাতায় সেভ হবে।",
                     color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont
                 )
             }

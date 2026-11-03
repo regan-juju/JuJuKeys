@@ -52,6 +52,11 @@ class KeyboardState {
 
     /** Number of clipboard items handed to Keep and waiting for "সেভ হয়েছে?" (0 = none). */
     var keepConfirm by mutableStateOf(0)
+    /** Autofill chips (saved passwords …) drawn by the autofill provider; shown in the top bar. */
+    var inlineViews by mutableStateOf<List<android.view.View>>(emptyList())
+    /** Items cut out of a copied Keep note, waiting for "যোগ করুন" (null = nothing to show). */
+    var keepSplit by mutableStateOf<List<String>?>(null)
+    var keepSplitMsg by mutableStateOf<String?>(null)
 
     /** Just-copied text, shown as a chip in the suggestion bar (like Gboard). */
     var freshClip by mutableStateOf<String?>(null)
@@ -170,6 +175,10 @@ interface KeyboardActions {
     /** Copy / Keep / view a clipboard item (sensitive ones ask for the phone lock first). */
     fun onClipAction(id: Long, action: com.reganbarua.jujukeys.security.SensitiveAction)
     fun onClipAllToKeep()
+    /** "Keep নোট ভাগ করুন": cut the note on the clipboard into items (preview only). */
+    fun onKeepSplitStart()
+    fun onKeepSplitApply()
+    fun onKeepSplitCancel()
     /** The user's answer to "Keep-এ সেভ হয়েছে?". */
     fun onKeepConfirm(saved: Boolean)
     fun onClipEnabled(on: Boolean)
