@@ -71,6 +71,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -109,25 +111,43 @@ import com.reganbarua.jujukeys.security.SensitiveAction
 internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, forceSuggestions: Boolean = false) {
     val bangla = state.language == Language.BANGLA
     val toolsOpen = state.toolsOpen
+    LaunchedEffect(toolsOpen) { if (toolsOpen) { delay(6000); state.toolsOpen = false } }
     val toolsVisible = remember { MutableTransitionState(false) }
     toolsVisible.targetState = toolsOpen
 
     Row(
-        Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 4.4.dp),
+        Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // son's photo = the tools key: tap opens Keep / Translate / Settings (and lights the keyboard); tap again closes
+        // language key: tap = switch Bangla/English, hold = Keep / Translate / Settings (6 s, or until one is chosen).
+        // Looks like the other keys; only a thin soft light round the border (Bangla green, English blue).
+        val langCol = if (bangla) Color(0xFF34D399) else Color(0xFF4DA3FF)
         PressBox(
-            Modifier.size(width = 44.dp, height = 36.dp)
-                .then(if (toolsOpen) Modifier.border(1.5.dp, IosColors.text.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier)
-                .toolsGlow(state, 0.08f, 0f),
+            Modifier.size(width = 44.dp, height = 38.dp)
+                .drawBehind {
+                    val cr = 10.dp.toPx()
+                    for ((pad, al) in listOf(3.3f to 0.22f, 2.2f to 0.38f, 1.1f to 0.60f)) {
+                        val p = pad.dp.toPx()
+                        drawRoundRect(
+                            langCol.copy(alpha = al), Offset(-p, -p),
+                            androidx.compose.ui.geometry.Size(size.width + 2 * p, size.height + 2 * p),
+                            androidx.compose.ui.geometry.CornerRadius(cr + p)
+                        )
+                    }
+                }
+                .border(
+                    if (toolsOpen) 1.5.dp else 1.dp,
+                    if (toolsOpen) IosColors.text.copy(alpha = 0.55f) else langCol,
+                    RoundedCornerShape(10.dp)
+                ),
             shape = RoundedCornerShape(10.dp),
             color = IosColors.keyOr(0, IosColors.key), pressedColor = IosColors.rainbowAt(0)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
-            onTap = { state.toolsOpen = !state.toolsOpen }
+            onTap = { state.toolsOpen = false; actions.onToggleLanguage() },
+            onLongPress = { state.toolsOpen = !state.toolsOpen }
         ) {
-            androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(com.reganbarua.jujukeys.R.drawable.logo),
-                contentDescription = "টুলস", modifier = Modifier.size(34.dp)
+            Text(
+                if (bangla) "ক" else "A", color = IosColors.text, fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold, fontFamily = if (bangla) BanglaFont else null
             )
         }
 
@@ -192,23 +212,23 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(8.dp))
-                    ToolButton(state, 0.21f, state.panel == Panel.CLIPBOARD, {
+                    ToolButton(state.panel == Panel.CLIPBOARD, {
                         state.toolsOpen = false
                         actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD)
                     }) { KeepIcon() }
                     Spacer(Modifier.width(8.dp))
-                    ToolButton(state, 0.33f, state.translateOn, { state.toolsOpen = false; actions.onTranslateToggle() }) {
+                    ToolButton(state.translateOn, { state.toolsOpen = false; actions.onTranslateToggle() }) {
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
-                    ToolButton(state, 0.44f, false, { state.toolsOpen = false; actions.onOpenSettings() }) {
+                    ToolButton(false, { state.toolsOpen = false; actions.onOpenSettings() }) {
                         Icon(Icons.Filled.Settings, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                 }
             }
         }
-        BackKey(actions, state)
+        BackKey(actions)
     }
 }
 
@@ -224,9 +244,9 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
 @Composable
-internal fun BackKey(actions: KeyboardActions, state: KeyboardState? = null) {
+internal fun BackKey(actions: KeyboardActions) {
     PressBox(
-        Modifier.size(width = 62.dp, height = 36.dp),
+        Modifier.size(width = 62.dp, height = 38.dp),
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },
@@ -250,9 +270,9 @@ private fun KeepIcon() {
 }
 
 @Composable
-private fun ToolButton(state: KeyboardState, u: Float, active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
+private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 48.dp, height = 36.dp),
+        Modifier.size(width = 48.dp, height = 38.dp),
         shape = RoundedCornerShape(10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,

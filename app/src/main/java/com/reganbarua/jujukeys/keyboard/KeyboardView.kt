@@ -179,31 +179,6 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
         LocalKeyWeight provides if (prefs.boldKeys) FontWeight.Medium else FontWeight.Normal,   // "হালকা বোল্ড"
         LocalSpaceCursor provides (prefs.spaceCursorDelay to prefs.spaceCursorSpeed),
     ) {
-        // border-glow clock: runs only while the tools are open (or fading out)
-        LaunchedEffect(state.toolsOpen) {
-            if (state.toolsOpen) {
-                state.glowT = 0f
-                val start = androidx.compose.runtime.withFrameMillis { it }
-                val fadeIn = Animatable(state.glowFade)
-                launch { fadeIn.animateTo(1f, tween(150)) { state.glowFade = value } }
-                while (true) {
-                    val now = androidx.compose.runtime.withFrameMillis { it }
-                    state.glowT = (now - start) / 1000f
-                }
-            } else if (state.glowFade > 0f) {
-                val fadeOut = Animatable(state.glowFade)
-                val start = androidx.compose.runtime.withFrameMillis { it }
-                launch {
-                    while (true) {
-                        val now = androidx.compose.runtime.withFrameMillis { it }
-                        state.glowT = state.glowT + 0.016f
-                        if (now - start > 600) break
-                    }
-                }
-                fadeOut.animateTo(0f, tween(450)) { state.glowFade = value }
-                state.glowFade = 0f
-            }
-        }
         SideEffect {
             if (banglaFontChoice.value != prefs.banglaFont) banglaFontChoice.value = prefs.banglaFont
             val s = listOf(1f, 1.1f, 1.2f, 1.3f)[prefs.banglaTextSize.coerceIn(0, 3)] * (if (prefs.banglaFont == 1) 1.2f else 1f)
@@ -568,82 +543,48 @@ internal fun KeyLabel(text: String, size: TextUnit) {
 
 // ------------------------------------------------------------------ bottom strip
 
-/** Strip under the keys (same height as the top bar): 🌐 under the photo key · ⌃ · language key in the middle · 🎤 under the ⟵ key. */
+/** Strip under the keys: 🌐 · faded ⌃ (more suggestions rise up) ·························· 🎤 */
 @Composable
 private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
-    Box(Modifier.fillMaxWidth().height(46.dp)) {
-        Row(
-            Modifier.fillMaxSize().padding(horizontal = 4.4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
-            // 44 dp wide like the photo key above it, so it sits right under it.
-            StripButton(width = 44.dp, onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
-                Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.text, modifier = Modifier.size(26.dp))
-            }
-            if (state.prefs.showSuggestions && state.emojiSearch == null) {
-                Spacer(Modifier.width(12.dp))
-                val open = state.panel == Panel.SUGGESTIONS
-                StripButton(width = 44.dp, onTap = { actions.onPanel(if (open) Panel.KEYS else Panel.SUGGESTIONS) }) {
-                    Icon(
-                        if (open) Symbols.arrowDown else Symbols.arrowUp, "আরও সাজেশন",
-                        tint = IosColors.text.copy(alpha = 0.42f), modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            if (state.prefs.showVoiceKey) {
-                // 62 dp wide like the ⟵ key above it, so it sits right under it.
-                StripButton(width = 62.dp, onTap = { actions.onVoice() }) {
-                    Icon(Symbols.mic, "ভয়েস", tint = IosColors.text, modifier = Modifier.size(26.dp))
-                }
-            } else {
-                Spacer(Modifier.width(62.dp))
+    Row(
+        Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
+        StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
+            Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.text, modifier = Modifier.size(32.dp))
+        }
+        if (state.prefs.showSuggestions && state.emojiSearch == null) {
+            Spacer(Modifier.width(20.dp))
+            val open = state.panel == Panel.SUGGESTIONS
+            StripButton(onTap = { actions.onPanel(if (open) Panel.KEYS else Panel.SUGGESTIONS) }) {
+                Icon(
+                    if (open) Symbols.arrowDown else Symbols.arrowUp, "আরও সাজেশন",
+                    tint = IosColors.text.copy(alpha = 0.42f), modifier = Modifier.size(30.dp)
+                )
             }
         }
-        // language key: exactly in the middle of the keyboard
-        Box(Modifier.align(Alignment.Center)) { LangKey(state, actions) }
-    }
-}
-
-/** Language key: ONE key. Bangla shows ক, English shows A; tap = switch. Always lit: English blue, Bangla green. */
-@Composable
-private fun LangKey(state: KeyboardState, actions: KeyboardActions) {
-    val bangla = state.language == Language.BANGLA
-    val col = if (bangla) Color(0xFF34D399) else Color(0xFF4DA3FF)
-    val shape = RoundedCornerShape(10.dp)
-    PressBox(
-        Modifier.size(width = 44.dp, height = 32.dp)
-            .drawBehind {
-                // soft light round the key (always on)
-                val cr = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx())
-                drawRoundRect(col.copy(alpha = 0.10f), Offset(-8.dp.toPx(), -8.dp.toPx()), Size(size.width + 16.dp.toPx(), size.height + 16.dp.toPx()), androidx.compose.ui.geometry.CornerRadius(18.dp.toPx()))
-                drawRoundRect(col.copy(alpha = 0.18f), Offset(-5.dp.toPx(), -5.dp.toPx()), Size(size.width + 10.dp.toPx(), size.height + 10.dp.toPx()), androidx.compose.ui.geometry.CornerRadius(15.dp.toPx()))
-                drawRoundRect(col.copy(alpha = 0.30f), Offset(-2.5.dp.toPx(), -2.5.dp.toPx()), Size(size.width + 5.dp.toPx(), size.height + 5.dp.toPx()), cr)
+        Spacer(Modifier.weight(1f))
+        if (state.prefs.showVoiceKey) {
+            StripButton(onTap = { actions.onVoice() }) {
+                Icon(Symbols.mic, "ভয়েস", tint = IosColors.text, modifier = Modifier.size(32.dp))
             }
-            .border(1.6.dp, col, shape),
-        shape = shape,
-        color = Color(0xFF1E1E20), pressedColor = Color(0xFF2C2C2E),
-        onTap = { actions.onToggleLanguage() }
-    ) {
-        Text(
-            if (bangla) "ক" else "A", color = col, fontSize = 19.sp,
-            fontWeight = FontWeight.Bold, fontFamily = if (bangla) BanglaFont else null
-        )
+        } else {
+            Spacer(Modifier.width(52.dp))
+        }
     }
 }
 
 @Composable
 private fun StripButton(
-    width: androidx.compose.ui.unit.Dp = 52.dp,
     active: Boolean = false,
     onTap: () -> Unit,
     onLongPress: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     PressBox(
-        Modifier.size(width = width, height = 36.dp),
-        shape = RoundedCornerShape(10.dp),
+        Modifier.size(width = 52.dp, height = 44.dp),
+        shape = RoundedCornerShape(12.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.35f) else Color.Transparent,
         pressedColor = IosColors.keyPressed,
         onTap = onTap, onLongPress = onLongPress, content = content

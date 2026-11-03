@@ -128,31 +128,3 @@ internal fun rememberGlowLevel(pressed: Boolean): Float {
     }
     return a.value
 }
-
-/**
- * Border light while the tools are open: a ripple spreads from the photo key (top-left), then a soft colour
- * flows across all keys. [u] 0..1 across the width, [v] 0..1 down the keyboard, [t] seconds since open, [fade] 0..1.
- */
-internal fun DrawScope.drawToolsGlow(r: Rect, corner: Float, u: Float, v: Float, t: Float, fade: Float) {
-    if (fade <= 0.01f) return
-    val d = kotlin.math.hypot(u - 0.08f, v * 0.6f)
-    val x = ((t - d * 0.9f) / 0.35f).coerceIn(0f, 1f)
-    val ease = x * x * (3f - 2f * x)
-    val breathe = 0.50f + 0.08f * kotlin.math.sin(Math.PI.toFloat() * t)
-    val a = ease * fade * breathe
-    if (a <= 0.01f) return
-    val hue = (((u * 0.8f + v * 0.2f + t / 4f) % 1f) + 1f) % 1f
-    val c = Color.hsv(hue * 360f, 0.75f, 1f)
-    val cr = CornerRadius(corner, corner)
-    val dp = density
-    drawRoundRect(c.copy(alpha = a * 0.22f), r.topLeft, r.size, cr, style = Stroke(width = 7f * dp))
-    drawRoundRect(c.copy(alpha = a * 0.45f), r.topLeft, r.size, cr, style = Stroke(width = 5f * dp))
-    drawRoundRect(c.copy(alpha = (a * 1.3f).coerceAtMost(1f)), r.topLeft, r.size, cr, style = Stroke(width = 1.6f * dp))
-}
-
-/** Modifier that adds the tools border glow over a top-bar/bottom-bar button. */
-internal fun Modifier.toolsGlow(state: KeyboardState, u: Float, v: Float, cornerDp: Float = 10f): Modifier =
-    this.drawWithContent {
-        drawContent()
-        drawToolsGlow(Rect(Offset.Zero, size), cornerDp * density, u, v, state.glowT, state.glowFade)
-    }

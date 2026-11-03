@@ -83,9 +83,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             add(chars(KeyboardLayouts.lettersRow1, longPressOn))
             add(listOf(GKey(KType.GAP, 0.5f)) + chars(KeyboardLayouts.lettersRow2, longPressOn) + GKey(KType.GAP, 0.5f))
             add(
-                listOf(GKey(KType.SHIFT, 1.5f)) +
+                listOf(GKey(KType.SHIFT, 1.29f), GKey(KType.GAP, 0.21f)) +
                     chars(KeyboardLayouts.lettersRow3, longPressOn, colOffset = 1) +
-                    listOf(GKey(KType.SHIFT, 1.5f))   // wide Shift on both sides, no gap (backspace is in the top bar)
+                    listOf(GKey(KType.GAP, 0.21f), GKey(KType.SHIFT, 1.29f))   // Shift on both sides (backspace is in the top bar)
             )
             add(
                 buildList {
