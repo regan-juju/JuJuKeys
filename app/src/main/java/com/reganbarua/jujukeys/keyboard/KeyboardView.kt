@@ -53,6 +53,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
@@ -157,6 +158,8 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
 
     val theme = Themes.byId(prefs.theme)
     IosColors.apply(theme)
+    val bgBitmap: androidx.compose.ui.graphics.ImageBitmap? =
+        theme.bgImage?.let { androidx.compose.ui.graphics.ImageBitmap.imageResource(it) }
 
     // keyboard opened: the light round it comes up (0.3 s) and fades away (0.9 s)
     val openLight = remember { Animatable(0f) }
@@ -200,6 +203,21 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     onDrawBehind {
                         drawRect(bg)
                         blobs.forEach { drawRect(it) }
+                        if (bgBitmap != null) {
+                            // the picture fills the key pad only; the bottom strip (🌐 ^ 🎤) stays plain dark
+                            val padH = (h - 62.dp.toPx()).coerceAtLeast(1f)
+                            val scale = w / bgBitmap.width
+                            val srcH = (padH / scale).toInt().coerceIn(1, bgBitmap.height)
+                            val srcTop = ((bgBitmap.height - srcH) * 0.48f).toInt()
+                            drawImage(
+                                bgBitmap,
+                                srcOffset = androidx.compose.ui.unit.IntOffset(0, srcTop),
+                                srcSize = androidx.compose.ui.unit.IntSize(bgBitmap.width, srcH),
+                                dstSize = androidx.compose.ui.unit.IntSize(w.toInt(), padH.toInt()),
+                                filterQuality = androidx.compose.ui.graphics.FilterQuality.High
+                            )
+                            drawRect(Color(0x40000000), size = Size(w, padH))   // slight dark veil so letters stay clear
+                        }
                     }
                 }
                 .border(1.dp, IosColors.topEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))

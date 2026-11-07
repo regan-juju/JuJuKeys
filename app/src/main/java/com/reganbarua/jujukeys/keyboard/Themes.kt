@@ -38,6 +38,8 @@ internal class KbTheme(
     val rainbow: List<Color>? = null,
     /** Colour for the 123 key in the rainbow theme. */
     val accent: Color? = null,
+    /** Picture drawn behind the key pad (suggestion bar + key rows); the bottom strip stays plain [bg]. */
+    @androidx.annotation.DrawableRes val bgImage: Int? = null,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -129,6 +131,16 @@ internal object Themes {
                 Color(0xC817B5AE), Color(0xC82E9BE0), Color(0xC81E6FF0), Color(0xC85059D6), Color(0xC89B4DE0),
             ),
             accent = Color(0xC8E0606A),
+        ),
+        KbTheme(
+            "pattern", "Pattern glass",
+            bg = Color(0xFF1C1C1E), blobs = emptyList(),
+            // extra see-through glass keys with a brighter rim, over the picture
+            key = Color(0x38FFFFFF), keyPressed = Color(0x70FFFFFF), fn = Color(0x26FFFFFF),
+            glassTop = Color(0xDEFFFFFF), edge = Color(0x59FFFFFF),
+            card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
+            panel = Color(0xF21C1C1E), nav = 0xFF1C1C1E.toInt(),
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_pattern,
         ),
         KbTheme(
             "white", "White glass",
