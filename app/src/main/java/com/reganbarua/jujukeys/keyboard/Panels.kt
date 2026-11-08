@@ -125,22 +125,28 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
         PressBox(
             Modifier.size(width = 44.dp, height = 38.dp)
                 .drawBehind {
-                    val cr = 10.dp.toPx()
-                    for ((pad, al) in listOf(3.3f to 0.22f, 2.2f to 0.38f, 1.1f to 0.60f)) {
-                        val p = pad.dp.toPx()
-                        drawRoundRect(
-                            langCol.copy(alpha = al), Offset(-p, -p),
-                            androidx.compose.ui.geometry.Size(size.width + 2 * p, size.height + 2 * p),
-                            androidx.compose.ui.geometry.CornerRadius(cr + p)
-                        )
+                    // soft light ONLY outside the key (the key itself keeps exactly the theme's key colour)
+                    val cr = 8.dp.toPx()
+                    val keyPath = androidx.compose.ui.graphics.Path().apply {
+                        addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(cr)))
+                    }
+                    androidx.compose.ui.graphics.drawscope.clipPath(keyPath, androidx.compose.ui.graphics.ClipOp.Difference) {
+                        for ((pad, al) in listOf(4.0f to 0.20f, 2.8f to 0.34f, 1.6f to 0.55f)) {
+                            val p = pad.dp.toPx()
+                            drawRoundRect(
+                                langCol.copy(alpha = al), Offset(-p, -p),
+                                androidx.compose.ui.geometry.Size(size.width + 2 * p, size.height + 2 * p),
+                                androidx.compose.ui.geometry.CornerRadius(cr + p)
+                            )
+                        }
                     }
                 }
                 .border(
                     if (toolsOpen) 1.5.dp else 1.dp,
                     if (toolsOpen) IosColors.text.copy(alpha = 0.55f) else langCol,
-                    RoundedCornerShape(10.dp)
+                    KeyShape
                 ),
-            shape = RoundedCornerShape(10.dp),
+            shape = KeyShape,
             color = IosColors.keyOr(0, IosColors.key), pressedColor = IosColors.rainbowAt(0)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
             onTap = { state.toolsOpen = false; actions.onToggleLanguage() },
             onLongPress = { state.toolsOpen = !state.toolsOpen }

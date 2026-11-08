@@ -1,6 +1,7 @@
 package com.reganbarua.jujukeys.bengali
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class AvroPhoneticTest {
@@ -78,5 +79,17 @@ class AvroPhoneticTest {
         assertEquals(AvroPhonetic.convert("ami"), AvroPhonetic.convert("AMI".replace("I", "i")))
         assertEquals("ট", AvroPhonetic.convert("T"))
         assertEquals("ত", AvroPhonetic.convert("t"))
+    }
+
+    /** Word-initial র + ্য needs the joiner (র‍্যাব); in the middle it stays reph. */
+    @Test
+    fun raYaPhalaAtWordStartGetsJoiner() {
+        val zwj = "\u200d"
+        assertEquals("র${zwj}্যাব", AvroPhonetic.convert("rZab"))
+        assertEquals("র${zwj}্যালি", AvroPhonetic.convert("rZali"))
+        assertEquals("অ্যানিমেশন", AvroPhonetic.convert("oZanimeSon"))     // অ্যা has no joiner
+        assertEquals("ন্যায়", AvroPhonetic.convert("nzay"))
+        assertEquals("প্রযুক্তি", AvroPhonetic.convert("przukti"))
+        assertFalse(AvroPhonetic.convert("sUrrjo").contains(zwj))          // reph in the middle: no joiner
     }
 }

@@ -24,6 +24,11 @@ class Learner {
     fun nextWords(previous: String, n: Int): List<String> =
         next[previous]?.entries?.sortedByDescending { it.value }?.take(n)?.map { it.key } ?: emptyList()
 
+    /** How often each word followed [previous] ("আমি" → {ভালো: 3, তোমাকে: 2}); empty when unknown. A copy. */
+    @Synchronized
+    fun nextCounts(previous: String?): Map<String, Int> =
+        if (previous.isNullOrBlank()) emptyMap() else HashMap(next[previous] ?: emptyMap())
+
     @Synchronized
     fun count(word: String): Int = counts[word] ?: 0
 

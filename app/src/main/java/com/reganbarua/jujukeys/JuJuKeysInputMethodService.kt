@@ -1082,7 +1082,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             val raw: List<String> = when {
                 bangla && romanNow.isNotEmpty() -> {
                     val conv = AvroPhonetic.convert(romanNow)
-                    val list0 = s?.bangla(conv, 18) ?: listOf(conv)
+                    val list0 = s?.bangla(conv, 18, learner.nextCounts(prev)) ?: listOf(conv)
                     // jemon → যেমন first (Avro's জেমন stays as the 2nd choice)
                     val fix = if (romanNow.length >= 3 && p.banglaAutoFix) s?.autoFix(conv) else null
                     val base = if (fix != null) listOf(fix) + list0.filter { it != fix } else list0
@@ -1096,7 +1096,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     RomanAliases.merge(base, aliases?.lookup(romanNow) ?: emptyList())
                 }
                 !bangla && typed.isNotEmpty() ->
-                    (s?.english(typed, 18) ?: emptyList()).map { matchCase(it, typed) }
+                    (s?.english(typed, 18, learner.nextCounts(prev)) ?: emptyList()).map { matchCase(it, typed) }
                 else -> nextWordList(bangla, prev, s)
             }
             val list = if (p.blockOffensive) raw.filter { it.lowercase() !in OFFENSIVE } else raw

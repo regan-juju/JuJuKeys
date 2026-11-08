@@ -226,7 +226,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
     }
 
     /** Up to [n] English words (lowercase) completing [prefix]. */
-    fun english(prefix: String, n: Int = 3): List<String> {
+    fun english(prefix: String, n: Int = 3, context: Map<String, Int> = emptyMap()): List<String> {
         val p = prefix.lowercase()
         if (p.isEmpty()) return emptyList()
         val out = LinkedHashSet<String>()
@@ -238,7 +238,8 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         learnedEn.asSequence().filter { it.first.startsWith(p) && it.first != p }.take(n)
             .forEach { if (out.size < n) out.add(it.first) }
         val learned = learnedCounts
-        found.sortedByDescending { (learned[it.word] ?: 0) * 1_000_000_000L + it.freq }
+        // words that usually come after the previous word first, then words typed often, then by frequency
+        found.sortedByDescending { (context[it.word] ?: 0) * CONTEXT_WEIGHT + (learned[it.word] ?: 0) * 1_000_000_000L + it.freq }
             .forEach { if (out.size < n) out.add(it.word) }
         if (out.size < n) extraEnglishMatches(p, n - out.size + 2).forEach { if (out.size < n) out.add(it) }
         return out.toList()
@@ -261,20 +262,25 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         if (w.length < 3 || userEnglish.any { it.equals(w, true) }) return null
         val own = englishFreq(w)   // common misspellings are in the list too, but far rarer
         val letters = "abcdefghijklmnopqrstuvwxyz"
-        val edits = HashSet<String>()
+        // every candidate with a weight: a slip to a NEIGHBOUR key counts fully, a letter from the far side of the
+        // keyboard only KeyNeighbors.FAR_KEY of its frequency (gello → hello, not jello)
+        val edits = HashMap<String, Double>()
+        fun add(e: String, weight: Double) { if (weight > (edits[e] ?: 0.0)) edits[e] = weight }
         for (i in 0..w.length) {
-            if (i < w.length) edits.add(w.removeRange(i, i + 1))                       // delete
-            if (i < w.length - 1) edits.add(w.substring(0, i) + w[i + 1] + w[i] + w.substring(i + 2)) // swap
+            if (i < w.length) add(w.removeRange(i, i + 1), 1.0)                                        // delete
+            if (i < w.length - 1) add(w.substring(0, i) + w[i + 1] + w[i] + w.substring(i + 2), 1.0)   // swap
             for (c in letters) {
-                if (i < w.length) edits.add(w.substring(0, i) + c + w.substring(i + 1))  // replace
-                edits.add(w.substring(0, i) + c + w.substring(i))                         // insert
+                if (i < w.length) add(w.substring(0, i) + c + w.substring(i + 1), KeyNeighbors.replaceWeight(w[i], c)) // replace
+                add(w.substring(0, i) + c + w.substring(i), 1.0)                                        // insert
             }
         }
         var best: String? = null
+        var bestScore = 0.0
         var bestF = 0L
-        for (e in edits) {
+        for ((e, weight) in edits) {
             val f = englishFreq(e)
-            if (f > bestF) { bestF = f; best = e }
+            val score = f * weight
+            if (score > bestScore) { bestScore = score; bestF = f; best = e }
         }
         return if (bestF >= 50 && bestF > own * 50) best else null
     }
@@ -326,7 +332,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
     }
 
     /** Up to [n] Bangla words for the Avro conversion [converted]. */
-    fun bangla(converted: String, n: Int = 3): List<String> {
+    fun bangla(converted: String, n: Int = 3, context: Map<String, Int> = emptyMap()): List<String> {
         if (converted.isEmpty()) return emptyList()
         val key = skeleton(converted)
         if (key.isEmpty()) return listOf(converted)
@@ -334,7 +340,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         val found = top(bangla, "bn", key, 60)
         val same = found.filter { it.key == key }
         val longer = found.filter { it.key != key }
-        val rank = { e: Entry -> (learned[e.word] ?: 0) * 1_000_000_000L + e.freq }
+        val rank = { e: Entry -> (context[e.word] ?: 0) * CONTEXT_WEIGHT + (learned[e.word] ?: 0) * 1_000_000_000L + e.freq }
         val out = LinkedHashSet<String>()
         out.add(nfc(converted))
         userBangla.filter { it.second.startsWith(key) }.forEach { if (out.size < n) out.add(it.first) }
@@ -346,6 +352,9 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
     }
 
     companion object {
+        /** A word that followed the previous word before outranks one that was only typed often (1 time ≈ 1000 typed). */
+        private const val CONTEXT_WEIGHT = 1_000_000_000_000L
+
         /** One Unicode spelling, so the same word never shows twice. */
         fun nfc(s: String): String = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC)
 

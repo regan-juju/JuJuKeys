@@ -281,6 +281,9 @@ object AvroPhonetic {
             i += len
         }
         if (out.endsWith(HASANTA)) out.append('\u200c')   // allahhs → আল্লাহ্‌
+        // word-initial র + ্য is ra with ya-phala (র‍্যাব, র‍্যালি): র ZWJ ্ য. Without the joiner the font
+        // draws a reph over য (র্য), which is wrong at the start of a word (সূর্য in the middle keeps it).
+        if (out.length >= 3 && out[0] == 'র' && out[1] == '্' && out[2] == 'য') out.insert(1, '\u200d')
         return out.toString()
     }
 
