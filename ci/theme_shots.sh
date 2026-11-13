@@ -26,8 +26,8 @@ set_theme() {
   for i in 1 2 3 4 5 6; do sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG; sleep 3; sh settings get secure default_input_method | grep -q jujukeys && break; done
   echo "default IME: $(sh settings get secure default_input_method)" >> $LOG
 }
-for T in pattern current amoled; do
-  set_theme $T
+for T in warmup pattern pattern2; do
+  TH=$T; [ "$T" = warmup ] && TH=current; [ "$T" = pattern2 ] && TH=pattern; set_theme $TH
   sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >> $LOG; sleep 8
   for t in 1 2 3 4; do
     focus_field; sleep 3
