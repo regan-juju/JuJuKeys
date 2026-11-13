@@ -216,7 +216,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                                 dstSize = androidx.compose.ui.unit.IntSize(w.toInt(), padH.toInt()),
                                 filterQuality = androidx.compose.ui.graphics.FilterQuality.High
                             )
-                            drawRect(Color(0x40000000), size = Size(w, padH))   // slight dark veil so letters stay clear
+                            drawRect(Color(theme.bgVeil shl 24), size = Size(w, padH))   // slight dark veil so letters stay clear
                         }
                     }
                 }
