@@ -40,6 +40,8 @@ internal class KbTheme(
     val accent: Color? = null,
     /** Picture drawn behind the key pad (suggestion bar + key rows); the bottom strip stays plain [bg]. */
     @androidx.annotation.DrawableRes val bgImage: Int? = null,
+    /** Dark veil over [bgImage] (0..255) so the letters stay readable. */
+    val bgVeil: Int = 0x40,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -136,11 +138,21 @@ internal object Themes {
             "pattern", "Pattern glass",
             bg = Color(0xFF1C1C1E), blobs = emptyList(),
             // extra see-through glass keys with a brighter rim, over the picture
-            key = Color(0x38FFFFFF), keyPressed = Color(0x70FFFFFF), fn = Color(0x26FFFFFF),
+            key = Color(0x40FFFFFF), keyPressed = Color(0x78FFFFFF), fn = Color(0x2EFFFFFF),
             glassTop = Color(0xDEFFFFFF), edge = Color(0x59FFFFFF),
             card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
             panel = Color(0xF21C1C1E), nav = 0xFF1C1C1E.toInt(),
-            bgImage = com.reganbarua.jujukeys.R.drawable.theme_pattern,
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_pattern, bgVeil = 0x78,
+        ),
+        KbTheme(
+            "patternB", "Pattern glass B",
+            bg = Color(0xFF1C1C1E), blobs = emptyList(),
+            // extra see-through glass keys with a brighter rim, over the picture
+            key = Color(0xA0262628), keyPressed = Color(0xC84A4A50), fn = Color(0xB0202022),
+            glassTop = Color(0xDEFFFFFF), edge = Color(0x59FFFFFF),
+            card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
+            panel = Color(0xF21C1C1E), nav = 0xFF1C1C1E.toInt(),
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_pattern, bgVeil = 0x96,
         ),
         KbTheme(
             "white", "White glass",
