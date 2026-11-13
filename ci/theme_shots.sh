@@ -23,10 +23,10 @@ set_theme() {
   sh am force-stop $PKG
   sh "run-as $PKG sh -c 'mkdir -p shared_prefs && cp /data/local/tmp/p.xml shared_prefs/jujukeys_settings.xml'" >> $LOG
   sh "run-as $PKG cat shared_prefs/jujukeys_settings.xml" >> $LOG
-  sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG; sleep 2
+  for i in 1 2 3 4 5 6; do sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG; sleep 3; sh settings get secure default_input_method | grep -q jujukeys && break; done
   echo "default IME: $(sh settings get secure default_input_method)" >> $LOG
 }
-for T in pattern current amoled white; do
+for T in pattern current amoled; do
   set_theme $T
   sh am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact >> $LOG; sleep 8
   for t in 1 2 3 4; do
