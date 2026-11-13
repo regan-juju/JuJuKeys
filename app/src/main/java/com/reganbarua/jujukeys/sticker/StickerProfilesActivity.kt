@@ -65,6 +65,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -104,7 +107,7 @@ class StickerProfilesActivity : ComponentActivity() {
         reload()
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Accent, background = Bg, surface = Color(0xFF2B2B2B))) {
-                Box(Modifier.fillMaxSize().background(Bg)) {
+                Box(Modifier.fillMaxSize().background(Bg).windowInsetsPadding(WindowInsets.safeDrawing)) {   // Android 15 edge-to-edge
                     val a = assign
                     if (a != null) AssignScreen(a) else BrowseScreen()
                 }

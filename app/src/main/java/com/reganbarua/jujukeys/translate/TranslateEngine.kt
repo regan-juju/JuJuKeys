@@ -37,7 +37,7 @@ class TranslateEngine(private val context: Context) {
     data class Result(val text: String, val online: Boolean)
 
     private val main = Handler(Looper.getMainLooper())
-    private val translators = HashMap<String, Translator>()
+    private val translators = java.util.concurrent.ConcurrentHashMap<String, Translator>()
 
     fun isOnline(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -147,7 +147,8 @@ class TranslateEngine(private val context: Context) {
     }
 
     private fun translator(from: String, to: String): Translator =
-        translators.getOrPut("$from>$to") {
+        // computeIfAbsent: two threads asking at once still get ONE translator (no leaked duplicate)
+        translators.computeIfAbsent("$from>$to") {
             Translation.getClient(
                 TranslatorOptions.Builder().setSourceLanguage(mlkit(from)!!).setTargetLanguage(mlkit(to)!!).build()
             )

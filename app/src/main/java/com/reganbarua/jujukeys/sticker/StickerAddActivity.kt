@@ -37,6 +37,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,9 +83,13 @@ class StickerAddActivity : ComponentActivity() {
                 val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
                     if (uris.isNotEmpty()) process(uris)
                 }
-                Screen(onPick = {
-                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                })
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxSize().background(Bg).windowInsetsPadding(WindowInsets.safeDrawing)   // Android 15 edge-to-edge
+                ) {
+                    Screen(onPick = {
+                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    })
+                }
             }
         }
         sharedUris(intent).takeIf { it.isNotEmpty() }?.let { process(it) }
