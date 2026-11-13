@@ -6,7 +6,7 @@ IME=$PKG/.JuJuKeysInputMethodService
 sh() { adb shell "$@" 2>&1 | tr -d '\r'; }
 mkdir -p shots; LOG=shots/api${API}-steps.txt
 APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
-adb install -r "$APK" >> $LOG 2>&1
+adb install -r "$APK" >> $LOG 2>&1; sleep 15
 sh settings put secure show_ime_with_hard_keyboard 1 >> $LOG
 for i in 1 2 3 4 5; do
   sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
@@ -23,6 +23,8 @@ set_theme() {
   sh am force-stop $PKG
   sh "run-as $PKG sh -c 'mkdir -p shared_prefs && cp /data/local/tmp/p.xml shared_prefs/jujukeys_settings.xml'" >> $LOG
   sh "run-as $PKG cat shared_prefs/jujukeys_settings.xml" >> $LOG
+  sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG; sleep 2
+  echo "default IME: $(sh settings get secure default_input_method)" >> $LOG
 }
 for T in pattern current amoled white; do
   set_theme $T
