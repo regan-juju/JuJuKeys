@@ -19,10 +19,10 @@ for round in warm real; do
   sleep 1
   sh input swipe 20 330 20 330 900; sleep 2
   adb exec-out screencap -p > shots/api${API}-${round}-tools.png
-  for x in 56 70; do
-    sh input tap $x 330; sleep 2
+  for x in 84; do
+    sh input tap $x 335; sleep 2
     adb exec-out screencap -p > shots/api${API}-${round}-tap$x.png
-    [ $x = 56 ] && { sh input swipe 20 330 20 330 900; sleep 2; }
+    :
   done
   sh input keyevent KEYCODE_HOME; sleep 1
 done
