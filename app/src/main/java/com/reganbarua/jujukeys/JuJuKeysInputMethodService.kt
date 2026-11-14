@@ -1241,7 +1241,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 val data = ClipData.newPlainText("JuJuKeys", item.text)
                 if (item.sensitive) data.description.extras = PersistableBundle().apply { putBoolean(EXTRA_IS_SENSITIVE, true) }
                 clipboard().setPrimaryClip(data)
-                toast("কপি হয়েছে")
+                toast("Copied")
             }
             SensitiveAction.KEEP -> onClipToKeep(item.text)          // only when the user picks it
             SensitiveAction.VIEW -> state.panel = Panel.CLIPBOARD
@@ -1267,8 +1267,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onClipToKeep(text: String) {
-        if (ClipHistory.sendToKeep(this, text)) toast("Google Keep-এ সেভ করতে 'Save' চাপুন")
-        else toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+        if (ClipHistory.sendToKeep(this, text)) toast("Tap 'Save' in Google Keep")
+        else toast("Google Keep is not installed — opened Play Store")
     }
 
     /**
@@ -1287,7 +1287,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onClipAllToKeep() {
         // only PINNED items go to Keep (sensitive pinned ones too, after the phone lock)
         val items = clips.items.filter { it.pinned }
-        if (items.isEmpty()) { toast("Keep-এ পাঠানোর জন্য আগে লেখা পিন করুন (📌 বাটন)"); return }
+        if (items.isEmpty()) { toast("Pin some text first to send it to Keep (📌 button)"); return }
         if (items.any { it.sensitive } && !SensitiveGate.isUnlocked()) {
             SensitiveGate.setPending(-1L, SensitiveAction.KEEP_ALL)
             AuthActivity.start(this)          // phone PIN / fingerprint, then back here
@@ -1295,20 +1295,20 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
         if (!ClipHistory.isKeepInstalled(this)) {
             ClipHistory.openKeep(this)          // opens the Play Store page
-            toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো। কিছুই পাঠানো হয়নি")
+            toast("Google Keep is not installed — opened Play Store. Nothing was sent")
             return
         }
         if (!Prefs.keepNoteCreated(this)) {
             if (ClipHistory.sendAllToKeep(this, items)) {
                 KeepLedger.handOff(this, items.map { it.id }.toSet(), creatingNote = true)
                 state.keepConfirm = items.size
-                toast("Keep-এ নতুন নোট খুলেছে — 'Save' চাপুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
-            } else toast("Google Keep খোলা যায়নি — কিছুই পাঠানো হয়নি")
+                toast("Keep opened a new note — tap 'Save', then come back to the keyboard and tap 'Yes'")
+            } else toast("Could not open Google Keep — nothing was sent")
             return
         }
         val fresh = KeepLedger.unsent(this, items)
         if (fresh.isEmpty()) {
-            toast("নতুন লেখা নেই — আপনি 'হ্যাঁ' বলা সব লেখা আগেই পাঠানো। আবার পাঠাতে: সেটিংস → ক্লিপবোর্ড")
+            toast("No new text — everything you answered 'Yes' for was already sent. To send again: Settings → Clipboard")
             return
         }
         ignoreNextClip = true
@@ -1318,7 +1318,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         KeepLedger.handOff(this, fresh.map { it.id }.toSet(), creatingNote = false)
         state.keepConfirm = fresh.size
         ClipHistory.openKeep(this)
-        toast("${fresh.size}টি নতুন লেখা কপি হয়েছে — Keep-এ 'JuJuKeys ক্লিপবোর্ড' নোটে লম্বা চেপে Paste করুন, তারপর কীবোর্ডে ফিরে 'হ্যাঁ' চাপুন")
+        toast("${fresh.size} new items copied — in Keep, long-press the 'JuJuKeys ক্লিপবোর্ড' note and Paste, then come back and tap 'Yes'")
     }
 
     override fun onKeepSplitStart() {
@@ -1327,17 +1327,17 @@ class JuJuKeysInputMethodService : InputMethodService(),
         } catch (e: Exception) { null }
         if (raw.isNullOrBlank()) {
             state.keepSplit = null
-            state.keepSplitMsg = "আগে Keep নোটের লেখা কপি করুন (নোট খুলে সব সিলেক্ট → কপি), তারপর এখানে ফিরে চাপুন"
+            state.keepSplitMsg = "First copy the text of the Keep note (open it, select all → copy), then come back and tap here"
             return
         }
         splitSource = raw
         val r = KeepNote.split(raw)
         if (r.items.size < 2) {
             state.keepSplit = null
-            state.keepSplitMsg = "কপি করা লেখায় আলাদা করার মতো একাধিক অংশ পাওয়া যায়নি"
+            state.keepSplitMsg = "The copied text has no separate parts to split"
             return
         }
-        state.keepSplitMsg = if (r.bySeparator) null else "——— দাগ নেই: ফাঁকা লাইন দেখে ভাগ হয়েছে"
+        state.keepSplitMsg = if (r.bySeparator) null else "No ——— lines: split at blank lines"
         state.keepSplit = r.items
     }
 
@@ -1351,19 +1351,19 @@ class JuJuKeysInputMethodService : InputMethodService(),
         val (added, ids) = clips.addPinned(list)
         KeepLedger.markSent(this, ids)          // these came from the note, so they are already in it
         state.keepSplit = null; state.keepSplitMsg = null
-        toast("${list.size}টি লেখা আলাদা করে পিন হয়েছে (নতুন $added টি)")
+        toast("${list.size} items pinned separately ($added new)")
     }
 
     override fun onKeepSplitCancel() { state.keepSplit = null; state.keepSplitMsg = null }
 
     override fun onKeepConfirm(saved: Boolean) {
         KeepLedger.confirm(this, saved)
-        if (!saved) toast("ঠিক আছে — লেখাগুলো পাঠানো হয়নি ধরা হলো, পরে ✎ চাপলে আবার যাবে")
+        if (!saved) toast("OK — counted as not sent; tap ✎ later to send again")
         state.keepConfirm = 0
     }
 
     override fun onOpenKeep() {
-        if (!ClipHistory.openKeep(this)) toast("Google Keep ইনস্টল নেই — Play Store খোলা হলো")
+        if (!ClipHistory.openKeep(this)) toast("Google Keep is not installed — opened Play Store")
     }
 
     // ================================================================== translate

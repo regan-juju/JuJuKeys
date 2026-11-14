@@ -168,12 +168,12 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Keep-এ সেভ হয়েছে?", color = IosColors.text, fontSize = 14.sp.bn(),
+                            "Saved in Keep?", color = IosColors.text, fontSize = 14.sp.bn(),
                             fontFamily = BanglaFont, maxLines = 1, modifier = Modifier.weight(1f)
                         )
-                        ConfirmChip("হ্যাঁ", IosColors.keepYellow, Color.Black) { actions.onKeepConfirm(true) }
+                        ConfirmChip("Yes", IosColors.keepYellow, Color.Black) { actions.onKeepConfirm(true) }
                         Spacer(Modifier.width(6.dp))
-                        ConfirmChip("না", IosColors.key, IosColors.text) { actions.onKeepConfirm(false) }
+                        ConfirmChip("No", IosColors.key, IosColors.text) { actions.onKeepConfirm(false) }
                         Spacer(Modifier.width(6.dp))
                     }
                 } else if (state.inlineViews.isNotEmpty() && !forceSuggestions) {
@@ -512,11 +512,11 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
             Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "ফিরে যান") {
+            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back") {
                 if (pinMode) { picks.clear(); pinMode = false } else actions.onPanel(Panel.KEYS)
             }
             Spacer(Modifier.width(12.dp))
-            Text(if (pinMode) "পিন করুন" else "ক্লিপবোর্ড", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold, fontFamily = BanglaFont)
+            Text(if (pinMode) "Pin items" else "Clipboard", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             if (enabled && clips.isNotEmpty()) {
                 PressBox(
@@ -526,7 +526,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                     onTap = { if (pinMode) finishPins() else { selected = null; picks.clear(); pinMode = true } }
                 ) {
                     Icon(
-                        if (pinMode) Icons.Filled.PushPin else Icons.Outlined.PushPin, "পিন",
+                        if (pinMode) Icons.Filled.PushPin else Icons.Outlined.PushPin, "Pin",
                         tint = if (pinMode) Color(0xFF111111) else IosColors.text, modifier = Modifier.size(20.dp)
                     )
                 }
@@ -537,18 +537,18 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                     Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFD54F))
                         .clickable { finishPins() }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
-                ) { Text("শেষ", color = Color(0xFF111111), fontSize = 14.sp.bn(), fontWeight = FontWeight.Bold, fontFamily = BanglaFont) }
+                ) { Text("Done", color = Color(0xFF111111), fontSize = 14.sp.bn(), fontWeight = FontWeight.Bold) }
             } else {
-                SmallIcon(if (enabled) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff, "ক্লিপবোর্ড চালু/বন্ধ") {
+                SmallIcon(if (enabled) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff, "Clipboard on/off") {
                     actions.onClipEnabled(!enabled)
                 }
                 Spacer(Modifier.width(8.dp))
-                SmallIcon(Icons.Outlined.Edit, "পিন করা লেখা Google Keep-এ সেভ") { actions.onClipAllToKeep() }
+                SmallIcon(Icons.Outlined.Edit, "Save pinned text to Google Keep") { actions.onClipAllToKeep() }
             }
         }
         if (pinMode) {
             Text(
-                "যেগুলো পিন করতে চান চাপুন — আবার চাপলে আনপিন", color = Color(0xFFFFD54F), fontSize = 12.5.sp.bn(),
+                "Tap the items to pin — tap again to unpin", color = Color(0xFFFFD54F), fontSize = 12.5.sp.bn(),
                 fontFamily = BanglaFont,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp)).background(Color(0x24FFD54F)).padding(horizontal = 10.dp, vertical = 5.dp)
@@ -563,11 +563,11 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (split != null) {
-                    Text("${split.size}টি লেখা পাওয়া গেল", color = IosColors.text, fontSize = 13.sp.bn(), fontFamily = BanglaFont)
-                    ActionChip("যোগ করুন", null, IosColors.keepYellow) { actions.onKeepSplitApply() }
+                    Text("${split.size} items found", color = IosColors.text, fontSize = 13.sp.bn())
+                    ActionChip("Add", null, IosColors.keepYellow) { actions.onKeepSplitApply() }
                     ActionChip("✕", null) { actions.onKeepSplitCancel() }
                 } else {
-                    ActionChip("Keep নোট ভাগ করুন", null) { actions.onKeepSplitStart() }
+                    ActionChip("Split Keep note", null) { actions.onKeepSplitStart() }
                     state.keepSplitMsg?.let {
                         Text(it, color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont, maxLines = 1)
                     }
@@ -596,22 +596,22 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
             ) {
                 ActionChip("✕", null) { selected = null }
                 if (sel.sensitive && !state.sensitiveUnlocked) {
-                    ActionChip("দেখুন", null) { actions.onClipAction(sel.id, SensitiveAction.VIEW); selected = null }
+                    ActionChip("View", null) { actions.onClipAction(sel.id, SensitiveAction.VIEW); selected = null }
                 }
-                ActionChip("কপি", null) { actions.onClipAction(sel.id, SensitiveAction.COPY); selected = null }
+                ActionChip("Copy", null) { actions.onClipAction(sel.id, SensitiveAction.COPY); selected = null }
                 ActionChip("Keep", null, IosColors.keepYellow) { actions.onClipAction(sel.id, SensitiveAction.KEEP); selected = null }
-                ActionChip("মুছুন", Icons.Filled.Delete) { actions.onClipDelete(sel.id); selected = null }
+                ActionChip("Delete", Icons.Filled.Delete) { actions.onClipDelete(sel.id); selected = null }
             }
         }
 
         if (!enabled) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("ক্লিপবোর্ড বন্ধ আছে — উপরের টগল চাপলে চালু হবে", color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont)
+                Text("Clipboard is off — tap the toggle above to turn it on", color = IosColors.dim, fontSize = 15.sp.bn())
             }
         } else if (clips.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "কিছু কপি করুন — সাথে সাথে এখানে আসবে।\n✎ চাপলে শুধু পিন করা লেখা Google Keep-এ এক পাতায় সেভ হবে।",
+                    "Copy something — it shows up here right away.\n✎ saves only the pinned text to one Google Keep note.",
                     color = IosColors.dim, fontSize = 15.sp.bn(), fontFamily = BanglaFont
                 )
             }
@@ -641,11 +641,11 @@ private fun ClipGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (recent.isNotEmpty()) {
-                item(span = { GridItemSpan(2) }) { SectionTitle("সাম্প্রতিক") }
+                item(span = { GridItemSpan(2) }) { SectionTitle("Recent") }
                 items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
             if (pinned.isNotEmpty()) {
-                item(span = { GridItemSpan(2) }) { SectionTitle("পিন করা হয়েছে") }
+                item(span = { GridItemSpan(2) }) { SectionTitle("Pinned") }
                 items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
         }
@@ -677,7 +677,7 @@ private fun ClipTile(
         if (clip.sensitive && !unlocked) {
             // private text: preview hidden until the phone lock is given
             Text(
-                "🔒 ••••••••\nসংবেদনশীল লেখা", color = IosColors.dim, fontSize = 14.sp.bn(), maxLines = 2,
+                "🔒 ••••••••\nSensitive text", color = IosColors.dim, fontSize = 14.sp.bn(), maxLines = 2,
                 fontFamily = BanglaFont
             )
         } else {
