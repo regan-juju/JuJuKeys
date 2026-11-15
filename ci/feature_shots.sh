@@ -32,7 +32,7 @@ open_demo() {  # extras...
   sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
   sh am start --activity-clear-task -n $PKG/.BlurDemoActivity "$@" >> $LOG; sleep 6
   for t in 1 2 3 4; do
-    sh input tap $(awk "BEGIN{printf \"%d\", 0.5*$W}") $(awk "BEGIN{printf \"%d\", 0.2*$H}"); sleep 3
+    sh input tap 400 205; sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
   done
   sleep 6
