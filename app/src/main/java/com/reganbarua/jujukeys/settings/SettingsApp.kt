@@ -354,6 +354,7 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
         "Space cursor speed",
         listOf(25 to "25", 50 to "50", 75 to "75", 100 to "100"), p.spaceCursorSpeed
     ) { Prefs.setInt(context, "space_cursor_speed", it); refresh() }
+    ToggleItem("Smart touch", "English: a touch near the edge between two letters picks the one that makes a real word (cat, not car). Touches in the middle of a key are never changed.", "smart_touch", p.smartTouch, refresh)
     ChoiceItem(
         "Touch offset",
         listOf(0 to "Off", 2 to "2 dp", 3 to "3 dp", 4 to "4 dp", 6 to "6 dp"), p.touchOffset

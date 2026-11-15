@@ -111,6 +111,8 @@ class KeyPreview {
 @Stable
 interface KeyboardActions {
     fun onChar(c: Char)
+    /** Smart touch: the touch fell near the edge between two letters; returns the one to type ([primary] or [alt]). */
+    fun resolveChar(primary: Char, alt: Char): Char
     /** Long-press: replace the character just typed with [c]. */
     fun onLongChar(c: Char)
     /** Emoji: typed as-is and remembered as recent. */

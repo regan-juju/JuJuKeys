@@ -248,6 +248,19 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         return out.toList()
     }
 
+    /**
+     * How common the best English word starting with [prefix] is (0 = no word starts so).
+     * Used by Smart touch to choose between two neighbouring letters; words the user typed count as very common.
+     */
+    fun prefixScore(prefix: String): Long {
+        val p = prefix.lowercase()
+        if (p.isEmpty()) return 0L
+        if (userEnglish.any { it.lowercase().startsWith(p) }) return 1_000_000_000L
+        val best = top(english, "en", p, 1).firstOrNull()?.freq ?: 0L
+        if (best > 0L) return best
+        return if (extraEnglishMatches(p, 1).isNotEmpty()) 1L else 0L
+    }
+
     /** Frequency of an English word: 1 if only in the extra list, 0 if it is not in the dictionary. */
     fun englishFreq(word: String): Long {
         val w = word.lowercase()

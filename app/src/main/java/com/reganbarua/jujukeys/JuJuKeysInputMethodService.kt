@@ -66,6 +66,7 @@ import com.reganbarua.jujukeys.keyboard.Panel
 import com.reganbarua.jujukeys.keyboard.ShiftState
 import com.reganbarua.jujukeys.settings.Prefs
 import com.reganbarua.jujukeys.suggest.Learner
+import com.reganbarua.jujukeys.keyboard.SmartTouch
 import com.reganbarua.jujukeys.text.TextBuf
 import com.reganbarua.jujukeys.textrep.Rep
 import com.reganbarua.jujukeys.textrep.ReplaceMatcher
@@ -497,6 +498,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     // ================================================================== keys
+
+    override fun resolveChar(primary: Char, alt: Char): Char {
+        if (!state.prefs.smartTouch || state.language != Language.ENGLISH || passwordField || state.emojiSearch != null) return primary
+        val s = suggester ?: return primary
+        val pick = SmartTouch.choose(enWord.toString().lowercase(), primary.lowercaseChar(), alt.lowercaseChar()) { s.prefixScore(it) }
+        return if (pick == alt.lowercaseChar()) alt else primary
+    }
 
     override fun onChar(c: Char) {
         state.emojiSearch?.let { q -> setEmojiQuery(q + c.lowercaseChar()); return }

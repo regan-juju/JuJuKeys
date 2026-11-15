@@ -249,6 +249,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val spaceDelay by rememberUpdatedState(prefs.spaceCursorDelay.toLong())
     val spaceSpeed by rememberUpdatedState(prefs.spaceCursorSpeed)
     val touchOff by rememberUpdatedState(prefs.touchOffset)
+    val smartOn by rememberUpdatedState(prefs.smartTouch)
     val enterLabel = state.enterLabel
 
     Canvas(
@@ -276,8 +277,14 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                             val event = awaitPointerEvent()
                             for (c in event.changes) {
                                 if (c.changedToDown()) {
-                                    val i = hit(c.position)
+                                    var i = hit(c.position)
                                     if (i < 0) continue
+                                    if (smartOn && flat[i].type == KType.CHAR) {
+                                        // near the edge between two letters: let the typed letters decide (English only, see resolveChar)
+                                        val hr = hitArrays(size.width.toFloat())
+                                        val j = TouchPick.neighbor(hr.l, hr.t, hr.r, charFlags, i, c.position.x, SmartTouch.ZONE)
+                                        if (j >= 0 && flat[j].ch != flat[i].ch && act.resolveChar(flat[i].ch, flat[j].ch) == flat[j].ch) i = j
+                                    }
                                     c.consume()
                                     val k = flat[i]
                                     val t = Touch(i, c.uptimeMillis)
