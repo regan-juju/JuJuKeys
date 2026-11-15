@@ -248,6 +248,32 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onWindowShown() {
         super.onWindowShown()
         darkNavigationBar()
+        applyBlur()
+    }
+
+    /**
+     * "Blur glass" theme: blur what is behind the keyboard window (Android 12+). Some phones switch window blur off
+     * (power saver, vendor settings); then the theme falls back to a nearly opaque dark background.
+     */
+    private fun applyBlur() {
+        val t = Themes.byId(state.prefs.theme)
+        val w = window?.window ?: return
+        var on = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            runCatching {
+                val wm = getSystemService(android.view.WindowManager::class.java)
+                on = t.blur > 0 && wm.isCrossWindowBlurEnabled
+                if (on) {
+                    val r = 22 * resources.displayMetrics.density
+                    // the blur follows the shape of the window background: round top corners like the keyboard
+                    w.setBackgroundDrawable(android.graphics.drawable.GradientDrawable().apply {
+                        setColor(0x14000000); cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                    })
+                }
+                w.setBackgroundBlurRadius(if (on) t.blur else 0)
+            }
+        }
+        com.reganbarua.jujukeys.keyboard.IosColors.blurOn = on
     }
 
     /** Navigation bar under the keyboard follows the theme (dark, or light for সাদা গ্লাস). */
@@ -266,7 +292,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private fun loadPrefs() {
         val old = state.prefs
         state.prefs = Prefs.load(this)
-        if (old.theme != state.prefs.theme) darkNavigationBar()
+        if (old.theme != state.prefs.theme) { darkNavigationBar(); applyBlur() }
         if (old.autoHide != state.prefs.autoHide || old.autoHideSeconds != state.prefs.autoHideSeconds) {
             if (isInputViewShown) bumpAutoHide() else main.removeCallbacks(autoHideRunnable)
         }

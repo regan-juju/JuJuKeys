@@ -42,6 +42,8 @@ internal class KbTheme(
     @androidx.annotation.DrawableRes val bgImage: Int? = null,
     /** Dark veil over [bgImage] (0..255) so the letters stay readable. */
     val bgVeil: Int = 0x40,
+    /** >0: blur what is behind the keyboard window by this many pixels (Android 12+, only where the phone allows it). */
+    val blur: Int = 0,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -145,6 +147,16 @@ internal object Themes {
             bgImage = com.reganbarua.jujukeys.R.drawable.theme_pattern, bgVeil = 0x96,
         ),
         KbTheme(
+            "blur", "Blur glass",
+            // see-through dark glass: the app behind the keyboard shows blurred through it (like the iPhone keyboard)
+            bg = Color(0x5C1A1B20), blobs = emptyList(),
+            key = Color(0x30FFFFFF), keyPressed = Color(0x6AFFFFFF), fn = Color(0x1CFFFFFF),
+            glassTop = Color(0xA8FFFFFF), edge = Color(0x40FFFFFF),
+            card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
+            panel = Color(0xE61C1C1E), nav = 0xFF1C1C1E.toInt(),
+            blur = 90,
+        ),
+        KbTheme(
             "white", "White glass",
             bg = Color(0xF5D6D8DC),
             blobs = listOf(Blob(0.20f, 0.80f, Color(0x5996C8FF), 0.60f), Blob(0.80f, 0.25f, Color(0x59FFC8DC), 0.60f)),
@@ -179,6 +191,8 @@ internal object IosColors {
     var bubble = theme.bubble; private set
     var shadow = theme.shadow; private set
     var panel = theme.panel; private set
+    /** True while the phone is really blurring what is behind the keyboard (set by the keyboard service). */
+    var blurOn = false
     val blue = Color(0xFF0A84FF)
     val bluePressed = Color(0xFF409CFF)
     val lightBlue = Color(0xFF8AB4F8)

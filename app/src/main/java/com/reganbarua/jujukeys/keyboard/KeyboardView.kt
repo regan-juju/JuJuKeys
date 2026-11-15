@@ -194,7 +194,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                 .drawWithCache {
                     // soft colour glow behind the glass keys (drawn once per size)
                     val w = size.width; val h = size.height
-                    val bg = theme.bg
+                    val bg = if (theme.blur > 0 && !IosColors.blurOn) theme.bg.copy(alpha = 0.96f) else theme.bg
                     val blobs = theme.blobs.map { b ->
                         // a little stronger colour behind the glass, so the keys look see-through
                         val c = b.color.copy(alpha = (b.color.alpha * 1.6f).coerceAtMost(0.55f))

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- debug-only screen for emulator screenshots (never in release builds) -->
+        <activity android:name=".BlurDemoActivity" android:exported="true" android:windowSoftInputMode="adjustNothing"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+    </application>
+</manifest>
