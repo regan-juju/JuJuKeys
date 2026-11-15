@@ -19,7 +19,7 @@ shotfor() {  # $1 = theme id, $2 = file
     sh input tap 300 140; sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
   done
-  sleep 2
+  sleep 7
   adb exec-out screencap -p > shots/api${API}-$2.png
   sh dumpsys input_method | grep -E "mCurMethodId|mInputShown" >> $LOG
 }
