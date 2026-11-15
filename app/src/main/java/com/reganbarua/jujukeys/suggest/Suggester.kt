@@ -171,6 +171,9 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
         userBangla = words.filter { w -> w.any { it in 'ঀ'..'৿' } }.map { it to skeleton(it) }
     }
 
+    /** The user's own finger slips ([Learner.snapshotSlips]); used by [correct]. */
+    @Volatile var slips: Map<String, Int> = emptyMap()
+
     /** Words the user often types get a boost. Filled by [Learner]. */
     @Volatile var learnedCounts: Map<String, Int> = emptyMap()
         set(value) {
@@ -270,7 +273,7 @@ class Suggester(englishLines: Sequence<String>, banglaLines: Sequence<String>) {
             if (i < w.length) add(w.removeRange(i, i + 1), 1.0)                                        // delete
             if (i < w.length - 1) add(w.substring(0, i) + w[i + 1] + w[i] + w.substring(i + 2), 1.0)   // swap
             for (c in letters) {
-                if (i < w.length) add(w.substring(0, i) + c + w.substring(i + 1), KeyNeighbors.replaceWeight(w[i], c)) // replace
+                if (i < w.length) add(w.substring(0, i) + c + w.substring(i + 1), KeyNeighbors.replaceWeight(w[i], c, slips)) // replace
                 add(w.substring(0, i) + c + w.substring(i), 1.0)                                        // insert
             }
         }

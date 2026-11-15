@@ -68,6 +68,7 @@ import com.reganbarua.jujukeys.settings.Prefs
 import com.reganbarua.jujukeys.suggest.Learner
 import com.reganbarua.jujukeys.text.TextBuf
 import com.reganbarua.jujukeys.suggest.RomanAliases
+import com.reganbarua.jujukeys.suggest.StaticBigrams
 import com.reganbarua.jujukeys.suggest.Suggester
 import com.reganbarua.jujukeys.translate.TranslateEngine
 import java.io.File
@@ -189,7 +190,9 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 suggester = Suggester(en.asSequence(), bn.asSequence()).also {
                     it.setUserWords(Prefs.userWords(this))
                     it.learnedCounts = learner.snapshotCounts()
+                    it.slips = learner.snapshotSlips()
                 }
+                runCatching { bigrams.load(assets.open("bigram_bn.txt").bufferedReader().readText()) }
                 aliases = runCatching {
                     RomanAliases(assets.open("aliases_bn.txt").bufferedReader().readLines().asSequence())
                 }.getOrNull()
@@ -983,8 +986,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
         } else {
             if (enWord.isNotEmpty()) {
                 markEdit()
+                learner.learnSlip(enWord.toString(), word)      // one letter different = one of this user's slips
                 currentInputConnection?.deleteSurroundingText(enWord.length, 0)
                 enWord.clear()
+                learnedSinceSave++
             }
             sinkCommit("$word ")
         }
@@ -1053,6 +1058,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
         learnedSinceSave = 0
         val text = learner.serialize()
         suggester?.learnedCounts = learner.snapshotCounts()
+        suggester?.slips = learner.snapshotSlips()
         worker.execute { runCatching { learnedFile().writeText(text) } }
     }
 
@@ -1082,7 +1088,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             val raw: List<String> = when {
                 bangla && romanNow.isNotEmpty() -> {
                     val conv = AvroPhonetic.convert(romanNow)
-                    val list0 = s?.bangla(conv, 18, learner.nextCounts(prev)) ?: listOf(conv)
+                    val list0 = s?.bangla(conv, 18, contextFor(prev)) ?: listOf(conv)
                     // jemon → যেমন first (Avro's জেমন stays as the 2nd choice)
                     val fix = if (romanNow.length >= 3 && p.banglaAutoFix) s?.autoFix(conv) else null
                     val base = if (fix != null) listOf(fix) + list0.filter { it != fix } else list0
@@ -1109,11 +1115,23 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
     }
 
+    /** Ready-made Bangla word pairs (Wikipedia counts). */
+    private val bigrams = StaticBigrams()
+
+    /** What came before [prev]: the user's own habit (counts × 10) beats the ready-made pairs (rank 1..5). */
+    private fun contextFor(prev: String?): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        bigrams.ranks(prev).forEach { (w, r) -> out[w] = r }
+        learner.nextCounts(prev).forEach { (w, c) -> out[w] = (out[w] ?: 0) + c * 10 }
+        return out
+    }
+
     /** Nothing typed yet: learned next words first, then the most common words. */
     private fun nextWordList(bangla: Boolean, prev: String?, s: Suggester?): List<String> {
         val fits = { w: String -> if (bangla) w.any { it in 'ঀ'..'৿' } else w.all { it.code < 128 } }
         val out = LinkedHashSet<String>()
         if (prev != null) learner.nextWords(prev, 12).filter(fits).forEach { out.add(it) }
+        if (bangla && prev != null) bigrams.next(prev, 8).filter(fits).forEach { if (out.size < 12) out.add(it) }
         // nothing to go on yet → the words this user types most
         if (out.size < 3) s?.favourites(bangla, 9)?.forEach { if (out.size < 12) out.add(it) }
         if (bangla) {

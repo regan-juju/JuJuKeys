@@ -8,6 +8,8 @@ package com.reganbarua.jujukeys.suggest
 class Learner {
     private val counts = HashMap<String, Int>()
     private val next = HashMap<String, HashMap<String, Int>>()
+    /** The user's own slips: "gh" = meant h, hit g (only letter pairs, never words). */
+    private val slips = HashMap<String, Int>()
 
     @Synchronized
     fun learn(previous: String?, word: String) {
@@ -29,6 +31,26 @@ class Learner {
     fun nextCounts(previous: String?): Map<String, Int> =
         if (previous.isNullOrBlank()) emptyMap() else HashMap(next[previous] ?: emptyMap())
 
+    /**
+     * The user tapped [chosen] to replace the typed [typed]. When the two differ in exactly one letter,
+     * that is one of the user's own finger slips (typed letter → meant letter): remember the pair.
+     */
+    @Synchronized
+    fun learnSlip(typed: String, chosen: String) {
+        val a = typed.lowercase(); val b = chosen.lowercase()
+        if (a.length != b.length || a.length < 3 || a == b) return
+        if (!a.all { it in 'a'..'z' } || !b.all { it in 'a'..'z' }) return
+        var at = -1
+        for (i in a.indices) if (a[i] != b[i]) { if (at >= 0) return; at = i }
+        if (at < 0) return
+        val key = "" + a[at] + b[at]
+        slips[key] = (slips[key] ?: 0) + 1
+    }
+
+    /** All slips: "gh" → how many times. A copy. */
+    @Synchronized
+    fun snapshotSlips(): Map<String, Int> = HashMap(slips)
+
     @Synchronized
     fun count(word: String): Int = counts[word] ?: 0
 
@@ -36,7 +58,7 @@ class Learner {
     fun snapshotCounts(): Map<String, Int> = HashMap(counts)
 
     @Synchronized
-    fun clear() { counts.clear(); next.clear() }
+    fun clear() { counts.clear(); next.clear(); slips.clear() }
 
     private fun trim() {
         val keep = counts.entries.sortedByDescending { it.value }.take(MAX_WORDS * 3 / 4).map { it.key }.toHashSet()
@@ -44,20 +66,22 @@ class Learner {
         next.keys.retainAll(keep)
     }
 
-    /** Lines: "w<TAB>word<TAB>count" and "n<TAB>prev<TAB>word<TAB>count". */
+    /** Lines: "w<TAB>word<TAB>count", "n<TAB>prev<TAB>word<TAB>count" and "s<TAB>pair<TAB>count". */
     @Synchronized
     fun serialize(): String = buildString {
         counts.forEach { (w, c) -> append("w\t").append(w).append('\t').append(c).append('\n') }
         next.forEach { (p, m) -> m.forEach { (w, c) -> append("n\t").append(p).append('\t').append(w).append('\t').append(c).append('\n') } }
+        slips.forEach { (k, c) -> append("s\t").append(k).append('\t').append(c).append('\n') }
     }
 
     @Synchronized
     fun load(text: String) {
-        counts.clear(); next.clear()
+        counts.clear(); next.clear(); slips.clear()
         text.lineSequence().forEach { line ->
             val p = line.split('\t')
             when {
                 p.size == 3 && p[0] == "w" -> p[2].toIntOrNull()?.let { counts[p[1]] = it }
+                p.size == 3 && p[0] == "s" && p[1].length == 2 -> p[2].toIntOrNull()?.let { slips[p[1]] = it }
                 p.size == 4 && p[0] == "n" -> p[3].toIntOrNull()?.let { next.getOrPut(p[1]) { HashMap() }[p[2]] = it }
             }
         }

@@ -24,7 +24,16 @@ object KeyNeighbors {
     }
 
     /** How much to trust a correction that REPLACES [typed] by [wanted]: 1 for a slip to a neighbour, less for a far key. */
-    fun replaceWeight(typed: Char, wanted: Char): Double = if (adjacent(typed, wanted)) 1.0 else FAR_KEY
+    fun replaceWeight(typed: Char, wanted: Char, slips: Map<String, Int> = emptyMap()): Double {
+        val base = if (adjacent(typed, wanted)) 1.0 else FAR_KEY
+        // the user's own slips (seen at least twice): that pair is likelier than the keyboard layout alone says
+        val n = slips["" + typed.lowercaseChar() + wanted.lowercaseChar()] ?: 0
+        if (n < 2) return base
+        return if (base < 1.0) minOf(1.0, base + 0.175 * n) else minOf(MAX_BOOST, 1.0 + 0.1 * (n - 1))
+    }
+
+    /** Even a slip the user makes all the time never counts more than this. */
+    const val MAX_BOOST = 1.3
 
     /** A replacement by a letter far away on the keyboard counts this much of its frequency. */
     const val FAR_KEY = 0.3
