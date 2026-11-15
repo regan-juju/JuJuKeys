@@ -195,7 +195,7 @@ class LauncherState(val app: Application) {
             } catch (_: Exception) {}
         }
         Icons.clear(); iconVersion = Icons.version
-        message = if (n > 0) "$n icon(s) added" else "No icon files found (name them <package>.png)"
+        message = if (n > 0) "$n icon(s) added" else "No icon files found (name them <package>.png or lbl_<appname>.png)"
     }
 
     fun setIconFor(pkg: String, uri: Uri) {
