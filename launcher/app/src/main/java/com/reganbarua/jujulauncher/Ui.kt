@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val Glass = Color(0x33FFFFFF)
@@ -127,12 +128,14 @@ fun LauncherRoot(st: LauncherState) {
     LaunchedEffect(st.message) { if (st.message != null) { delay(2200); st.message = null } }
     LaunchedEffect(homePages) { if (pager.currentPage > homePages) pager.scrollToPage(homePages) }
 
-    BackHandler(enabled = openFolder != null || showSearch || showSettings || edit) {
+    BackHandler(enabled = true) {   // never leave the launcher with Back
         when {
             showSettings -> showSettings = false
             showSearch -> showSearch = false
             openFolder != null -> openFolder = null
             edit -> edit = false
+            menuFor != null -> menuFor = null
+            else -> scope.launch { pager.animateScrollToPage(0) }
         }
     }
 
@@ -451,7 +454,7 @@ private fun LibraryPage(st: LauncherState, onMenu: (String?) -> Unit, menuFor: S
                                         for (rr in 0 until 2) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                             for (cc in 0 until 2) {
                                                 val a = apps.getOrNull(rr * 2 + cc)
-                                                Box(Modifier.weight(1f).aspectRatio(1f)) { if (a != null) AppIcon(st, a, 54.dp) }
+                                                Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) { if (a != null) AppIcon(st, a, 52.dp) }
                                             }
                                         }
                                     }
