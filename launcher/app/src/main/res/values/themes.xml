@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Launcher" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="Theme.Launcher.Base" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
@@ -8,4 +8,5 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
+    <style name="Theme.Launcher" parent="Theme.Launcher.Base" />
 </resources>
