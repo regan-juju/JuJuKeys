@@ -26,20 +26,26 @@ SPACE_X=540; SPACE_Y=1684; BACK_X=978; BACK_Y=1120; LANG_X=80; LANG_Y=1120
 longpress_lang() { sh input swipe $LANG_X $LANG_Y $LANG_X $LANG_Y 900; sleep 1.2; }
 
 kb() { sh dumpsys input_method | grep -q 'mInputShown=true' || { note "keyboard hidden -> reopen"; sh input tap 400 205; sleep 3; }; }
+focused() { sh dumpsys window | grep -E "mCurrentFocus" | grep -q BlurDemo; }
 open_demo() {  # extras...
-  sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
-  sh am start --activity-clear-task -n $PKG/.BlurDemoActivity "$@" >> $LOG; sleep 6
+  for n in 1 2 3; do
+    sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
+    sh am start --activity-clear-task -n $PKG/.BlurDemoActivity "$@" >> $LOG
+    for w in 1 2 3 4 5 6 7 8; do sleep 2; focused && break; done
+    focused && break; note "demo not focused, retry $n"
+  done
+  sleep 3
   for t in 1 2 3 4; do
     sh input tap 400 205; sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
   done
-  sleep 6
+  sleep 5
 }
 
 # ---- 1. blur theme open (Bangla default), then tools row
 open_demo --es theme blur
 shot 01-blur-open
-longpress_lang
+kb; longpress_lang
 shot 02-tools-row
 
 # ---- 2. English: omw + space → On my way!, then backspace brings omw back
