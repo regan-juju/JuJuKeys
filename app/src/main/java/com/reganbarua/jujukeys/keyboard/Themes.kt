@@ -149,12 +149,13 @@ internal object Themes {
         KbTheme(
             "blur", "Blur glass",
             // see-through dark glass: the app behind the keyboard shows blurred through it (like the iPhone keyboard)
-            bg = Color(0x5C1A1B20), blobs = emptyList(),
-            key = Color(0x30FFFFFF), keyPressed = Color(0x6AFFFFFF), fn = Color(0x1CFFFFFF),
+            bg = Color(0x57121318), blobs = emptyList(),
+            // dark smoked-glass keys (chosen "middle" darkness), light blur so the apps behind stay faintly visible
+            key = Color(0x4D08090D), keyPressed = Color(0x8C9A9AA2), fn = Color(0x3808090D),
             glassTop = Color(0xA8FFFFFF), edge = Color(0x40FFFFFF),
             card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
             panel = Color(0xE61C1C1E), nav = 0xFF1C1C1E.toInt(),
-            blur = 90,
+            blur = 30,
         ),
         KbTheme(
             "white", "White glass",

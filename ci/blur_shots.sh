@@ -14,7 +14,7 @@ for i in 1 2 3 4 5; do
 done
 shotfor() {  # $1 = theme id, $2 = file
   sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
-  sh am start -S -n $PKG/.BlurDemoActivity --es theme "$1" >> $LOG; sleep 7
+  sh am start --activity-clear-task -n $PKG/.BlurDemoActivity --es theme "$1" >> $LOG; sleep 7
   for t in 1 2 3 4; do
     sh input tap 300 140; sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
