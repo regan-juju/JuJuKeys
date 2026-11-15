@@ -64,6 +64,17 @@ tapp $BACK_X $BACK_Y 0.6; tapp $BACK_X $BACK_Y 0.6; tapp $BACK_X $BACK_Y 0.6
 word hello; tapp $SPACE_X $SPACE_Y 1
 note "plain word (expect hello ): $(fieldtext)"
 
+# ---- 2b. Smart touch: "th" then a touch at the W/E edge (W side) must type e → "the"; mid-key W must stay w
+kb; sh input keycombination CTRL_LEFT A; sleep 0.4; sh input keyevent 67; sleep 0.5
+word th; tapp 210 1260 0.8
+note "smart touch edge (expect the): $(fieldtext)"
+shot 05b-smart-edge
+tapp 978 1120 0.5
+tapp ${X[w]} 1260 0.8
+note "smart touch middle of W (expect thw): $(fieldtext)"
+kb; sh input keycombination CTRL_LEFT A; sleep 0.4; sh input keyevent 67; sleep 0.5
+word hello; tapp $SPACE_X $SPACE_Y 1
+
 # ---- 3. copy → round Paste button
 kb; sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 1; sh input keyevent KEYCODE_MOVE_END; sleep 1.5   # select all, copy
 shot 06-paste-round
