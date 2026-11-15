@@ -231,6 +231,8 @@ class LauncherState(val app: Application) {
         catch (_: Exception) { message = "Cannot open" }
     }
 
+    fun installTime(a: AppInfo): Long = try { app.packageManager.getPackageInfo(a.pkg, 0).firstInstallTime } catch (_: Exception) { 0L }
+
     fun categoryName(c: Int): String = when (c) {
         ApplicationInfo.CATEGORY_GAME -> "Games"
         ApplicationInfo.CATEGORY_AUDIO -> "Music"

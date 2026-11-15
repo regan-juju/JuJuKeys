@@ -428,7 +428,10 @@ private fun Dock(
 private fun LibraryPage(st: LauncherState, onMenu: (String?) -> Unit, menuFor: String?) {
     var query by remember { mutableStateOf("") }
     var openCat by remember { mutableStateOf<String?>(null) }
-    val groups = remember(st.apps) { st.apps.groupBy { st.categoryName(it.category) }.toList().sortedBy { it.first } }
+    val groups = remember(st.apps) {
+        val recent = st.apps.sortedByDescending { st.installTime(it) }.take(8)
+        listOf("Recently Added" to recent) + st.apps.groupBy { st.categoryName(it.category) }.toList().sortedBy { it.first }
+    }
     BackHandler(enabled = openCat != null) { openCat = null }
     Column(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
         SearchField(query, "App Library", { query = it }, Modifier.fillMaxWidth().padding(vertical = 4.dp))
@@ -449,12 +452,22 @@ private fun LibraryPage(st: LauncherState, onMenu: (String?) -> Unit, menuFor: S
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { (name, apps) ->
                             Column(Modifier.weight(1f)) {
-                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0x59FFFFFF)).clickable { openCat = name }.padding(12.dp)) {
+                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Color(0x55FFFFFF)).border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(26.dp)).clickable { openCat = name }.padding(12.dp)) {
                                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         for (rr in 0 until 2) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                             for (cc in 0 until 2) {
-                                                val a = apps.getOrNull(rr * 2 + cc)
-                                                Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) { if (a != null) AppIcon(st, a, 52.dp) }
+                                                val idx = rr * 2 + cc
+                                                Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                                                    if (idx < 3 || apps.size <= 4) {
+                                                        apps.getOrNull(idx)?.let { AppIcon(st, it, 56.dp) }
+                                                    } else {   // 4th cell = four tiny icons (like iOS)
+                                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                            for (mr in 0 until 2) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                for (mc in 0 until 2) apps.getOrNull(3 + mr * 2 + mc)?.let { AppIcon(st, it, 26.dp) } ?: Spacer(Modifier.size(26.dp))
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -499,8 +512,8 @@ private fun AppRows(st: LauncherState, list: List<AppInfo>, onMenu: (String?) ->
 
 @Composable
 private fun SearchField(value: String, hint: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, focus: FocusRequester? = null) {
-    Box(modifier.clip(RoundedCornerShape(14.dp)).background(Color(0x66000000)).padding(horizontal = 14.dp, vertical = 11.dp)) {
-        if (value.isEmpty()) Text(hint, color = Color(0xB3FFFFFF), fontSize = 16.sp)
+    Box(modifier.clip(RoundedCornerShape(50)).background(Color(0x55FFFFFF)).border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(50)).padding(horizontal = 20.dp, vertical = 12.dp)) {
+        if (value.isEmpty()) Text("\uD83D\uDD0D  " + hint, color = Color(0xE6FFFFFF), fontSize = 17.sp)
         BasicTextField(
             value, onChange, singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = 16.sp), cursorBrush = SolidColor(Color.White),

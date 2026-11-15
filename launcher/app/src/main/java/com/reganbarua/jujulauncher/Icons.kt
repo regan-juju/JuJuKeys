@@ -91,43 +91,51 @@ object Icons {
         return out
     }
 
-    /** Dark tile + round badge with a thin blue ring (matches the phone's current dark theme). */
+    /** iOS dark-mode look: near-black glossy tile, the app's glyph large on it (our own drawing). */
     private fun drawDark(ctx: Context, app: AppInfo, c: Canvas, s: Int, paint: Paint) {
         val f = s.toFloat()
-        paint.shader = LinearGradient(0f, 0f, 0f, f, 0xFF1D2438.toInt(), 0xFF0E121E.toInt(), Shader.TileMode.CLAMP)
+        paint.shader = LinearGradient(0f, 0f, 0f, f, 0xFF232326.toInt(), 0xFF050506.toInt(), Shader.TileMode.CLAMP)
         c.drawRect(0f, 0f, f, f, paint); paint.shader = null
         val d: Drawable? = try { ctx.packageManager.getActivityIcon(android.content.ComponentName(app.pkg, app.cls)) } catch (_: Exception) { null }
-        val dia = f * 0.66f; val cx = f / 2; val cy = f / 2
-        val circle = Path().apply { addCircle(cx, cy, dia / 2, Path.Direction.CW) }
-        val full = d is AdaptiveIconDrawable && d.background != null
-        c.save()
-        if (d is AdaptiveIconDrawable) {
-            c.clipPath(circle)
-            val half = dia * 0.75f   // 108dp layer, 72dp visible
-            val l = (cx - half).toInt(); val t = (cy - half).toInt(); val r = (cx + half).toInt(); val b = (cy + half).toInt()
-            d.background?.apply { setBounds(l, t, r, b); draw(c) }
-            d.foreground?.apply { setBounds(l, t, r, b); draw(c) }
-        } else if (d != null) {
-            val tmp = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
-            d.setBounds(0, 0, s, s); d.draw(Canvas(tmp))
-            val fullBleed = corner(tmp, 2) > 235 && corner(tmp, s - 3) > 235
-            if (fullBleed) {   // big square logo: show it on the tile without a ring
-                c.restore(); c.save()
-                val pad = f * 0.17f
-                c.clipPath(Path().apply { addRoundRect(RectF(pad, pad, f - pad, f - pad), f * 0.16f, f * 0.16f, Path.Direction.CW) })
-                c.drawBitmap(tmp, null, RectF(pad, pad, f - pad, f - pad), paint)
-                c.restore(); return
+        val cx = f / 2; val cy = f / 2
+        when {
+            d is AdaptiveIconDrawable -> {
+                val fg = d.foreground
+                if (fg != null) {
+                    val half = f * 0.56f
+                    val l = (cx - half).toInt(); val t = (cy - half).toInt(); val r = (cx + half).toInt(); val b = (cy + half).toInt()
+                    // is the glyph dark (would vanish on a dark tile)? then draw it white
+                    val probe = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+                    fg.setBounds(-8, -8, 40, 40); fg.draw(Canvas(probe))
+                    var sum = 0.0; var n = 0
+                    for (y in 0 until 32) for (x in 0 until 32) {
+                        val p = probe.getPixel(x, y)
+                        if (Color.alpha(p) > 140) { sum += (0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)) / 255.0; n++ }
+                    }
+                    val dark = n > 20 && sum / n < 0.28
+                    // a glyph that fills the whole layer (photo / full logo) keeps its own background
+                    val opaque = n > 32 * 32 * 0.85
+                    if (opaque) { d.background?.apply { setBounds(-(f * 0.25f).toInt(), -(f * 0.25f).toInt(), (f * 1.25f).toInt(), (f * 1.25f).toInt()); draw(c) } }
+                    fg.setBounds(l, t, r, b)
+                    if (dark && !opaque) fg.colorFilter = PorterDuffColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
+                    fg.draw(c); fg.colorFilter = null
+                    if (opaque) { fg.setBounds(-(f * 0.25f).toInt(), -(f * 0.25f).toInt(), (f * 1.25f).toInt(), (f * 1.25f).toInt()); fg.draw(c) }
+                }
             }
-            c.clipPath(circle)
-            paint.color = 0xFFFFFFFF.toInt(); c.drawCircle(cx, cy, dia / 2, paint)
-            val g = dia * 0.14f
-            d.setBounds((cx - dia / 2 + g).toInt(), (cy - dia / 2 + g).toInt(), (cx + dia / 2 - g).toInt(), (cy + dia / 2 - g).toInt()); d.draw(c)
+            d != null -> {
+                val tmp = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
+                d.setBounds(0, 0, s, s); d.draw(Canvas(tmp))
+                val fullBleed = corner(tmp, 2) > 235 && corner(tmp, s - 3) > 235
+                if (fullBleed) c.drawBitmap(tmp, 0f, 0f, paint)
+                else {
+                    val pad = f * 0.14f
+                    d.setBounds(pad.toInt(), pad.toInt(), (f - pad).toInt(), (f - pad).toInt()); d.draw(c)
+                }
+            }
         }
-        c.restore()
-        if (d is AdaptiveIconDrawable || d != null) {
-            val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = f * 0.028f; color = 0xFF3F5FD8.toInt() }
-            c.drawCircle(cx, cy, dia / 2, ring)
-        }
+        // thin glossy rim
+        val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = f * 0.012f; color = 0x2CFFFFFF }
+        c.drawPath(squircle(f), rim)
     }
 
     private fun corner(b: Bitmap, p: Int): Int = Color.alpha(b.getPixel(p, p))
