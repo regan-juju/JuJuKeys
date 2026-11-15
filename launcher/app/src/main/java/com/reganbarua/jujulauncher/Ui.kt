@@ -118,6 +118,14 @@ fun LauncherRoot(st: LauncherState) {
     var dockWidth by remember { mutableFloatStateOf(1f) }
     var menuFor by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val view = androidx.compose.ui.platform.LocalView.current
+    val status by rememberStatus(st.permTick)
+    LaunchedEffect(st.iosBar) {
+        val w = (view.context as? android.app.Activity)?.window ?: return@LaunchedEffect
+        val c = androidx.core.view.WindowCompat.getInsetsController(w, view)
+        c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (st.iosBar) c.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars()) else c.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+    }
 
     LaunchedEffect(st.homeSignal) {
         if (st.homeSignal > 0) {
@@ -179,7 +187,7 @@ fun LauncherRoot(st: LauncherState) {
         // soft dark veil so labels stay readable on bright wallpapers
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x40000000), Color(0x00000000), Color(0x55000000)))))
 
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(SysInsets)) {
             // top bar (edit mode)
             Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 16.dp)) {
                 if (edit) {
@@ -259,6 +267,11 @@ fun LauncherRoot(st: LauncherState) {
         if (showSearch) SearchOverlay(st, onClose = { showSearch = false })
         if (showSettings) SettingsOverlay(st, onClose = { showSettings = false })
 
+        if (st.iosBar) {
+            val top = WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding()
+            IosStatusBar(status, Modifier.align(Alignment.TopStart).height(top.coerceAtLeast(28.dp)))
+        }
+
         st.message?.let {
             Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp).clip(RoundedCornerShape(50)).background(Color(0xE62C2C2E)).padding(horizontal = 18.dp, vertical = 10.dp)) {
                 Text(it, color = Color.White, fontSize = 13.sp)
@@ -273,6 +286,9 @@ private fun Pill(text: String, modifier: Modifier, bold: Boolean = false, onClic
         Text(text, color = Color.White, fontSize = 14.sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
     }
 }
+
+private val SysInsets: WindowInsets
+    @Composable get() = WindowInsets.statusBarsIgnoringVisibility.union(WindowInsets.navigationBars)
 
 // ---------------------------------------------------------------- cell + grid
 @Composable
@@ -576,7 +592,7 @@ private fun SearchOverlay(st: LauncherState, onClose: () -> Unit) {
     LaunchedEffect(Unit) { fr.requestFocus() }
     val res = if (q.isBlank()) emptyList() else st.apps.filter { it.label.contains(q, true) }.sortedBy { !it.label.startsWith(q, true) }.take(30)
     Box(Modifier.fillMaxSize().background(Color(0xCC000000)).clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClose() }) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).windowInsetsPadding(WindowInsets.ime).padding(14.dp)) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(SysInsets).windowInsetsPadding(WindowInsets.ime).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SearchField(q, "Search", { q = it }, Modifier.weight(1f), fr)
                 Spacer(Modifier.width(12.dp))
@@ -599,7 +615,7 @@ private fun SearchOverlay(st: LauncherState, onClose: () -> Unit) {
 // ---------------------------------------------------------------- settings
 @Composable
 private fun SettingsOverlay(st: LauncherState, onClose: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Color(0xFF000000)).windowInsetsPadding(WindowInsets.systemBars)) {
+    Column(Modifier.fillMaxSize().background(Color(0xFF000000)).windowInsetsPadding(SysInsets)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Settings", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text("Done", color = Color(0xFF4DA3FF), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { onClose() })
@@ -630,12 +646,19 @@ private fun SettingsOverlay(st: LauncherState, onClose: () -> Unit) {
                     Row2(if (st.showLabels) "Names under icons: On" else "Names under icons: Off") { st.updateLabels(!st.showLabels) }
                     Row2("Reset Home Screen layout") { st.resetLayout(); onClose() }
                 }
+                Group("Status bar") {
+                    Row2(if (st.iosBar) "iPhone-style bar on Home: On" else "iPhone-style bar on Home: Off") { st.updateIosBar(!st.iosBar) }
+                    val ok = androidx.core.content.ContextCompat.checkSelfPermission(androidx.compose.ui.platform.LocalContext.current, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (ok) Row2("Signal bars and 4G/5G: allowed") {} else Row2("Allow signal bars and 4G/5G (phone state)") { st.askPhone() }
+                    Text("Shows on the Home screen only. Swipe down from the top edge to see the real bar and notifications.",
+                        color = Color(0xFF8E8E93), fontSize = 13.sp, modifier = Modifier.padding(14.dp))
+                }
                 Group("Phone") {
                     Row2("Make JuJu Launcher the default home app") { st.defaultHomeSettings() }
                     Text("To go back: Settings › Apps › Default apps › Home app → choose your old launcher.",
                         color = Color(0xFF8E8E93), fontSize = 13.sp, modifier = Modifier.padding(14.dp))
                 }
-                Text("Status bar, battery icon and lock screen belong to the phone system, not to a launcher. They need a MIUI theme.",
+                Text("Inside other apps and on the lock screen, the phone\'s own status bar stays. Changing that needs a MIUI theme.",
                     color = Color(0xFF8E8E93), fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
                 Spacer(Modifier.height(30.dp))
             }

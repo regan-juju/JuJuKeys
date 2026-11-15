@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
         val p = iconTarget; if (u != null && p != null) st.setIconFor(p, u)
     }
 
+    private val phonePerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) { st.permTick++ }
+
     private val pkgReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) { st.refreshApps() }
     }
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
         st = LauncherState(application)
         st.pickWallpaper = { wallpaperPicker.launch("image/*") }
         st.pickIcons = { iconsPicker.launch(arrayOf("image/*", "application/zip", "application/x-zip-compressed", "application/octet-stream")) }
+        st.askPhone = { phonePerm.launch(android.Manifest.permission.READ_PHONE_STATE) }
         st.pickIconFor = { pkg -> iconTarget = pkg; oneIconPicker.launch("image/*") }
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED); addAction(Intent.ACTION_PACKAGE_REMOVED)
