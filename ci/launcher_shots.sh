@@ -91,7 +91,7 @@ open('shots/test_icon.png','wb').write(b'\x89PNG\r\n\x1a\n'+ch(b'IHDR',struct.pa
 PY
 adb push $OUT/test_icon.png /data/local/tmp/t.png >/dev/null
 adb shell run-as $PKG mkdir -p files/icons
-adb shell run-as $PKG cp /data/local/tmp/t.png files/icons/com.android.settings.png
+adb shell run-as $PKG cp /data/local/tmp/t.png files/icons/lbl_settings.png
 adb shell am force-stop $PKG; adb shell input keyevent KEYCODE_HOME; sleep 4
 shot 10_custom_icon
 adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null; sleep 2
