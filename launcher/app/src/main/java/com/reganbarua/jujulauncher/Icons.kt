@@ -64,7 +64,26 @@ object Icons {
             c.drawBitmap(custom, null, Rect(0, 0, s, s), paint)
         } else if (dark) {
             drawDark(ctx, app, c, s, paint)
+            if (looksEmpty(out)) { c.drawColor(0, PorterDuff.Mode.CLEAR); drawOriginal(ctx, app, c, s, paint) }
         } else {
+            drawOriginal(ctx, app, c, s, paint)
+        }
+        c.restore()
+        return out
+    }
+
+    private fun looksEmpty(b: Bitmap): Boolean {
+        val s = b.width
+        var lo = 255.0; var hi = 0.0
+        for (iy in 0..6) for (ix in 0..6) {
+            val p = b.getPixel((s * (0.3f + ix * 0.4f / 6)).toInt(), (s * (0.3f + iy * 0.4f / 6)).toInt())
+            val l = 0.299 * Color.red(p) + 0.587 * Color.green(p) + 0.114 * Color.blue(p)
+            if (l < lo) lo = l; if (l > hi) hi = l
+        }
+        return hi - lo < 14
+    }
+
+    private fun drawOriginal(ctx: Context, app: AppInfo, c: Canvas, s: Int, paint: Paint) {
             val d: Drawable? = try { ctx.packageManager.getActivityIcon(android.content.ComponentName(app.pkg, app.cls)) } catch (_: Exception) { null }
             when {
                 d == null -> { paint.color = 0xFF3A3A3C.toInt(); c.drawRect(0f, 0f, s.toFloat(), s.toFloat(), paint) }
@@ -86,9 +105,6 @@ object Icons {
                     }
                 }
             }
-        }
-        c.restore()
-        return out
     }
 
     /** iOS dark-mode look: near-black glossy tile, the app's glyph large on it (our own drawing). */
