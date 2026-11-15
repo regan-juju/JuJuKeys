@@ -29,6 +29,7 @@ class LauncherState(val app: Application) {
     var byKey by mutableStateOf(mapOf<String, AppInfo>()); private set
     var layout by mutableStateOf(LayoutState(listOf(emptyList()), emptyList())); private set
     var iconScale by mutableFloatStateOf(prefs.getFloat("iconScale", 1f)); private set
+    var darkIcons by mutableStateOf(prefs.getBoolean("dark", true)); private set
     var showLabels by mutableStateOf(prefs.getBoolean("labels", true)); private set
     var wallpaper by mutableStateOf<ImageBitmap?>(null); private set
     var iconVersion by mutableIntStateOf(0); private set
@@ -41,6 +42,7 @@ class LauncherState(val app: Application) {
     var pickIconFor: (String) -> Unit = {}
 
     init {
+        Icons.dark = darkIcons
         loadWallpaper()
         loadLayout()
         refreshApps()
@@ -125,6 +127,7 @@ class LauncherState(val app: Application) {
     }
 
     fun updateIconScale(v: Float) { iconScale = v; prefs.edit().putFloat("iconScale", v).apply() }
+    fun updateDark(v: Boolean) { darkIcons = v; Icons.dark = v; prefs.edit().putBoolean("dark", v).apply(); Icons.clear(); iconVersion = Icons.version }
     fun updateLabels(v: Boolean) { showLabels = v; prefs.edit().putBoolean("labels", v).apply() }
 
     // ---- wallpaper
