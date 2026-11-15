@@ -16,17 +16,14 @@ done
 sh wm size 1080x2400 >> $LOG; sh wm density 420 >> $LOG; sleep 3
 read W H <<<"$(sh wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | tr x ' ')"
 note "screen ${W}x${H}"
-S=$(awk "BEGIN{print $W/640}")
-# panel coordinates (640 wide reference picture, 1280 tall, bottom anchored) -> screen pixels
-px() { awk "BEGIN{printf \"%d\", $1*$S}"; }
-py() { awk "BEGIN{printf \"%d\", $H-(1280-$1)*$S}"; }
-tapp() { sh input tap $(px $1) $(py $2); sleep ${3:-0.6}; }
+tapp() { sh input tap $1 $2; sleep ${3:-0.6}; }
 shot() { adb exec-out screencap -p > shots/api${API}-$1.png; note "shot $1"; }
 fieldtext() { sh uiautomator dump /sdcard/u.xml >/dev/null; sh cat /sdcard/u.xml | grep -oE '<node [^>]*class="android.widget.EditText"[^>]*>' | grep -oE ' text="[^"]*"' | head -1; }
-declare -A X=( [q]=37 [w]=100 [e]=163 [r]=226 [t]=289 [y]=352 [u]=414 [i]=477 [o]=539 [p]=601 [a]=68 [s]=131 [d]=194 [f]=258 [g]=320 [h]=381 [j]=445 [k]=508 [l]=571 [z]=131 [x]=194 [c]=258 [v]=320 [b]=381 [n]=445 [m]=508 )
-declare -A Y=( [q]=778 [w]=778 [e]=778 [r]=778 [t]=778 [y]=778 [u]=778 [i]=778 [o]=778 [p]=778 [a]=886 [s]=886 [d]=886 [f]=886 [g]=886 [h]=886 [j]=886 [k]=886 [l]=886 [z]=994 [x]=994 [c]=994 [v]=994 [b]=994 [n]=994 [m]=994 )
+declare -A X=( [q]=60 [w]=168 [e]=274 [r]=380 [t]=486 [y]=592 [u]=698 [i]=804 [o]=912 [p]=1018 [a]=114 [s]=220 [d]=326 [f]=432 [g]=540 [h]=646 [j]=752 [k]=860 [l]=966 [z]=220 [x]=326 [c]=432 [v]=540 [b]=646 [n]=752 [m]=860 )
+declare -A Y=( [q]=1260 [w]=1260 [e]=1260 [r]=1260 [t]=1260 [y]=1260 [u]=1260 [i]=1260 [o]=1260 [p]=1260 [a]=1402 [s]=1402 [d]=1402 [f]=1402 [g]=1402 [h]=1402 [j]=1402 [k]=1402 [l]=1402 [z]=1542 [x]=1542 [c]=1542 [v]=1542 [b]=1542 [n]=1542 [m]=1542 )
 word() { for ch in $(echo "$1" | grep -o .); do tapp ${X[$ch]} ${Y[$ch]} 0.35; done; }
-SPACE_X=320; SPACE_Y=1100; BACK_X=560; BACK_Y=670; LANG_X=60; LANG_Y=670
+SPACE_X=540; SPACE_Y=1684; BACK_X=978; BACK_Y=1120; LANG_X=80; LANG_Y=1120
+longpress_lang() { sh input swipe $LANG_X $LANG_Y $LANG_X $LANG_Y 900; sleep 1.2; }
 
 open_demo() {  # extras...
   sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
@@ -41,7 +38,7 @@ open_demo() {  # extras...
 # ---- 1. blur theme open (Bangla default), then tools row
 open_demo --es theme blur
 shot 01-blur-open
-sh input swipe $(px $LANG_X) $(py $LANG_Y) $(px $LANG_X) $(py $LANG_Y) 900; sleep 1.2
+longpress_lang
 shot 02-tools-row
 
 # ---- 2. English: omw + space → On my way!, then backspace brings omw back
@@ -63,15 +60,15 @@ note "plain word (expect hello ): $(fieldtext)"
 # ---- 3. copy → round Paste button
 sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 2   # select all, copy
 shot 06-paste-round
-tapp 155 670 1.5
+tapp 195 1120 1.5
 note "after Paste tap (text doubled?): $(fieldtext)"
 shot 07-pasted
 
 # ---- 4. Text Replacement screen from the tools row
-sh input swipe $(px $LANG_X) $(py $LANG_Y) $(px $LANG_X) $(py $LANG_Y) 900; sleep 1.2
-tapp 411 670 3
+longpress_lang
+tapp 518 1120 3
 shot 08-textreplace-list
-sh input tap $(awk "BEGIN{printf \"%d\", $W*0.93}") $(awk "BEGIN{printf \"%d\", $H*0.075}"); sleep 2
+sh input tap 1000 118; sleep 2
 shot 09-add-sheet
 
 # ---- 5. password entry + phone lock
