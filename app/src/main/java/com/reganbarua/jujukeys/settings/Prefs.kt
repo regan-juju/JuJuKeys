@@ -41,6 +41,10 @@ data class KeyboardPrefs(
     // ক্লিপবোর্ড
     val clipboardOn: Boolean = true,
     val saveSensitive: Boolean = false,     // keep text the copying app marked private (locked)
+    val pasteButton: Boolean = true,        // round Paste button beside the language key after copying
+    val pasteHideSec: Int = 6,              // ...and it hides itself after this many seconds
+    // Text replacement (omw → On my way!)
+    val textReplace: Boolean = true,
     // ইমোজি
     val recentEmoji: Boolean = true,
     // থিম
@@ -89,6 +93,9 @@ object Prefs {
             learnWords = p.getBoolean("learn_words", d.learnWords),
             clipboardOn = p.getBoolean("clipboard", d.clipboardOn),
             saveSensitive = p.getBoolean("save_sensitive", d.saveSensitive),
+            pasteButton = p.getBoolean("paste_button", d.pasteButton),
+            pasteHideSec = p.getInt("paste_hide_sec", d.pasteHideSec).coerceIn(2, 30),
+            textReplace = p.getBoolean("text_replace", d.textReplace),
             recentEmoji = p.getBoolean("recent_emoji", d.recentEmoji),
             theme = p.getString("theme", d.theme) ?: d.theme,
             autoHide = p.getBoolean("auto_hide", d.autoHide),

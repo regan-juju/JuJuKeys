@@ -43,6 +43,15 @@
             android:taskAffinity=""
             android:theme="@style/Theme.JuJuKeys.Auth" />
 
+        <!-- Text replacement list (omw → On my way!); password entries ask for the phone lock -->
+        <activity
+            android:name=".textrep.TextReplaceActivity"
+            android:exported="false"
+            android:label="JuJuKeys Text Replacement"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.reganbarua.jujukeys.textrep"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Sticker profiles: folders inside folders; choose and arrange each profile's stickers -->
         <activity
             android:name=".sticker.StickerProfilesActivity"

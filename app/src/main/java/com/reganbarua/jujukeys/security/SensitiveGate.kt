@@ -3,7 +3,7 @@ package com.reganbarua.jujukeys.security
 import android.os.SystemClock
 
 /** What to do with a sensitive clipboard item once the user has unlocked. */
-enum class SensitiveAction { PASTE, COPY, KEEP, VIEW, KEEP_ALL }
+enum class SensitiveAction { PASTE, COPY, KEEP, VIEW, KEEP_ALL, REPLACE }
 
 /**
  * Sensitive clipboard items (passwords, OTPs …) stay locked until the user proves it is them

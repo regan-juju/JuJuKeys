@@ -129,6 +129,8 @@ interface KeyboardActions {
     /** 🌐 tap: the next keyboard (or the keyboard list if there is no other one). */
     fun onNextKeyboard()
     fun onOpenSettings()
+    /** The omw↓ button: opens the Text replacement list. */
+    fun onOpenTextReplace()
     /** Sound / vibration for a key press, following the settings. */
     fun onKeyFeedback(kind: KeyKind)
     fun onPage(page: Page)

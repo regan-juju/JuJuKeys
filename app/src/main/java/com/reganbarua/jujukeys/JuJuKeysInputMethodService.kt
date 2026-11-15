@@ -67,6 +67,9 @@ import com.reganbarua.jujukeys.keyboard.ShiftState
 import com.reganbarua.jujukeys.settings.Prefs
 import com.reganbarua.jujukeys.suggest.Learner
 import com.reganbarua.jujukeys.text.TextBuf
+import com.reganbarua.jujukeys.textrep.Rep
+import com.reganbarua.jujukeys.textrep.ReplaceMatcher
+import com.reganbarua.jujukeys.textrep.ReplaceStore
 import com.reganbarua.jujukeys.suggest.RomanAliases
 import com.reganbarua.jujukeys.suggest.StaticBigrams
 import com.reganbarua.jujukeys.suggest.Suggester
@@ -144,6 +147,13 @@ class JuJuKeysInputMethodService : InputMethodService(),
     private var noLearn = false
     @Volatile private var suggestionSeq = 0
     private var ignoreNextClip = false
+
+    // ---- text replacement (omw → On my way!)
+    private val repStore by lazy { ReplaceStore(this) }
+    private var reps: List<Rep> = emptyList()
+    /** What the last replacement did, so the FIRST backspace right after gives the typed shortcut back. */
+    private class Expansion(val typed: String, val inserted: Int, val roman: Boolean)
+    private var lastExpand: Expansion? = null
 
     // ---- translate box
     private val tCommitted = StringBuilder()
@@ -335,9 +345,12 @@ class JuJuKeysInputMethodService : InputMethodService(),
         state.stickerSheet = null
         state.keepConfirm = KeepLedger.pendingCount(this)
         refreshSensitiveLock()
+        reps = if (state.prefs.textReplace) runCatching { repStore.load() }.getOrDefault(emptyList()) else emptyList()
+        lastExpand = null
         // came back from the phone-lock screen: do what the user asked for
         SensitiveGate.takePending()?.let { (id, action) ->
-            if (action == SensitiveAction.KEEP_ALL) main.post { onClipAllToKeep() }
+            if (action == SensitiveAction.REPLACE) main.post { finishReplace(id) }
+            else if (action == SensitiveAction.KEEP_ALL) main.post { onClipAllToKeep() }
             else clips.find(id)?.let { item ->
                 if (action == SensitiveAction.VIEW) state.panel = Panel.CLIPBOARD
                 else main.post { runClipAction(item, action) }
@@ -403,6 +416,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onFinishInputView(finishingInput: Boolean) {
         state.inlineViews = emptyList()
         state.toolsOpen = false
+        state.freshClip = null              // the round Paste button goes away when the keyboard closes
+        main.removeCallbacks(clearFreshClip)
         main.removeCallbacks(autoHideRunnable)
         state.emojiSearch = null
         if (state.translateOn) stopTranslate() else { commitWord(); endEnglishWord() }
@@ -486,6 +501,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onChar(c: Char) {
         state.emojiSearch?.let { q -> setEmojiQuery(q + c.lowercaseChar()); return }
         state.freshClip = null
+        lastExpand = null
         state.typing = true
         if (state.language == Language.ENGLISH || passwordField) {
             // Key labels are CAPITAL, but typing is normal: small letters, Shift = capital.
@@ -499,6 +515,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
                 sinkCommit(out.toString())
                 enWord.append(out)
             } else {
+                if (out in REPLACE_PUNCT && tryExpand(out.toString())) { updateCaps(); refreshSuggestions(); return }
                 endEnglishWord()
                 sinkCommit(out.toString())
                 updateCaps()
@@ -539,6 +556,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     override fun onRawText(text: String) {
         state.freshClip = null
+        lastExpand = null
         state.typing = true
         commitWord()
         endEnglishWord()
@@ -550,6 +568,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onBackspace() {
         val q = state.emojiSearch
         if (q != null && q.isNotEmpty()) { setEmojiQuery(q.dropLast(1)); return }
+        lastExpand?.let { ex ->
+            lastExpand = null
+            if (!state.translateOn && undoExpansion(ex)) return
+        }
         if (roman.isNotEmpty()) {
             roman.setLength(roman.length - 1)
             if (roman.isEmpty()) {
@@ -574,6 +596,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
     override fun onSpace() {
         state.emojiSearch?.let { q -> if (q.isNotEmpty() && !q.endsWith(" ")) setEmojiQuery("$q "); return }
         val now = SystemClock.uptimeMillis()
+        lastExpand = null
+        if (tryExpand(" ")) { lastSpaceTime = 0L; updateCaps(); refreshSuggestions(); return }
         val hadWord = roman.isNotEmpty() || enWord.isNotEmpty()
         commitWord()
         autoCorrectWord()
@@ -599,6 +623,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onCursorMove(steps: Int) {
+        lastExpand = null
         if (state.translateOn) return
         commitWord()
         enWord.clear(); lastWord = null
@@ -607,6 +632,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onEnter() {
+        lastExpand = null
         if (state.translateOn) {
             // not translated yet → this Enter translates (the next one sends)
             if (state.translateDirty && (tCommitted.toString() + tComposing).isNotBlank()) { onTranslateNow(); return }
@@ -721,6 +747,15 @@ class JuJuKeysInputMethodService : InputMethodService(),
         Prefs.setLastLanguageBangla(this, lang == Language.BANGLA)
         updateCaps()
         refreshSuggestions()
+    }
+
+    override fun onOpenTextReplace() {
+        commitWord()
+        startActivity(
+            Intent(this, com.reganbarua.jujukeys.textrep.TextReplaceActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            )
+        )
     }
 
     override fun onOpenSettings() {
@@ -994,6 +1029,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
     }
 
     override fun onSuggestionWord(word: String) {
+        lastExpand = null
         if (state.translateOn) {
             // put the chosen word into the translate box
             if (roman.isNotEmpty()) roman.clear()
@@ -1019,7 +1055,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             }
             sinkCommit("$word ")
         }
-        learn(word)
+        if (!word.contains(' ')) learn(word)          // a replacement phrase is not a word
         if (state.panel == Panel.SUGGESTIONS) state.panel = Panel.KEYS
         updateCaps()
         refreshSuggestions()
@@ -1057,6 +1093,92 @@ class JuJuKeysInputMethodService : InputMethodService(),
             Prefs.setUserWords(this, listOf(w) + words)
             Prefs.sp(this).edit().putString("auto_words", (Prefs.autoWords(this) + w).joinToString("\n")).apply()
         }
+    }
+
+    // ================================================================== text replacement
+
+    /**
+     * Space (or . , ! ? ; :) was pressed: if the word just typed is a saved shortcut, put its phrase
+     * there instead. Bangla mode matches the Roman letters typed (omw), other fields the last word
+     * before the cursor. A password entry needs the phone lock first (fingerprint / PIN) and only
+     * works in password fields. Returns true when it replaced (or is waiting for the lock).
+     */
+    private fun tryExpand(trailing: String): Boolean {
+        if (!state.prefs.textReplace || reps.isEmpty() || state.translateOn || state.emojiSearch != null) return false
+        val ic = currentInputConnection ?: return false
+        if (state.language == Language.BANGLA && !passwordField && roman.isNotEmpty()) {
+            val r = roman.toString()
+            val rep = ReplaceMatcher.find(r, reps, false) ?: ReplaceMatcher.find(AvroPhonetic.convert(r), reps, false) ?: return false
+            val phrase = ReplaceMatcher.applyCase(r, rep.phrase, false)
+            autoWord = null; roman.clear()
+            markEdit()
+            ic.commitText(phrase, 1)              // replaces the composing word
+            rememberTyped(phrase)
+            sinkCommit(trailing)
+            lastExpand = Expansion(r, phrase.length + trailing.length, true)
+            return true
+        }
+        if (roman.isNotEmpty()) return false
+        val token = ReplaceMatcher.lastToken(ic.getTextBeforeCursor(MAX_TOKEN, 0) ?: return false)
+        val rep = ReplaceMatcher.find(token, reps, passwordField) ?: return false
+        val base: String = if (rep.password) {
+            if (!SensitiveGate.isUnlocked()) {
+                SensitiveGate.setPending(rep.id, SensitiveAction.REPLACE)
+                AuthActivity.start(this)
+                return true                       // waits for fingerprint / PIN; the typed shortcut stays
+            }
+            repStore.reveal(rep) ?: return false
+        } else rep.phrase
+        expandInto(ic, token, ReplaceMatcher.applyCase(token, base, rep.password), trailing, rep.password)
+        return true
+    }
+
+    private fun expandInto(ic: android.view.inputmethod.InputConnection, token: String, phrase: String, trailing: String, secret: Boolean) {
+        markEdit()
+        ic.beginBatchEdit()
+        ic.deleteSurroundingText(token.length, 0)
+        ic.commitText(phrase, 1)
+        if (trailing.isNotEmpty()) ic.commitText(trailing, 1)
+        ic.endBatchEdit()
+        enWord.clear()
+        if (secret) recent.setLength(0)          // a password never stays in our own memory of what was typed
+        else {
+            repeat(token.length) { TextBuf.dropLast(recent) }
+            rememberTyped(phrase); rememberTyped(trailing)
+        }
+        lastWord = null
+        lastExpand = Expansion(token, phrase.length + trailing.length, false)
+    }
+
+    /** First backspace after a replacement: the shortcut comes back, the phrase goes. */
+    private fun undoExpansion(ex: Expansion): Boolean {
+        val ic = currentInputConnection ?: return false
+        markEdit()
+        ic.beginBatchEdit()
+        ic.deleteSurroundingText(ex.inserted, 0)
+        if (ex.roman) {
+            roman.setLength(0); roman.append(ex.typed)
+            ic.setComposingText(AvroPhonetic.convert(ex.typed), 1)
+        } else {
+            ic.commitText(ex.typed, 1)
+            if (ex.typed.all { it.isLetter() }) { enWord.setLength(0); enWord.append(ex.typed) }
+        }
+        ic.endBatchEdit()
+        readRecentFromApp()
+        updateCaps()
+        refreshSuggestions()
+        return true
+    }
+
+    /** Back from the lock screen: put the password where the shortcut was typed. */
+    private fun finishReplace(id: Long) {
+        val rep = reps.firstOrNull { it.id == id && it.password } ?: return
+        val ic = currentInputConnection ?: return
+        val token = ReplaceMatcher.lastToken(ic.getTextBeforeCursor(MAX_TOKEN, 0) ?: return)
+        if (!token.equals(rep.shortcut, ignoreCase = true)) return
+        val phrase = repStore.reveal(rep) ?: return
+        expandInto(ic, token, phrase, "", true)
+        updateCaps()
     }
 
     /** Auto-correction (setting): fix an English typo when space is pressed. */
@@ -1131,7 +1253,10 @@ class JuJuKeysInputMethodService : InputMethodService(),
                     (s?.english(typed, 18, learner.nextCounts(prev)) ?: emptyList()).map { matchCase(it, typed) }
                 else -> nextWordList(bangla, prev, s)
             }
-            val list = if (p.blockOffensive) raw.filter { it.lowercase() !in OFFENSIVE } else raw
+            val filtered = if (p.blockOffensive) raw.filter { it.lowercase() !in OFFENSIVE } else raw
+            // a saved shortcut typed in full: its phrase comes first (tap it, or press space)
+            val hit = if (p.textReplace && typed.length >= ReplaceMatcher.MIN_SHORTCUT) ReplaceMatcher.find(typed, reps, false) else null
+            val list = if (hit != null) listOf(ReplaceMatcher.applyCase(typed, hit.phrase, false)) + filtered.filter { it != hit.phrase } else filtered
             main.post {
                 if (seq == suggestionSeq) {
                     state.suggestions = list.take(3)
@@ -1180,6 +1305,8 @@ class JuJuKeysInputMethodService : InputMethodService(),
 
     companion object {
         /** Small list hidden when "আপত্তিকর শব্দ সাজেস্ট করো না" is on. */
+        private const val MAX_TOKEN = 64
+        private val REPLACE_PUNCT = setOf('.', ',', '!', '?', ';', ':')
         private const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
         private const val NO_SENSITIVE_TRANSLATE = "সংবেদনশীল লেখা অনুবাদের বক্সে দেওয়া যায় না (অনলাইনে যেতে পারে)"
 
@@ -1241,16 +1368,17 @@ class JuJuKeysInputMethodService : InputMethodService(),
             val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: return
             if (text.isBlank()) return
             clips.add(text, sensitive)
-            if (fresh && !sensitive) {
+            if (fresh && !sensitive && state.prefs.pasteButton) {
                 state.freshClip = text
                 main.removeCallbacks(clearFreshClip)
-                main.postDelayed(clearFreshClip, 60_000)
+                main.postDelayed(clearFreshClip, state.prefs.pasteHideSec * 1000L)
             }
         }
     }
 
     override fun onClipPaste(text: String) {
         state.freshClip = null
+        lastExpand = null
         state.typing = true
         commitWord()
         endEnglishWord()
@@ -1290,6 +1418,7 @@ class JuJuKeysInputMethodService : InputMethodService(),
             SensitiveAction.KEEP -> onClipToKeep(item.text)          // only when the user picks it
             SensitiveAction.VIEW -> state.panel = Panel.CLIPBOARD
             SensitiveAction.KEEP_ALL -> onClipAllToKeep()
+            SensitiveAction.REPLACE -> Unit
         }
     }
 

@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.ToggleOff
@@ -191,24 +192,14 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                             }
                         }
                     )
-                } else if (clip != null && !forceSuggestions) {
-                    // Just copied → one tap pastes it (like Gboard)
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(34.dp)
-                            .clip(RoundedCornerShape(17.dp)).background(IosColors.key)
-                            .clickable { actions.onClipPaste(clip) }.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.ContentPaste, null, tint = IosColors.text, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            clip.replace('\n', ' '), color = IosColors.text, fontSize = 15.sp, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip)
-                        )
-                    }
                 } else {
                     val words = if (state.prefs.showSuggestions) state.suggestions else emptyList()
                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                        // just copied → a small round Paste button beside the language key (one tap pastes, hides by itself)
+                        if (clip != null && !forceSuggestions) {
+                            Spacer(Modifier.width(2.dp))
+                            PasteRoundButton { actions.onClipPaste(clip) }
+                        }
                         for (i in 0 until 3) {
                             val w = words.getOrNull(i)
                             Box(
@@ -243,6 +234,14 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                     Spacer(Modifier.width(8.dp))
+                    // omw↓ Text replacement (shortcut → phrase)
+                    ToolButton(false, { state.toolsOpen = false; actions.onOpenTextReplace() }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text("omw", color = IosColors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp, maxLines = 1)
+                            Text("↓", color = IosColors.text, fontSize = 12.sp, lineHeight = 11.sp, maxLines = 1)
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
                     // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
                     ToolButton(false, { state.toolsOpen = false; actions.onOpenSettings() }) {
                         Icon(Icons.Filled.Settings, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(23.dp))
@@ -251,6 +250,26 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             }
         }
         BackKey(actions)
+    }
+}
+
+/** Small round button: copied text is waiting — tap = paste it. Soft blue light round the edge. */
+@Composable
+private fun PasteRoundButton(onTap: () -> Unit) {
+    val glow = Color(0xFF4DA3FF)
+    Box(
+        Modifier.size(38.dp)
+            .drawBehind {
+                for ((pad, al) in listOf(4.0f to 0.16f, 2.6f to 0.28f, 1.4f to 0.5f)) {
+                    drawCircle(glow.copy(alpha = al), radius = size.minDimension / 2 + pad.dp.toPx())
+                }
+            }
+            .clip(CircleShape).background(IosColors.key)
+            .border(1.dp, glow.copy(alpha = 0.85f), CircleShape)
+            .clickable(onClickLabel = "Paste") { onTap() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Outlined.ContentCopy, "Paste", tint = IosColors.text, modifier = Modifier.size(20.dp))
     }
 }
 

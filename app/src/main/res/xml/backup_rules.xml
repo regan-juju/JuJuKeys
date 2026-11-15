@@ -5,6 +5,7 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="jujukeys_clipboard.xml" />
     <exclude domain="sharedpref" path="jujukeys_secret.xml" />
+        <exclude domain="sharedpref" path="jujukeys_textrep.xml" />
     <exclude domain="file" path="learned_words.txt" />
     <exclude domain="file" path="stickers/" />
 </full-backup-content>

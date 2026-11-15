@@ -437,6 +437,13 @@ private fun TextPage(p: KeyboardPrefs, refresh: () -> Unit) {
     Header("Auto-correction")
     ToggleItem("Auto-correct", "Fix English spelling mistakes when you press space", "auto_correct", p.autoCorrect, refresh)
     ToggleItem("Bangla auto-fix", "Off: exactly what you type appears (jemon → জেমন). On: a common word that sounds the same replaces it (যেমন)", "bangla_auto_fix", p.banglaAutoFix, refresh)
+    ToggleItem("Text replacement", "Type a shortcut (omw) then space: the phrase (On my way!) replaces it. Backspace right after brings the shortcut back", "text_replace", p.textReplace, refresh)
+    ActionButton("Open Text replacement list", primary = false) {
+        context.startActivity(
+            Intent(context, com.reganbarua.jujukeys.textrep.TextReplaceActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        )
+    }
     ToggleItem("Auto-capitalisation", "English only: first letter of every sentence is a capital (never in Bangla)", "auto_cap", p.autoCapitalize, refresh)
     ToggleItem("Double-space full stop", "Bangla ।  English .", "double_space", p.doubleSpacePeriod, refresh)
     Header("Suggestions")
@@ -464,6 +471,26 @@ private fun ClipboardPage(p: KeyboardPrefs, refresh: () -> Unit) {
     val context = LocalContext.current
     ToggleItem("Clipboard", "Keep copied text in the keyboard", "clipboard", p.clipboardOn, refresh)
     Note("Anything you copy appears in the keyboard clipboard exactly as copied (spaces and lines too). Pin button at the top: tap it, choose items, then Done. Hold an item: copy / Keep / delete. History is encrypted and stays on this phone (Android Keystore); it is not in phone backups.")
+    ToggleItem("Paste button", "After you copy text, a small round Paste button appears beside the language key and hides by itself; the text stays in the clipboard too", "paste_button", p.pasteButton, refresh)
+    if (p.pasteButton) {
+        Text("Hide the Paste button after", color = TextMain, fontSize = 17.sp, modifier = Modifier.padding(start = 20.dp, top = 6.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(3 to "3 s", 6 to "6 s", 10 to "10 s", 15 to "15 s").forEach { (sec, label) ->
+                val on = p.pasteHideSec == sec
+                Box(
+                    Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp))
+                        .background(if (on) Accent else Color.Transparent)
+                        .border(1.dp, if (on) Accent else Color(0xFF5F6368), RoundedCornerShape(10.dp))
+                        .clickable { Prefs.setInt(context, "paste_hide_sec", sec); refresh() },
+                    contentAlignment = Alignment.Center
+                ) { Text(label, color = if (on) Color(0xFF062E6F) else TextMain, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal) }
+            }
+        }
+        Note("Text you copy from a password manager or bank app (marked private) never shows the Paste button — use the clipboard panel and the phone lock for that.")
+    }
     Header("Sensitive text (passwords, OTP …)")
     ToggleItem(
         "Keep sensitive text too",
