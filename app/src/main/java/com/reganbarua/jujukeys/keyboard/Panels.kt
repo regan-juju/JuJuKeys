@@ -234,12 +234,9 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    // omw↓ Text replacement (shortcut → phrase)
+                    // Text replacement (shortcut → phrase): two boxes with swap arrows
                     ToolButton(false, { state.toolsOpen = false; actions.onOpenTextReplace() }) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Text("omw", color = IosColors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp, maxLines = 1)
-                            Text("↓", color = IosColors.text, fontSize = 12.sp, lineHeight = 11.sp, maxLines = 1)
-                        }
+                        ReplaceIcon(IosColors.text)
                     }
                     Spacer(Modifier.width(8.dp))
                     // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
@@ -250,6 +247,31 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             }
         }
         BackKey(actions)
+    }
+}
+
+/** Two small boxes with swap arrows (Text replacement button). Drawn on a 48-unit grid. */
+@Composable
+private fun ReplaceIcon(tint: Color) {
+    androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
+        val u = size.width / 48f
+        val st = androidx.compose.ui.graphics.drawscope.Stroke(
+            width = 3.4f * u, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round
+        )
+        fun box(x: Float, y: Float) = drawRoundRect(
+            tint, androidx.compose.ui.geometry.Offset(x * u, y * u), androidx.compose.ui.geometry.Size(17f * u, 13f * u),
+            androidx.compose.ui.geometry.CornerRadius(3f * u), style = st
+        )
+        box(5f, 9f); box(26f, 26f)
+        val a = androidx.compose.ui.graphics.Path().apply {      // top: right, then down with an arrow head
+            moveTo(24f * u, 15f * u); lineTo(36f * u, 15f * u); lineTo(36f * u, 22f * u)
+            moveTo(32f * u, 19f * u); lineTo(36f * u, 22f * u); lineTo(40f * u, 19f * u)
+        }
+        val b = androidx.compose.ui.graphics.Path().apply {      // bottom: left, then up with an arrow head
+            moveTo(24f * u, 33f * u); lineTo(12f * u, 33f * u); lineTo(12f * u, 26f * u)
+            moveTo(8f * u, 29f * u); lineTo(12f * u, 25f * u); lineTo(16f * u, 29f * u)
+        }
+        drawPath(a, tint, style = st); drawPath(b, tint, style = st)
     }
 }
 
