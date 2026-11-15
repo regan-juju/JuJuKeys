@@ -55,7 +55,7 @@ fi
 
 # drag one app onto another (folder)
 dump
-A=$(find_text "Chrome"); B=$(find_text "Settings"); [ -z "$B" ] && B=$(find_text "Maps")
+A=$(find_text "Camera"); B=$(find_text "Clock")
 echo "drag $A -> $B"
 if [ -n "$A" ] && [ -n "$B" ]; then
   set -- $A; ax=$1; ay=$(( $2 - 70 )); set -- $B; bx=$1; by=$(( $2 - 70 ))
