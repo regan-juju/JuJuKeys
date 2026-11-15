@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.reganbarua.jujulauncher
 
 import androidx.activity.compose.BackHandler
