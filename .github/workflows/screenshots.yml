@@ -38,7 +38,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash ci/blur_shots.sh
+          script: bash ci/feature_shots.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -17,9 +17,14 @@ class BlurDemoActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         intent.getStringExtra("theme")?.let { Prefs.setString(this, "theme", it) }
+        // debug only: a ready password replacement (shortcut pwx → Secret#123), used by the emulator test
+        if (intent.getBooleanExtra("seedpw", false)) com.reganbarua.jujukeys.textrep.ReplaceStore(this).save(null, "pwx", "Secret#123", true)
         val root = FrameLayout(this)
         root.addView(Colourful(this), ViewGroup.LayoutParams(-1, -1))
-        val et = EditText(this).apply { setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); hint = "type here"; setBackgroundColor(0x66000000) }
+        val et = EditText(this).apply {
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); hint = "type here"; setBackgroundColor(0x66000000)
+            if (intent.getBooleanExtra("password", false)) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
         root.addView(et, FrameLayout.LayoutParams(-1, -2).apply { topMargin = 80 })
         setContentView(root)
         et.requestFocus()
