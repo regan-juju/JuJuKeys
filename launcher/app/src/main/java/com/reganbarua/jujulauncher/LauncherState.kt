@@ -31,6 +31,9 @@ class LauncherState(val app: Application) {
     var iconScale by mutableFloatStateOf(prefs.getFloat("iconScale", 1f)); private set
     var darkIcons by mutableStateOf(prefs.getBoolean("dark", true)); private set
     var showLabels by mutableStateOf(prefs.getBoolean("labels", true)); private set
+    var iosBar by mutableStateOf(prefs.getBoolean("iosbar", true)); private set
+    var permTick by mutableStateOf(0)
+    var askPhone: () -> Unit = {}
     var wallpaper by mutableStateOf<ImageBitmap?>(null); private set
     var iconVersion by mutableIntStateOf(0); private set
     var homeSignal by mutableIntStateOf(0)
@@ -128,6 +131,7 @@ class LauncherState(val app: Application) {
 
     fun updateIconScale(v: Float) { iconScale = v; prefs.edit().putFloat("iconScale", v).apply() }
     fun updateDark(v: Boolean) { darkIcons = v; Icons.dark = v; prefs.edit().putBoolean("dark", v).apply(); Icons.clear(); iconVersion = Icons.version }
+    fun updateIosBar(v: Boolean) { iosBar = v; prefs.edit().putBoolean("iosbar", v).apply() }
     fun updateLabels(v: Boolean) { showLabels = v; prefs.edit().putBoolean("labels", v).apply() }
 
     // ---- wallpaper
