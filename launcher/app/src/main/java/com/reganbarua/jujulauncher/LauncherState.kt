@@ -64,14 +64,18 @@ class LauncherState(val app: Application) {
 
     private fun defaultDockKeys(): List<String> {
         val pm = app.packageManager
-        fun first(intent: Intent): String? = pm.resolveActivity(intent, 0)?.activityInfo?.let { "${it.packageName}/${it.name}" }
-        val keys = listOfNotNull(
+        fun first(intent: Intent): String? = pm.queryIntentActivities(intent, 0)
+            .firstOrNull { it.activityInfo.packageName != app.packageName && it.activityInfo.exported }
+            ?.activityInfo?.let { "${it.packageName}/${it.name}" }
+        val pref = listOfNotNull(
             first(Intent(Intent.ACTION_DIAL)),
             first(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING)),
             first(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER)),
             first(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)),
+            first(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MUSIC)),
+            first(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_GALLERY)),
         )
-        return keys
+        return pref.distinct().filter { it in byKey }.take(4)
     }
 
     fun setLayout(l: LayoutState, save: Boolean = true) {
