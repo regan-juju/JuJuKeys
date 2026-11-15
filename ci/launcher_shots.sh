@@ -23,6 +23,11 @@ if i<len(m):
 PY
 }
 adb shell wm size; adb shell wm density
+dump
+if grep -q 'Select a Home app' $OUT/u.xml; then
+  P=$(find_text 'JuJu Launcher'); set -- $P; adb shell input tap $1 $2; sleep 1
+  dump; P=$(find_text 'Always'); set -- $P; adb shell input tap $1 $2; sleep 3
+fi
 shot 01_home
 dump; grep -o 'text="[^"]*"' $OUT/u.xml | head -40 | tr '\n' ' '; echo
 
