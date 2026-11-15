@@ -25,7 +25,8 @@ jobs:
           gradle testDebugUnitTest assembleRelease --console=plain 2>&1 | tee build.log
       - name: Show errors
         if: failure()
-        run: grep -E "^e: |error:|What went wrong|FAILED|AssertionError" build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+        run: |
+          grep -E "^e: |error:|What went wrong|FAILED|AssertionError" build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
       - name: Sign with the key from GitHub Secrets (never printed)
         env:
           KS_B64: ${{ secrets.JUJU_KEYSTORE_B64 }}
