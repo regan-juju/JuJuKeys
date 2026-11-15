@@ -25,6 +25,7 @@ word() { for ch in $(echo "$1" | grep -o .); do tapp ${X[$ch]} ${Y[$ch]} 0.35; d
 SPACE_X=540; SPACE_Y=1684; BACK_X=978; BACK_Y=1120; LANG_X=80; LANG_Y=1120
 longpress_lang() { sh input swipe $LANG_X $LANG_Y $LANG_X $LANG_Y 900; sleep 1.2; }
 
+kb() { sh dumpsys input_method | grep -q 'mInputShown=true' || { note "keyboard hidden -> reopen"; sh input tap 400 205; sleep 3; }; }
 open_demo() {  # extras...
   sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
   sh am start --activity-clear-task -n $PKG/.BlurDemoActivity "$@" >> $LOG; sleep 6
@@ -42,11 +43,11 @@ longpress_lang
 shot 02-tools-row
 
 # ---- 2. English: omw + space → On my way!, then backspace brings omw back
-sleep 6; tapp $LANG_X $LANG_Y 1
+sleep 4; kb; tapp $LANG_X $LANG_Y 1.5; kb; shot 02b-after-lang
 word omw; sleep 1
 shot 03-omw-typed
 note "before space: $(fieldtext)"
-tapp $SPACE_X $SPACE_Y 1
+kb; tapp $SPACE_X $SPACE_Y 1
 note "after space (expect On my way! ): $(fieldtext)"
 shot 04-omw-replaced
 tapp $BACK_X $BACK_Y 1
@@ -58,14 +59,14 @@ word hello; tapp $SPACE_X $SPACE_Y 1
 note "plain word (expect hello ): $(fieldtext)"
 
 # ---- 3. copy → round Paste button
-sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 2   # select all, copy
+kb; sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 2   # select all, copy
 shot 06-paste-round
 tapp 195 1120 1.5
 note "after Paste tap (text doubled?): $(fieldtext)"
 shot 07-pasted
 
 # ---- 4. Text Replacement screen from the tools row
-longpress_lang
+kb; longpress_lang
 tapp 518 1120 3
 shot 08-textreplace-list
 sh input tap 1000 118; sleep 2
