@@ -13,6 +13,7 @@ for i in 1 2 3 4 5; do
   sh ime enable $IME >> $LOG; sh ime set $IME >> $LOG
   sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4
 done
+sh wm size 1080x2400 >> $LOG; sh wm density 420 >> $LOG; sleep 3
 read W H <<<"$(sh wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | tr x ' ')"
 note "screen ${W}x${H}"
 S=$(awk "BEGIN{print $W/640}")
@@ -21,7 +22,7 @@ px() { awk "BEGIN{printf \"%d\", $1*$S}"; }
 py() { awk "BEGIN{printf \"%d\", $H-(1280-$1)*$S}"; }
 tapp() { sh input tap $(px $1) $(py $2); sleep ${3:-0.6}; }
 shot() { adb exec-out screencap -p > shots/api${API}-$1.png; note "shot $1"; }
-fieldtext() { sh uiautomator dump /sdcard/u.xml >/dev/null; sh cat /sdcard/u.xml | grep -oE 'class="android.widget.EditText"[^>]*' | grep -oE ' text="[^"]*"' | head -1; }
+fieldtext() { sh uiautomator dump /sdcard/u.xml >/dev/null; sh cat /sdcard/u.xml | grep -oE '<node [^>]*class="android.widget.EditText"[^>]*>' | grep -oE ' text="[^"]*"' | head -1; }
 declare -A X=( [q]=37 [w]=100 [e]=163 [r]=226 [t]=289 [y]=352 [u]=414 [i]=477 [o]=539 [p]=601 [a]=68 [s]=131 [d]=194 [f]=258 [g]=320 [h]=381 [j]=445 [k]=508 [l]=571 [z]=131 [x]=194 [c]=258 [v]=320 [b]=381 [n]=445 [m]=508 )
 declare -A Y=( [q]=778 [w]=778 [e]=778 [r]=778 [t]=778 [y]=778 [u]=778 [i]=778 [o]=778 [p]=778 [a]=886 [s]=886 [d]=886 [f]=886 [g]=886 [h]=886 [j]=886 [k]=886 [l]=886 [z]=994 [x]=994 [c]=994 [v]=994 [b]=994 [n]=994 [m]=994 )
 word() { for ch in $(echo "$1" | grep -o .); do tapp ${X[$ch]} ${Y[$ch]} 0.35; done; }
@@ -31,7 +32,7 @@ open_demo() {  # extras...
   sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
   sh am start --activity-clear-task -n $PKG/.BlurDemoActivity "$@" >> $LOG; sleep 6
   for t in 1 2 3 4; do
-    sh input tap 300 $(awk "BEGIN{printf \"%d\", 0.1*$H}"); sleep 3
+    sh input tap $(awk "BEGIN{printf \"%d\", 0.5*$W}") $(awk "BEGIN{printf \"%d\", 0.2*$H}"); sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
   done
   sleep 6
