@@ -30,10 +30,18 @@ dump; grep -o 'text="[^"]*"' $OUT/u.xml | head -40 | tr '\n' ' '; echo
 adb shell input swipe 900 1000 150 1000 300; sleep 2; shot 02_library
 adb shell input swipe 150 1000 900 1000 300; sleep 2
 
-# search by pulling down
-adb shell input swipe 540 700 540 1500 300; sleep 2; shot 03_search
+# search: swipe from an empty area, then from over an icon, then the Search pill
+adb shell input swipe 540 1250 540 1900 400; sleep 2; shot 03_search_swipe_empty
+adb shell input keyevent KEYCODE_BACK; sleep 1
+adb shell input swipe 540 700 540 1500 400; sleep 2; shot 03b_search_swipe_icon
+adb shell input keyevent KEYCODE_BACK; sleep 1
+dump; Q=$(find_text "Search" 0); echo "pill: $Q"; set -- $Q
+adb shell input tap $1 $2; sleep 2; shot 03c_search_pill
 adb shell input text "chr"; sleep 2; shot 04_search_results
-adb shell input keyevent KEYCODE_BACK; sleep 1; adb shell input keyevent KEYCODE_BACK; sleep 1
+adb shell input keyevent KEYCODE_BACK; sleep 1
+adb shell input keyevent KEYCODE_BACK; sleep 1
+adb shell input keyevent KEYCODE_BACK; sleep 1
+shot 04b_after_backs
 
 # long-press first app label area
 dump
