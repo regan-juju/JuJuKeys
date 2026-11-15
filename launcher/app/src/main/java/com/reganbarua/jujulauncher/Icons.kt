@@ -48,10 +48,16 @@ object Icons {
 
     fun peek(app: AppInfo, px: Int): ImageBitmap? = cache.get("${app.key}@$px@$dark")
 
-    private fun customBitmap(ctx: Context, pkg: String): Bitmap? {
-        val f = File(customDir(ctx), "$pkg.png")
-        if (f.exists()) BitmapFactory.decodeFile(f.path)?.let { return it }
-        return try { ctx.assets.open("icons/$pkg.png").use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
+    /** user icon for this app: by package (pkg.png) or by app name (lbl_<name>.png), then bundled assets */
+    fun labelKey(label: String) = "lbl_" + label.lowercase().filter { it in 'a'..'z' || it in '0'..'9' }
+
+    private fun customBitmap(ctx: Context, app: AppInfo): Bitmap? {
+        val dir = customDir(ctx)
+        for (name in listOf("${app.pkg}.png", labelKey(app.label) + ".png")) {
+            val f = File(dir, name)
+            if (f.exists()) BitmapFactory.decodeFile(f.path)?.let { return it }
+        }
+        return try { ctx.assets.open("icons/${app.pkg}.png").use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
     }
 
     private fun render(ctx: Context, app: AppInfo, s: Int): Bitmap {
@@ -59,7 +65,7 @@ object Icons {
         val c = Canvas(out)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         c.save(); c.clipPath(squircle(s.toFloat()))
-        val custom = customBitmap(ctx, app.pkg)
+        val custom = customBitmap(ctx, app)
         if (custom != null) {
             c.drawBitmap(custom, null, Rect(0, 0, s, s), paint)
         } else if (dark) {
