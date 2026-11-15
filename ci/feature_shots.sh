@@ -65,7 +65,7 @@ word hello; tapp $SPACE_X $SPACE_Y 1
 note "plain word (expect hello ): $(fieldtext)"
 
 # ---- 3. copy → round Paste button
-kb; sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 2   # select all, copy
+kb; sh input keycombination CTRL_LEFT A; sleep 0.5; sh input keyevent 278; sleep 1; sh input keyevent KEYCODE_MOVE_END; sleep 1.5   # select all, copy
 shot 06-paste-round
 tapp 195 1120 1.5
 note "after Paste tap (text doubled?): $(fieldtext)"
@@ -87,6 +87,9 @@ tapp $SPACE_X $SPACE_Y 4
 shot 10-lock-prompt
 sh input text 1234; sleep 1; sh input keyevent 66; sleep 5
 shot 11-after-unlock
-note "password field after unlock (expect 10 dots): $(fieldtext)"
+note "password field right after unlock: $(fieldtext)"
+sh input tap 400 205; sleep 4
+shot 12-reopened
+note "password field after keyboard reopened (expect 10 dots): $(fieldtext)"
 sh logcat -d -t 600 | grep -iE "jujukeys|AndroidRuntime|FATAL" | tail -60 > shots/api${API}-log.txt
 cat $LOG
