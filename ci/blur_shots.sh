@@ -13,16 +13,15 @@ for i in 1 2 3 4 5; do
   sh settings get secure default_input_method | grep -q jujukeys && break; sleep 4
 done
 shotfor() {  # $1 = theme id, $2 = file
-  sh am force-stop $PKG >/dev/null; sleep 1
-  sh am start -n $PKG/.BlurDemoActivity --es theme "$1" >> $LOG; sleep 7
+  sh input keyevent KEYCODE_HOME; sleep 1; sh ime set $IME >> $LOG
+  sh am start -S -n $PKG/.BlurDemoActivity --es theme "$1" >> $LOG; sleep 7
   for t in 1 2 3 4; do
     sh input tap 300 140; sleep 3
     sh dumpsys input_method | grep -q 'mInputShown=true' && break
   done
   sleep 2
   adb exec-out screencap -p > shots/api${API}-$2.png
-  sh dumpsys window | grep -iE "blur" | head -5 >> $LOG
-  echo "blur enabled: $(sh dumpsys window | grep -ci 'isCrossWindowBlurEnabled=true')" >> $LOG
+  sh dumpsys input_method | grep -E "mCurMethodId|mInputShown" >> $LOG
 }
 shotfor blur 1-blur
 shotfor current 2-current
