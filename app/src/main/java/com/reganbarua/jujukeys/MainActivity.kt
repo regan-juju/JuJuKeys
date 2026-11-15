@@ -12,12 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.background
 import com.reganbarua.jujukeys.security.DataMigration
 import com.reganbarua.jujukeys.settings.SettingsApp
 
@@ -38,12 +32,7 @@ class MainActivity : ComponentActivity() {
                     background = Color(0xFF1B1B1B),
                 )
             ) {
-                // Android 15 draws apps edge-to-edge: keep the screen clear of the status / navigation bars and the keyboard
-                androidx.compose.foundation.layout.Box(
-                    Modifier.fillMaxSize().background(Color(0xFF1B1B1B)).windowInsetsPadding(WindowInsets.safeDrawing)
-                ) {
-                    SettingsApp(enabled = enabled, selected = selected, onClose = { finish() })
-                }
+                SettingsApp(enabled = enabled, selected = selected, onClose = { finish() })
             }
         }
     }

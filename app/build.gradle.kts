@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.reganbarua.jujukeys"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.reganbarua.jujukeys"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34
         // CI: the GitHub run number. Local builds: VERSION_CODE in gradle.properties (never lower
         // than the newest release, so an install over it is an update, not a "downgrade").
         val code = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
