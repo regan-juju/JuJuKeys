@@ -73,7 +73,7 @@ internal object Themes {
         KbTheme(
             "darkglass", "Dark glass",
             // same glass keypad, darker and less grey; coloured 🌐 and 🎤
-            bg = Color(0xFF1A1A1C), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xA8,
+            bg = Color(0xFF1A1A1C), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xA8,
             key = Color(0x1CFFFFFF), keyPressed = Color(0x4DFFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xCCFFFFFF), edge = Color(0x66FFFFFF),
             panel = Color(0xF21C1C1E), nav = 0xFF1A1A1C.toInt(),
@@ -82,7 +82,7 @@ internal object Themes {
         KbTheme(
             "noirglass", "Noir glass",
             // nearly black glass keypad, picture only a faint texture; coloured 🌐 and 🎤
-            bg = Color(0xFF111113), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xCC,
+            bg = Color(0xFF111113), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xCC,
             key = Color(0x1CFFFFFF), keyPressed = Color(0x44FFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xB8FFFFFF), edge = Color(0x59FFFFFF),
             panel = Color(0xF50E0E10), nav = 0xFF111113.toInt(),
