@@ -209,10 +209,14 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             rims = rects.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) },
             bodies = rects.mapIndexed { i, r ->
                 val base = tint.getOrNull(i)?.first ?: IosColors.key
-                Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
+                if (t.crisp > 0f) Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = 0.26f * t.crisp), 0.55f to Color.White.copy(alpha = 0.04f * t.crisp),
+                    1f to Color.White.copy(alpha = 0.10f * t.crisp), startY = r.top, endY = r.bottom)
+                else Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
             },
             sheens = rects.map { r ->
-                Brush.linearGradient(
+                if (t.crisp > 0f) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent), start = r.topLeft, end = Offset(r.right, r.bottom))
+                else Brush.linearGradient(
                     0f to Color.White.copy(alpha = if (strong) 0.24f else 0.17f),
                     0.42f to Color.Transparent,
                     1f to Color.White.copy(alpha = 0.05f),
@@ -379,6 +383,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                     // glow in this key's own rainbow colour, rising from below the key
                     drawGlowBehind(kr, corner, gc, strongKey, glowLevel)
                 } else if (down) drawRoundRect(Color.White.copy(alpha = 0.14f), kr.inflate(2.5.dp.toPx()).topLeft, kr.inflate(2.5.dp.toPx()).size, CornerRadius(corner + 2.5.dp.toPx()))   // soft glow
+                else if (IosColors.theme.crisp > 0f) drawRoundRect(Color.Black.copy(alpha = 0.45f), kr.topLeft + Offset(0f, 2.dp.toPx()), kr.size, cr)
                 else drawRoundRect(IosColors.shadow, kr.topLeft + Offset(0f, 1.dp.toPx()), kr.size, cr)
                 when {
                     down -> drawRoundRect(tc?.second ?: IosColors.keyPressed, kr.topLeft, kr.size, cr)
@@ -390,6 +395,8 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 val rim = looks.rims.getOrNull(i)?.let { if (down) it.second else it.first } ?: IosColors.glassEdge
                 if (k.type == KType.SHIFT && state.shift != ShiftState.OFF)   // shift is on: clearly lit
                     drawRoundRect(Color.White.copy(alpha = if (state.shift == ShiftState.LOCK) 0.34f else 0.22f), kr.topLeft, kr.size, cr)
+                if (IosColors.theme.crisp > 0f && !down)   // clear outline all round (the bright top edge is added by the rim below)
+                    drawRoundRect(Color.White.copy(alpha = 0.42f * IosColors.theme.crisp), kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = if (down) 1.5.dp.toPx() else 0.9.dp.toPx()))
                 if (gc != null) drawGlowInside(kr, corner, gc, strongKey, glowLevel)
             }

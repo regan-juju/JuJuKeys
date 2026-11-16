@@ -51,6 +51,8 @@ internal class KbTheme(
     /** Colours of the 🌐 and 🎤 buttons (null = normal text colour). */
     val navGlobe: Color? = null,
     val navMic: Color? = null,
+    /** >0: crisp glass keys (clear outline all round, bright top edge, soft drop shadow, clearer body). 1 = full strength. */
+    val crisp: Float = 0f,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -67,15 +69,15 @@ internal object Themes {
             ),
             // glass keys over a soft blurred grey picture behind the key pad; the bottom strip (🌐 ^ 🎤) stays plain dark
             bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B,
-            key = Color(0x2EFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x22FFFFFF),
-            glassTop = Color(0xCCFFFFFF), edge = Color(0x59FFFFFF),
+            key = Color(0x1AFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x1AFFFFFF),
+            glassTop = Color(0xFFFFFFFF), edge = Color(0x59FFFFFF), crisp = 1f,
         ),
         KbTheme(
             "darkglass", "Dark glass",
             // same glass keypad, darker and less grey; coloured 🌐 and 🎤
             bg = Color(0xFF1A1A1C), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xA8,
-            key = Color(0x1CFFFFFF), keyPressed = Color(0x4DFFFFFF), fn = Color(0x1AFFFFFF),
-            glassTop = Color(0xCCFFFFFF), edge = Color(0x66FFFFFF),
+            key = Color(0x1AFFFFFF), keyPressed = Color(0x4DFFFFFF), fn = Color(0x1AFFFFFF),
+            glassTop = Color(0xFFFFFFFF), edge = Color(0x66FFFFFF), crisp = 0.75f,
             panel = Color(0xF21C1C1E), nav = 0xFF1A1A1C.toInt(),
             navGlobe = Color(0xFF4FC3FF), navMic = Color(0xFFFF8A6B),
         ),
@@ -83,8 +85,8 @@ internal object Themes {
             "noirglass", "Noir glass",
             // nearly black glass keypad, picture only a faint texture; coloured 🌐 and 🎤
             bg = Color(0xFF111113), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xCC,
-            key = Color(0x1CFFFFFF), keyPressed = Color(0x44FFFFFF), fn = Color(0x1AFFFFFF),
-            glassTop = Color(0xB8FFFFFF), edge = Color(0x59FFFFFF),
+            key = Color(0x1AFFFFFF), keyPressed = Color(0x44FFFFFF), fn = Color(0x1AFFFFFF),
+            glassTop = Color(0xF0FFFFFF), edge = Color(0x59FFFFFF), crisp = 0.7f,
             panel = Color(0xF50E0E10), nav = 0xFF111113.toInt(),
             navGlobe = Color(0xFF5BE0B0), navMic = Color(0xFFFFB347),
         ),

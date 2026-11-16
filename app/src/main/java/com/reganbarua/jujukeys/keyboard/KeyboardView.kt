@@ -731,13 +731,17 @@ internal fun PressBox(
             .background(if (pressed) pressedColor else color)
             .then(if (glass) Modifier.drawWithCache {
                 // liquid glass: lighter top, diagonal light sheen (same as the letter keys)
-                val body = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.09f), 1f to Color.Transparent)
-                val sheen = Brush.linearGradient(
+                val cz = IosColors.theme.crisp
+                val body = if (cz > 0f) Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = 0.22f * cz), 0.55f to Color.Transparent, 1f to Color.White.copy(alpha = 0.06f * cz))
+                else Brush.verticalGradient(0f to Color.White.copy(alpha = 0.09f), 1f to Color.Transparent)
+                val sheen = if (cz > 0f) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else Brush.linearGradient(
                     0f to Color.White.copy(alpha = 0.16f), 0.42f to Color.Transparent, 1f to Color.White.copy(alpha = 0.05f),
                     start = Offset.Zero, end = Offset(size.width, size.height)
                 )
                 onDrawBehind { drawRect(body); drawRect(sheen) }
             } else Modifier)
+            .then(if (glass && IosColors.theme.crisp > 0f) Modifier.border(0.8.dp, Color.White.copy(alpha = 0.42f * IosColors.theme.crisp), shape) else Modifier)
             .then(if (glass) Modifier.border(0.8.dp, IosColors.glassEdge, shape) else Modifier)
             .then(if (glowLevel > 0.01f) Modifier.drawWithContent {
                 drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong, glowLevel)
