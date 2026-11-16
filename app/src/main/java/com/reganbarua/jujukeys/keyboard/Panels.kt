@@ -308,8 +308,27 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
 @Composable
 internal fun BackKey(actions: KeyboardActions) {
+    // same thin soft light round the border as the ক / A key (outside only), in soft red for delete
+    val delCol = Color(0xFFFF6B81)
     PressBox(
-        Modifier.size(width = 62.dp, height = 38.dp),
+        Modifier.size(width = 62.dp, height = 38.dp)
+            .drawBehind {
+                val cr = 10.dp.toPx()
+                val keyPath = androidx.compose.ui.graphics.Path().apply {
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(cr)))
+                }
+                clipPath(keyPath, androidx.compose.ui.graphics.ClipOp.Difference) {
+                    for ((pad, al) in listOf(4.0f to 0.20f, 2.8f to 0.34f, 1.6f to 0.55f)) {
+                        val q = pad.dp.toPx()
+                        drawRoundRect(
+                            delCol.copy(alpha = al), Offset(-q, -q),
+                            androidx.compose.ui.geometry.Size(size.width + 2 * q, size.height + 2 * q),
+                            androidx.compose.ui.geometry.CornerRadius(cr + q)
+                        )
+                    }
+                }
+            }
+            .border(1.dp, delCol, RoundedCornerShape(10.dp)),
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },
