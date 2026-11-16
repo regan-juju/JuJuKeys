@@ -229,16 +229,28 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
                         state.toolsOpen = false
                         actions.onPanel(if (state.panel == Panel.CLIPBOARD) Panel.KEYS else Panel.CLIPBOARD)
                     }) { KeepIcon() }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(5.dp))
                     ToolButton(state.translateOn, { state.toolsOpen = false; actions.onTranslateToggle() }) {
                         Icon(Symbols.translate, "অনুবাদ", tint = IosColors.text, modifier = Modifier.size(23.dp))
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(5.dp))
                     // Text replacement (shortcut → phrase): two boxes with swap arrows
                     ToolButton(false, { state.toolsOpen = false; actions.onOpenTextReplace() }) {
                         ReplaceIcon(IosColors.text)
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(5.dp))
+                    // Text editing (cursor, select, cut/copy/paste)
+                    ToolButton(state.panel == Panel.EDIT, {
+                        state.toolsOpen = false
+                        actions.onPanel(if (state.panel == Panel.EDIT) Panel.KEYS else Panel.EDIT)
+                    }) { Text("I", color = IosColors.text, fontSize = 22.sp, fontWeight = FontWeight.Light) }
+                    Spacer(Modifier.width(5.dp))
+                    // Themes (quick picker)
+                    ToolButton(state.panel == Panel.THEMES, {
+                        state.toolsOpen = false
+                        actions.onPanel(if (state.panel == Panel.THEMES) Panel.KEYS else Panel.THEMES)
+                    }) { Text("🎨", fontSize = 18.sp) }
+                    Spacer(Modifier.width(5.dp))
                     // ⚙ JuJuKeys settings (the 🌐 key now only switches keyboards)
                     ToolButton(false, { state.toolsOpen = false; actions.onOpenSettings() }) {
                         Icon(Icons.Filled.Settings, "সেটিংস", tint = IosColors.text, modifier = Modifier.size(23.dp))
@@ -354,7 +366,7 @@ private fun KeepIcon() {
 @Composable
 private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 48.dp, height = 38.dp),
+        Modifier.size(width = 40.dp, height = 38.dp),
         shape = RoundedCornerShape(10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,
@@ -1192,3 +1204,85 @@ private fun StickerSheetButton(icon: ImageVector, text: String, modifier: Modifi
 }
 
 private fun bnNum(n: Int): String = n.toString().map { if (it in '0'..'9') '০' + (it - '0') else it }.joinToString("")
+
+
+// ------------------------------------------------------------------ text editing page
+
+@Composable
+internal fun EditPanel(state: KeyboardState, actions: KeyboardActions) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back") { actions.onPanel(Panel.KEYS) }
+            Spacer(Modifier.width(12.dp))
+            Text("Text editing", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            PressBox(
+                Modifier.size(width = 104.dp, height = 38.dp), shape = RoundedCornerShape(12.dp),
+                color = if (state.editSelect) IosColors.blue.copy(alpha = 0.55f) else IosColors.key, pressedColor = IosColors.keyPressed,
+                onTap = { state.editSelect = !state.editSelect }
+            ) { Text("Select", color = IosColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+        }
+        @Composable
+        fun RowScope.EBtn(label: String, op: String, w: Float = 1f) {
+            PressBox(
+                Modifier.weight(w).fillMaxHeight(), shape = RoundedCornerShape(14.dp),
+                color = IosColors.key, pressedColor = IosColors.keyPressed, onTap = { actions.onEdit(op) }
+            ) { Text(label, color = IosColors.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) }
+        }
+        Row(Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // arrows (cross)
+            Column(Modifier.weight(1.25f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(Modifier.weight(1f)); EBtn("▲", "up"); Spacer(Modifier.weight(1f))
+                }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EBtn("◀", "left"); EBtn("▼", "down"); EBtn("▶", "right")
+                }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EBtn("Home", "home"); EBtn("⇠ Word", "wleft", 1.2f); EBtn("Word ⇢", "wright", 1.2f); EBtn("End", "end")
+                }
+            }
+            // actions
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { EBtn("Select all", "all") }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { EBtn("Cut", "cut"); EBtn("Copy", "copy") }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { EBtn("Paste", "paste") }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+// ------------------------------------------------------------------ themes quick picker
+
+@Composable
+internal fun ThemesPanel(state: KeyboardState, actions: KeyboardActions) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            SmallIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back") { actions.onPanel(Panel.KEYS) }
+            Spacer(Modifier.width(12.dp))
+            Text("Themes", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold)
+        }
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(Themes.all.size) { n ->
+                val t = Themes.all[n]
+                val on = t.id == state.prefs.theme
+                PressBox(
+                    Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
+                    color = if (on) IosColors.blue.copy(alpha = 0.45f) else IosColors.key, pressedColor = IosColors.keyPressed,
+                    onTap = { actions.onThemePick(t.id) }
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(20.dp).clip(CircleShape).background(t.bg).border(1.dp, Color(0x99FFFFFF), CircleShape))
+                        Spacer(Modifier.width(10.dp))
+                        Text(t.name, color = IosColors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}

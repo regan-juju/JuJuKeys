@@ -766,6 +766,38 @@ class JuJuKeysInputMethodService : InputMethodService(),
         )
     }
 
+    override fun onEdit(op: String) {
+        lastExpand = null
+        commitWord(); enWord.clear(); lastWord = null
+        val ic = currentInputConnection ?: return
+        fun key(code: Int, meta: Int = 0) {
+            val t = android.os.SystemClock.uptimeMillis()
+            ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0, meta))
+            ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP, code, 0, meta))
+        }
+        val sel = if (state.editSelect) KeyEvent.META_SHIFT_ON else 0
+        when (op) {
+            "left" -> key(KeyEvent.KEYCODE_DPAD_LEFT, sel)
+            "right" -> key(KeyEvent.KEYCODE_DPAD_RIGHT, sel)
+            "up" -> key(KeyEvent.KEYCODE_DPAD_UP, sel)
+            "down" -> key(KeyEvent.KEYCODE_DPAD_DOWN, sel)
+            "home" -> key(KeyEvent.KEYCODE_MOVE_HOME, sel)
+            "end" -> key(KeyEvent.KEYCODE_MOVE_END, sel)
+            "wleft" -> key(KeyEvent.KEYCODE_DPAD_LEFT, sel or KeyEvent.META_CTRL_ON)
+            "wright" -> key(KeyEvent.KEYCODE_DPAD_RIGHT, sel or KeyEvent.META_CTRL_ON)
+            "all" -> ic.performContextMenuAction(android.R.id.selectAll)
+            "cut" -> ic.performContextMenuAction(android.R.id.cut)
+            "copy" -> ic.performContextMenuAction(android.R.id.copy)
+            "paste" -> ic.performContextMenuAction(android.R.id.paste)
+        }
+    }
+
+    override fun onThemePick(id: String) {
+        Prefs.setString(this, "theme", id)
+        state.prefs = Prefs.load(this)
+        applyBlur(); darkNavigationBar()
+    }
+
     override fun onOpenSettings() {
         commitWord()
         // Opened from the keyboard: a fresh settings screen that does not stay in Recents, so it

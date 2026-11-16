@@ -16,7 +16,7 @@ enum class ShiftState { OFF, ONCE, LOCK }
 enum class Page { LETTERS, NUMPAD, SYMBOLS, MORE_SYMBOLS }
 
 /** What fills the key area. */
-enum class Panel { KEYS, CLIPBOARD, EMOJI, SUGGESTIONS }
+enum class Panel { KEYS, CLIPBOARD, EMOJI, SUGGESTIONS, EDIT, THEMES }
 
 /** Which sound a key press makes. */
 enum class KeyKind { NORMAL, DELETE, SPACE, RETURN }
@@ -34,6 +34,8 @@ class KeyboardState {
 
     /** Tools (Keep / Translate / Settings) are open: opened by holding the language key, closes after 6 s or when one is chosen. */
     var toolsOpen by mutableStateOf(false)
+    /** Text-editing panel: arrows select while this is on. */
+    var editSelect by mutableStateOf(false)
 
     /** Settings chosen in the app (Gboard-style settings screen). */
     var prefs by mutableStateOf(KeyboardPrefs())
@@ -131,6 +133,9 @@ interface KeyboardActions {
     /** 🌐 tap: the next keyboard (or the keyboard list if there is no other one). */
     fun onNextKeyboard()
     fun onOpenSettings()
+    /** Text-editing panel: left/right/up/down/home/end/wleft/wright/all/cut/copy/paste. */
+    fun onEdit(op: String)
+    fun onThemePick(id: String)
     /** The omw↓ button: opens the Text replacement list. */
     fun onOpenTextReplace()
     /** Sound / vibration for a key press, following the settings. */

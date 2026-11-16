@@ -114,6 +114,17 @@ open_demo --es theme noirglass --ez plain true
 kb; longpress_lang; tapp 220 1120 2.5
 shot 08b-clipboard
 
+# ---- 4c. text editing page + theme picker (from the tools row)
+open_demo --es theme noirglass --ez plain true
+kb; longpress_lang
+shot 08f-tools-row
+tapp 330 1120 1.5
+shot 08g-edit-page
+tapp 60 1120 1.0
+kb; longpress_lang
+tapp 385 1120 1.5
+shot 08h-themes-page
+
 # ---- 5. password entry + phone lock
 sh locksettings set-pin 1234 >> $LOG
 open_demo --es theme blur --ez password true --ez seedpw true
