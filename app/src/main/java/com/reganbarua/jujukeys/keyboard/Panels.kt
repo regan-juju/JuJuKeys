@@ -577,6 +577,10 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
             }
             Spacer(Modifier.width(12.dp))
             Text(if (pinMode) "Pin items" else "Clipboard", color = IosColors.text, fontSize = 19.sp.bn(), fontWeight = FontWeight.Bold)
+            if (enabled && !pinMode && state.keepSplit == null) {
+                Spacer(Modifier.width(10.dp))
+                ActionChip("Split", null) { actions.onKeepSplitStart() }
+            }
             Spacer(Modifier.weight(1f))
             if (enabled && clips.isNotEmpty()) {
                 PressBox(
@@ -615,7 +619,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
             )
         }
 
-        if (enabled && !pinMode) {
+        if (enabled && !pinMode && (state.keepSplit != null || state.keepSplitMsg != null)) {
             val split = state.keepSplit
             Row(
                 Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
@@ -627,7 +631,6 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
                     ActionChip("Add", null, IosColors.keepYellow) { actions.onKeepSplitApply() }
                     ActionChip("✕", null) { actions.onKeepSplitCancel() }
                 } else {
-                    ActionChip("Split Keep note", null) { actions.onKeepSplitStart() }
                     state.keepSplitMsg?.let {
                         Text(it, color = IosColors.dim, fontSize = 12.sp.bn(), fontFamily = BanglaFont, maxLines = 1)
                     }
@@ -697,8 +700,8 @@ private fun ClipGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (recent.isNotEmpty()) {
                 item(span = { GridItemSpan(2) }) { SectionTitle("Recent") }
@@ -724,14 +727,14 @@ private fun ClipTile(
 ) {
     Box(
         Modifier
-            .heightIn(min = 56.dp)
+            .heightIn(min = 46.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isSelected) IosColors.keyPressed else IosColors.card)
             .combinedClickable(
                 onClick = { if (pinPick != null) onPinToggle(clip.id) else actions.onClipTap(clip.id) },
                 onLongClick = { if (pinPick == null) onLongPress() }
             )
-            .padding(start = 12.dp, end = if (pinPick != null) 34.dp else 12.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 12.dp, end = if (pinPick != null) 34.dp else 12.dp, top = 7.dp, bottom = 7.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         if (clip.sensitive && !unlocked) {
@@ -742,7 +745,7 @@ private fun ClipTile(
             )
         } else {
             Text(
-                clip.text, color = IosColors.text, fontSize = 15.sp, maxLines = 3,
+                clip.text, color = IosColors.text, fontSize = 15.sp, maxLines = 2,
                 overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip.text)
             )
         }

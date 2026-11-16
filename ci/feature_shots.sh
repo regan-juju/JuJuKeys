@@ -104,6 +104,11 @@ shot 08-textreplace-list
 sh input tap 1000 118; sleep 2
 shot 09-add-sheet
 
+# ---- 4b. clipboard page (real panel)
+open_demo --es theme noirglass --ez plain true
+kb; longpress_lang; tapp 220 1120 2.5
+shot 08b-clipboard
+
 # ---- 5. password entry + phone lock
 sh locksettings set-pin 1234 >> $LOG
 open_demo --es theme blur --ez password true --ez seedpw true

@@ -260,6 +260,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                 when {
                     searching -> EmojiSearchBar(state, actions)
                     state.panel == Panel.EMOJI -> EmojiTopBar(actions)
+                    state.panel == Panel.CLIPBOARD -> {}   // clipboard uses this space for more items
                     state.translateOn -> {
                         TranslateBar(state, actions)
                         SuggestionBar(state, actions, forceSuggestions = true)   // suggestions while translating too
@@ -267,7 +268,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     else -> SuggestionBar(state, actions)
                 }
 
-                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp)) {
+                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (state.panel == Panel.CLIPBOARD && !searching) 48.dp else 0.dp))) {
                     when (state.panel) {
                         Panel.KEYS, Panel.SUGGESTIONS -> KeysPanel(state, actions, preview)
                         Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
