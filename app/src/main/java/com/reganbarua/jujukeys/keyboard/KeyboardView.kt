@@ -268,7 +268,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     else -> SuggestionBar(state, actions)
                 }
 
-                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (state.panel == Panel.CLIPBOARD && !searching) 48.dp else 0.dp))) {
+                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (state.panel == Panel.CLIPBOARD && !searching) 110.dp else 0.dp))) {
                     when (state.panel) {
                         Panel.KEYS, Panel.SUGGESTIONS -> KeysPanel(state, actions, preview)
                         Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
@@ -282,7 +282,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     ) { MoreSuggestionsPanel(state, actions) }
                     if (state.translateOn && state.translatePicker) LanguagePicker(state, actions)
                 }
-                BottomStrip(state, actions)
+                if (state.panel != Panel.CLIPBOARD || searching) BottomStrip(state, actions)   // clipboard fills the whole keyboard
             }
             KeyPreviewBubble(preview, rootWidth)
         }
