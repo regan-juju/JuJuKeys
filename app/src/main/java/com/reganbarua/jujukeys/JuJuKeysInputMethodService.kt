@@ -792,6 +792,31 @@ class JuJuKeysInputMethodService : InputMethodService(),
         }
     }
 
+    override fun onUndo() {
+        lastExpand = null
+        commitWord(); enWord.clear(); lastWord = null
+        currentInputConnection?.performContextMenuAction(android.R.id.undo)
+    }
+
+    override fun onResize() {
+        val steps = listOf(1.0f, 1.1f, 1.2f, 1.3f)
+        val i = steps.indexOfFirst { kotlin.math.abs(it - state.prefs.heightScale) < 0.01f }
+        Prefs.setFloat(this, "height_scale", steps[(i + 1).mod(steps.size)])
+        state.prefs = Prefs.load(this)
+    }
+
+    override fun onOneHand(mode: Int) {
+        Prefs.setInt(this, "one_hand", mode)
+        state.prefs = Prefs.load(this)
+        if (mode != 0) state.panel = Panel.KEYS
+    }
+
+    override fun onShareKeyboard() {
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_TEXT, "JuJuKeys keyboard: https://github.com/regan-juju/JuJuKeys/releases/latest")
+        startActivity(Intent.createChooser(send, "Share JuJuKeys").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
     override fun onThemePick(id: String) {
         Prefs.setString(this, "theme", id)
         state.prefs = Prefs.load(this)

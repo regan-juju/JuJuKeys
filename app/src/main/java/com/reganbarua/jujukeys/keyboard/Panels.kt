@@ -22,6 +22,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -151,7 +152,7 @@ internal fun SuggestionBar(state: KeyboardState, actions: KeyboardActions, force
             shape = KeyShape,
             color = IosColors.keyOr(0, IosColors.key), pressedColor = IosColors.rainbowAt(0)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
             onTap = { state.toolsOpen = false; actions.onToggleLanguage() },
-            onLongPress = { state.toolsOpen = !state.toolsOpen }
+            onLongPress = { state.toolsOpen = false; actions.onPanel(if (state.panel == Panel.TOOLS) Panel.KEYS else Panel.TOOLS) }
         ) {
             Text(
                 if (bangla) "ক" else "A", color = IosColors.text, fontSize = 19.sp,
@@ -1282,6 +1283,89 @@ internal fun ThemesPanel(state: KeyboardState, actions: KeyboardActions) {
                         Text(t.name, color = IosColors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
+            }
+        }
+    }
+}
+
+
+// ------------------------------------------------------------------ tools page (hold ক / A) — Gboard style
+
+private class ToolItem(val label: String, val more: Boolean, val icon: @Composable () -> Unit, val run: () -> Unit)
+
+@Composable
+internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
+    var page by remember { mutableStateOf(0) }
+    fun glyph(g: String): @Composable () -> Unit = { Text(g, color = IosColors.text, fontSize = 22.sp) }
+    val pages = listOf(
+        listOf(
+            ToolItem("Emoji", true, glyph("☺")) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Sticker", true, glyph("▣")) { actions.onStickerTab(true); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Text replace", false, { ReplaceIcon(IosColors.text) }) { actions.onPanel(Panel.KEYS); actions.onOpenTextReplace() },
+            ToolItem("Undo", false, glyph("↶")) { actions.onPanel(Panel.KEYS); actions.onUndo() },
+            ToolItem("Text editing", true, glyph("I")) { actions.onPanel(Panel.EDIT) },
+            ToolItem("Theme", true, glyph("🎨")) { actions.onPanel(Panel.THEMES) },
+        ),
+        listOf(
+            ToolItem("Resize", false, glyph("⤢")) { actions.onResize() },
+            ToolItem("Next language", false, { Icon(Symbols.globe, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onToggleLanguage() },
+            ToolItem("One-handed", false, glyph("▯")) { actions.onOneHand(1) },
+            ToolItem("Share keyboard", false, glyph("⤴")) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
+        )
+    )
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 8.dp)
+            .pointerInput(Unit) {
+                var dx = 0f
+                androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                    onDragStart = { dx = 0f },
+                    onDragEnd = { if (dx < -60f) page = 1 else if (dx > 60f) page = 0 },
+                ) { _, d -> dx += d }
+            }
+    ) {
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            SmallIcon(Icons.Filled.Close, "Close") { actions.onPanel(Panel.KEYS) }
+            Spacer(Modifier.weight(1f))
+            ToolButton(false, { actions.onPanel(Panel.CLIPBOARD) }) { KeepIcon() }
+            Spacer(Modifier.weight(1f))
+            ToolButton(state.translateOn, { actions.onPanel(Panel.KEYS); actions.onTranslateToggle() }) {
+                Icon(Symbols.translate, "Translate", tint = IosColors.text, modifier = Modifier.size(23.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            ToolButton(false, { actions.onOpenSettings() }) {
+                Icon(Icons.Filled.Settings, "Settings", tint = IosColors.text, modifier = Modifier.size(23.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            SmallIcon(Symbols.mic, "Voice") { actions.onPanel(Panel.KEYS); actions.onVoice() }
+        }
+        val items = pages[page]
+        Column(Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (r in 0 until 3) {
+                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (c in 0 until 2) {
+                        val it = items.getOrNull(r * 2 + c)
+                        if (it == null) { Spacer(Modifier.weight(1f)); continue }
+                        PressBox(
+                            Modifier.weight(1f).fillMaxHeight(), shape = RoundedCornerShape(16.dp),
+                            color = IosColors.key, pressedColor = IosColors.keyPressed, onTap = it.run
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { it.icon() }
+                                Spacer(Modifier.width(10.dp))
+                                Text(it.label, color = IosColors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                if (it.more) Text("›", color = IosColors.text.copy(alpha = 0.7f), fontSize = 22.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().height(26.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            for (i in 0..1) {
+                Box(
+                    Modifier.padding(horizontal = 5.dp).size(8.dp).clip(CircleShape)
+                        .background(IosColors.text.copy(alpha = if (i == page) 0.9f else 0.3f)).clickable { page = i }
+                )
             }
         }
     }

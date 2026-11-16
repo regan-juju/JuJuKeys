@@ -16,7 +16,7 @@ enum class ShiftState { OFF, ONCE, LOCK }
 enum class Page { LETTERS, NUMPAD, SYMBOLS, MORE_SYMBOLS }
 
 /** What fills the key area. */
-enum class Panel { KEYS, CLIPBOARD, EMOJI, SUGGESTIONS, EDIT, THEMES }
+enum class Panel { KEYS, CLIPBOARD, EMOJI, SUGGESTIONS, EDIT, THEMES, TOOLS }
 
 /** Which sound a key press makes. */
 enum class KeyKind { NORMAL, DELETE, SPACE, RETURN }
@@ -136,6 +136,10 @@ interface KeyboardActions {
     /** Text-editing panel: left/right/up/down/home/end/wleft/wright/all/cut/copy/paste. */
     fun onEdit(op: String)
     fun onThemePick(id: String)
+    fun onUndo()
+    fun onResize()
+    fun onOneHand(mode: Int)
+    fun onShareKeyboard()
     /** The omw↓ button: opens the Text replacement list. */
     fun onOpenTextReplace()
     /** Sound / vibration for a key press, following the settings. */

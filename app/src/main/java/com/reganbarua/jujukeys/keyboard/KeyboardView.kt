@@ -137,6 +137,8 @@ internal val LocalSpaceCursor = staticCompositionLocalOf { 900 to 75 }
 internal fun spaceStepDp(speed: Int): Float = 18f - 0.12f * speed.coerceIn(1, 100)
 
 /** Height of the area used by keys / clipboard / emoji / suggestions. */
+internal fun isFullPage(p: Panel) = p == Panel.CLIPBOARD || p == Panel.EDIT || p == Panel.THEMES || p == Panel.TOOLS
+
 internal fun keyAreaHeight(prefs: KeyboardPrefs): Dp =
     BaseRowHeight * prefs.heightScale * (if (prefs.numberRow) 5 else 4)
 
@@ -255,12 +257,26 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                 }
                 .onGloballyPositioned { rootWidth = it.size.width.toFloat() }
         ) {
-            Column(Modifier.fillMaxWidth()) {
+            val oh = prefs.oneHand
+            if (oh != 0) {
+                // one-handed: a thin side button (widen / move to the other side)
+                Column(
+                    Modifier.align(if (oh == 1) Alignment.CenterEnd else Alignment.CenterStart).fillMaxWidth(0.16f).fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+                ) {
+                    PressBox(Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = IosColors.key, pressedColor = IosColors.keyPressed,
+                        onTap = { actions.onOneHand(0) }) { Text(if (oh == 1) "▶" else "◀", color = IosColors.text, fontSize = 16.sp) }
+                    Spacer(Modifier.height(10.dp))
+                    PressBox(Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = IosColors.key, pressedColor = IosColors.keyPressed,
+                        onTap = { actions.onOneHand(if (oh == 1) 2 else 1) }) { Text("⇄", color = IosColors.text, fontSize = 18.sp) }
+                }
+            }
+            Column((if (oh == 0) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.84f).align(if (oh == 1) Alignment.TopStart else Alignment.TopEnd))) {
                 val searching = state.emojiSearch != null
                 when {
                     searching -> EmojiSearchBar(state, actions)
                     state.panel == Panel.EMOJI -> EmojiTopBar(actions)
-                    state.panel == Panel.CLIPBOARD || state.panel == Panel.EDIT || state.panel == Panel.THEMES -> {}   // these pages use this space
+                    isFullPage(state.panel) -> {}   // these pages use this space
                     state.translateOn -> {
                         TranslateBar(state, actions)
                         SuggestionBar(state, actions, forceSuggestions = true)   // suggestions while translating too
@@ -268,12 +284,13 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     else -> SuggestionBar(state, actions)
                 }
 
-                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if ((state.panel == Panel.CLIPBOARD || state.panel == Panel.EDIT || state.panel == Panel.THEMES) && !searching) 110.dp else 0.dp))) {
+                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (isFullPage(state.panel) && !searching) 110.dp else 0.dp))) {
                     when (state.panel) {
                         Panel.KEYS, Panel.SUGGESTIONS -> KeysPanel(state, actions, preview)
                         Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
                         Panel.EDIT -> EditPanel(state, actions)
                         Panel.THEMES -> ThemesPanel(state, actions)
+                        Panel.TOOLS -> ToolsPanel(state, actions)
                         Panel.EMOJI -> if (searching) KeysPanel(state, actions, preview) else EmojiPanel(state, actions)
                     }
                     // more suggestions rise from the bottom (the faded arrow in the bottom strip)
@@ -284,7 +301,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     ) { MoreSuggestionsPanel(state, actions) }
                     if (state.translateOn && state.translatePicker) LanguagePicker(state, actions)
                 }
-                if ((state.panel != Panel.CLIPBOARD && state.panel != Panel.EDIT && state.panel != Panel.THEMES) || searching) BottomStrip(state, actions)   // clipboard fills the whole keyboard
+                if (!isFullPage(state.panel) || searching) BottomStrip(state, actions)   // clipboard fills the whole keyboard
             }
             KeyPreviewBubble(preview, rootWidth)
         }

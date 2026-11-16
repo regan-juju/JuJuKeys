@@ -15,6 +15,7 @@ data class KeyboardPrefs(
     val showVoiceKey: Boolean = true,
     val boldKeys: Boolean = true,
     // পছন্দসমূহ — লেআউট
+    val oneHand: Int = 0,                   // 0 off, 1 keyboard on the left, 2 on the right
     val heightScale: Float = 1.1f,          // 1.0 ছোট / 1.1 মাঝারি (আগের "Large") / 1.2 বড় / 1.3 অনেক বড়
     // পছন্দসমূহ — কী চাপলে
     val sound: Boolean = false,
@@ -72,6 +73,7 @@ object Prefs {
             showVoiceKey = p.getBoolean("voice_key", d.showVoiceKey),
             boldKeys = p.getBoolean("bold_keys", d.boldKeys),
             // Old "Small" (0.9) no longer exists: it becomes the new smallest size (1.0).
+            oneHand = p.getInt("one_hand", 0).coerceIn(0, 2),
             heightScale = p.getFloat("height_scale", d.heightScale).coerceIn(1.0f, 1.3f),
             sound = p.getBoolean("sound", d.sound),
             vibrate = p.getBoolean("vibrate", d.vibrate),
