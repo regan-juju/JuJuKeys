@@ -1226,11 +1226,11 @@ internal fun EditPanel(state: KeyboardState, actions: KeyboardActions) {
             ) { Text("Select", color = IosColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
         }
         @Composable
-        fun RowScope.EBtn(label: String, op: String, w: Float = 1f) {
+        fun RowScope.EBtn(label: String, op: String, w: Float = 1f, fs: Int = 20) {
             PressBox(
                 Modifier.weight(w).fillMaxHeight(), shape = RoundedCornerShape(14.dp),
                 color = IosColors.key, pressedColor = IosColors.keyPressed, onTap = { actions.onEdit(op) }
-            ) { Text(label, color = IosColors.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) }
+            ) { Text(label, color = IosColors.text, fontSize = fs.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false) }
         }
         Row(Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // arrows (cross)
@@ -1242,7 +1242,7 @@ internal fun EditPanel(state: KeyboardState, actions: KeyboardActions) {
                     EBtn("◀", "left"); EBtn("▼", "down"); EBtn("▶", "right")
                 }
                 Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EBtn("Home", "home"); EBtn("⇠ Word", "wleft", 1.2f); EBtn("Word ⇢", "wright", 1.2f); EBtn("End", "end")
+                    EBtn("Home", "home", 1.15f, 13); EBtn("◂Word", "wleft", 1.25f, 13); EBtn("Word▸", "wright", 1.25f, 13); EBtn("End", "end", 1f, 13)
                 }
             }
             // actions
@@ -1298,7 +1298,7 @@ private class ToolItem(val label: String, val more: Boolean, val icon: @Composab
 @Composable
 internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
     var page by remember { mutableStateOf(0) }
-    fun glyph(g: String): @Composable () -> Unit = { Text(g, color = IosColors.text, fontSize = 22.sp) }
+    fun glyph(g: String): @Composable () -> Unit = { Text(g, color = IosColors.text, fontSize = 26.sp) }
     val pages = listOf(
         listOf(
             ToolItem("Emoji", true, glyph("☺")) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
