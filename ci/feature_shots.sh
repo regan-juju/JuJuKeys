@@ -49,6 +49,10 @@ open_demo --es theme current --ez plain true
 shot 01q-glass-dark
 open_demo --es theme current --ez plain true --ez white true
 shot 01r-glass-white-app
+open_demo --es theme darkglass --ez plain true
+shot 01s-darkglass
+open_demo --es theme noirglass --ez plain true
+shot 01t-noirglass
 open_demo --es theme blur --ez plain true
 shot 01b-blur-dark-bg
 open_demo --es theme blur --ez plain true --ez white true --ez noglow true
