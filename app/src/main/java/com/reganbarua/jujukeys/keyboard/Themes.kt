@@ -68,14 +68,14 @@ internal object Themes {
                 Blob(0.88f, 0.28f, Color(0x1F3C3C8C), 0.50f), Blob(0.30f, 0.18f, Color(0x1A6E6432), 0.45f),
             ),
             // glass keys over a soft blurred grey picture behind the key pad; the bottom strip (🌐 ^ 🎤) stays plain dark
-            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B,
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_colour, bgVeil = 0x70,
             key = Color(0x1AFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xFFFFFFFF), edge = Color(0x59FFFFFF), crisp = 1f,
         ),
         KbTheme(
             "darkglass", "Dark glass",
             // same glass keypad, darker and less grey; coloured 🌐 and 🎤
-            bg = Color(0xFF1A1A1C), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xA8,
+            bg = Color(0xFF1A1A1C), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_colour, bgVeil = 0x88,
             key = Color(0x1AFFFFFF), keyPressed = Color(0x4DFFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xFFFFFFFF), edge = Color(0x66FFFFFF), crisp = 0.75f,
             panel = Color(0xF21C1C1E), nav = 0xFF1A1A1C.toInt(),
@@ -84,7 +84,7 @@ internal object Themes {
         KbTheme(
             "noirglass", "Noir glass",
             // nearly black glass keypad, picture only a faint texture; coloured 🌐 and 🎤
-            bg = Color(0xFF111113), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_dark, bgVeil = 0xCC,
+            bg = Color(0xFF111113), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_colour, bgVeil = 0xA0,
             key = Color(0x1AFFFFFF), keyPressed = Color(0x44FFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xF0FFFFFF), edge = Color(0x59FFFFFF), crisp = 0.7f,
             panel = Color(0xF50E0E10), nav = 0xFF111113.toInt(),
