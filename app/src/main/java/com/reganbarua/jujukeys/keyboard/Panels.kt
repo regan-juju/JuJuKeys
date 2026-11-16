@@ -22,6 +22,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1317,7 +1319,7 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
         Modifier.fillMaxSize().padding(horizontal = 8.dp)
             .pointerInput(Unit) {
                 var dx = 0f
-                androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                detectHorizontalDragGestures(
                     onDragStart = { dx = 0f },
                     onDragEnd = { if (dx < -60f) page = 1 else if (dx > 60f) page = 0 },
                 ) { _, d -> dx += d }
