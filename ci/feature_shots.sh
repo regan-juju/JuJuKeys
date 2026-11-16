@@ -104,9 +104,10 @@ shot 08-textreplace-list
 sh input tap 1000 118; sleep 2
 shot 09-add-sheet
 
-# ---- 4a. every press lights a new colour (same key g, three taps)
+# ---- 4a. every press lights a new colour (same key g, tapped and captured in one shell call)
 open_demo --es theme noirglass --ez plain true
-kb; sh input tap 540 1402; shot 08c-press1; sleep 1; sh input tap 540 1402; shot 08d-press2; sleep 1; sh input tap 540 1402; shot 08e-press3; sleep 1
+kb
+for n in 1 2 3 4; do sh "input tap 540 1402; screencap -p /sdcard/p$n.png"; adb pull /sdcard/p$n.png shots/api${API}-08c-press$n.png >/dev/null 2>&1; sleep 1; done
 
 # ---- 4b. clipboard page (real panel)
 open_demo --es theme noirglass --ez plain true
