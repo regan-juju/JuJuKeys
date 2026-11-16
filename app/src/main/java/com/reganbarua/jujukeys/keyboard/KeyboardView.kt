@@ -739,9 +739,17 @@ internal fun PressBox(
                     0f to Color.White.copy(alpha = 0.16f), 0.42f to Color.Transparent, 1f to Color.White.copy(alpha = 0.05f),
                     start = Offset.Zero, end = Offset(size.width, size.height)
                 )
-                onDrawBehind { drawRect(body); drawRect(sheen) }
+                val lip = if (cz > 0f) Brush.verticalGradient(0f to Color.White.copy(alpha = 0.85f * cz), 0.22f to Color.Transparent) else null
+                onDrawBehind {
+                    drawRect(body); drawRect(sheen)
+                    if (lip != null) {
+                        val inset = 0.9.dp.toPx()
+                        drawRoundRect(lip, Offset(inset, inset), androidx.compose.ui.geometry.Size(size.width - 2 * inset, size.height - 2 * inset),
+                            androidx.compose.ui.geometry.CornerRadius((corner - inset).coerceAtLeast(0f)), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6.dp.toPx()))
+                    }
+                }
             } else Modifier)
-            .then(if (glass && IosColors.theme.crisp > 0f) Modifier.border(0.8.dp, Color.White.copy(alpha = 0.42f * IosColors.theme.crisp), shape) else Modifier)
+            .then(if (glass && IosColors.theme.crisp > 0f) Modifier.border(0.8.dp, Color.White.copy(alpha = 0.50f * IosColors.theme.crisp), shape) else Modifier)
             .then(if (glass) Modifier.border(0.8.dp, IosColors.glassEdge, shape) else Modifier)
             .then(if (glowLevel > 0.01f) Modifier.drawWithContent {
                 drawGlowInside(androidx.compose.ui.geometry.Rect(Offset.Zero, size), corner, glowColor, strong, glowLevel)

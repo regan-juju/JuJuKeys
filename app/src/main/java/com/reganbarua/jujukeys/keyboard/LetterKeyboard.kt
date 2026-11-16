@@ -396,7 +396,17 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 if (k.type == KType.SHIFT && state.shift != ShiftState.OFF)   // shift is on: clearly lit
                     drawRoundRect(Color.White.copy(alpha = if (state.shift == ShiftState.LOCK) 0.34f else 0.22f), kr.topLeft, kr.size, cr)
                 if (IosColors.theme.crisp > 0f && !down)   // clear outline all round (the bright top edge is added by the rim below)
-                    drawRoundRect(Color.White.copy(alpha = 0.42f * IosColors.theme.crisp), kr.topLeft, kr.size, cr, style = Stroke(width = 0.8.dp.toPx()))
+                {
+                    val cz = IosColors.theme.crisp
+                    drawRoundRect(Color.White.copy(alpha = 0.50f * cz), kr.topLeft, kr.size, cr, style = Stroke(width = 1.0.dp.toPx()))
+                    // bright bevel just inside the top edge (like a thick glass lip)
+                    val inset = 0.9.dp.toPx()
+                    drawRoundRect(
+                        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.85f * cz), 0.22f to Color.Transparent, startY = kr.top, endY = kr.bottom),
+                        kr.topLeft + Offset(inset, inset), Size(kr.size.width - 2 * inset, kr.size.height - 2 * inset),
+                        CornerRadius((corner - inset).coerceAtLeast(0f)), style = Stroke(width = 1.6.dp.toPx())
+                    )
+                }
                 drawRoundRect(rim, kr.topLeft, kr.size, cr, style = Stroke(width = if (down) 1.5.dp.toPx() else 0.9.dp.toPx()))
                 if (gc != null) drawGlowInside(kr, corner, gc, strongKey, glowLevel)
             }
