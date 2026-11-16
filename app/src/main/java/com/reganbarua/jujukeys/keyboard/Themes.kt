@@ -78,42 +78,6 @@ internal object Themes {
             glassTop = Color(0xC4FFFFFF), panel = Color(0xF5161816),
         ),
         KbTheme(
-            "midnight", "Midnight blue",
-            bg = Color(0xF50B1020),
-            blobs = listOf(
-                Blob(0.20f, 0.85f, Color(0x592850C8), 0.60f), Blob(0.80f, 0.25f, Color(0x407838DC), 0.60f),
-                Blob(0.55f, 0.60f, Color(0x2E1E8CC8), 0.50f),
-            ),
-            key = Color(0x3D96B4FF), keyPressed = Color(0x7396B4FF), fn = Color(0x245A78DC),
-            dim = Color(0xFF9FB0D8), suggestion = Color(0xFFC8D4F0), glassTop = Color(0xB8FFFFFF),
-            card = Color(0x4D5A78DC), chip = Color(0x805A78DC), bubble = Color(0xFF3A4A78),
-            panel = Color(0xF50E1428), nav = 0xFF0B1020.toInt(),
-        ),
-        KbTheme(
-            "emerald", "Emerald green",
-            bg = Color(0xF507140E),
-            blobs = listOf(
-                Blob(0.15f, 0.80f, Color(0x5914A05A), 0.60f), Blob(0.85f, 0.30f, Color(0x40147878), 0.60f),
-                Blob(0.50f, 0.55f, Color(0x1F78C850), 0.50f),
-            ),
-            key = Color(0x33A0FFC8), keyPressed = Color(0x66A0FFC8), fn = Color(0x1F3CA06E),
-            dim = Color(0xFF9FD8B8), suggestion = Color(0xFFC8ECD8), glassTop = Color(0xB8FFFFFF),
-            card = Color(0x4D3CA06E), chip = Color(0x803CA06E), bubble = Color(0xFF2E5A44),
-            panel = Color(0xF50A1A12), nav = 0xFF07140E.toInt(),
-        ),
-        KbTheme(
-            "aurora", "Aurora purple",
-            bg = Color(0xF5140A1C),
-            blobs = listOf(
-                Blob(0.15f, 0.80f, Color(0x52C83CA0), 0.60f), Blob(0.85f, 0.25f, Color(0x526E46E6), 0.60f),
-                Blob(0.55f, 0.60f, Color(0x243CA0DC), 0.50f),
-            ),
-            key = Color(0x38E6AAFF), keyPressed = Color(0x6BE6AAFF), fn = Color(0x1F9650C8),
-            dim = Color(0xFFD0B0E8), suggestion = Color(0xFFE6D2F2), glassTop = Color(0xB8FFFFFF),
-            card = Color(0x4D9650C8), chip = Color(0x809650C8), bubble = Color(0xFF5A3A78),
-            panel = Color(0xF5180E22), nav = 0xFF140A1C.toInt(),
-        ),
-        KbTheme(
             "amoled", "Black AMOLED",
             bg = Color(0xFF000000), blobs = emptyList(),
             key = Color(0x21FFFFFF), keyPressed = Color(0x55FFFFFF), fn = Color(0x14FFFFFF),
