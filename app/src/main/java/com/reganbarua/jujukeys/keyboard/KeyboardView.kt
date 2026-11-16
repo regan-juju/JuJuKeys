@@ -209,7 +209,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                         glows.forEach { drawRect(it) }
                         if (bgBitmap != null) {
                             // the picture fills the key pad only; the bottom strip (🌐 ^ 🎤) stays plain dark
-                            val padH = (h - 62.dp.toPx()).coerceAtLeast(1f)
+                            val padH = if (theme.bgFull) h else (h - 62.dp.toPx()).coerceAtLeast(1f)
                             val scale = w / bgBitmap.width
                             val srcH = (padH / scale).toInt().coerceIn(1, bgBitmap.height)
                             val srcTop = ((bgBitmap.height - srcH) * 0.48f).toInt()
@@ -574,7 +574,7 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
     ) {
         // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
         StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
-            Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.text, modifier = Modifier.size(32.dp))
+            Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.theme.navGlobe ?: IosColors.text, modifier = Modifier.size(32.dp))
         }
         if (state.prefs.showSuggestions && state.emojiSearch == null) {
             Spacer(Modifier.width(20.dp))
@@ -589,7 +589,7 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
-                Icon(Symbols.mic, "ভয়েস", tint = IosColors.text, modifier = Modifier.size(32.dp))
+                Icon(Symbols.mic, "ভয়েস", tint = IosColors.theme.navMic ?: IosColors.text, modifier = Modifier.size(32.dp))
             }
         } else {
             Spacer(Modifier.width(52.dp))

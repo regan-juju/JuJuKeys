@@ -46,6 +46,11 @@ internal class KbTheme(
     val blur: Int = 0,
     /** Blur glass: soft colour glows behind the glass keys, so the keyboard looks see-through whatever app is behind (Settings switch). */
     val glow: List<Blob> = emptyList(),
+    /** true: [bgImage] fills the whole keyboard, bottom strip included. */
+    val bgFull: Boolean = false,
+    /** Colours of the 🌐 and 🎤 buttons (null = normal text colour). */
+    val navGlobe: Color? = null,
+    val navMic: Color? = null,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -166,15 +171,14 @@ internal object Themes {
         ),
         KbTheme(
             "quill", "Charcoal glass",
-            // solid charcoal, soft grey rounded keys with a glassy top sheen, soft white glow behind (iPhone-style reference)
-            bg = Color(0xFF333334), blobs = emptyList(),
-            key = Color(0xFF4A4A4D), keyPressed = Color(0xFF6A6A6E), fn = Color(0xFF404043),
-            glassTop = Color(0x59FFFFFF), edge = Color(0x26FFFFFF),
+            // dark glass keys over a soft blurred grey picture that fills the whole keyboard; coloured 🌐 and 🎤
+            bg = Color(0xFF1A1A1C), blobs = emptyList(),
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B, bgFull = true,
+            key = Color(0x2EFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x22FFFFFF),
+            glassTop = Color(0xCCFFFFFF), edge = Color(0x59FFFFFF),
             card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
-            panel = Color(0xFF2A2A2C), nav = 0xFF333334.toInt(),
-            glow = listOf(
-                Blob(0.50f, 0.55f, Color(0x26FFFFFF), 0.70f), Blob(0.50f, 0.92f, Color(0x1FBFD4FF), 0.45f),
-            ),
+            panel = Color(0xF21C1C1E), nav = 0xFF1A1A1C.toInt(),
+            navGlobe = Color(0xFF4FC3FF), navMic = Color(0xFFFF8A6B),
         ),
         KbTheme(
             "white", "White glass",
