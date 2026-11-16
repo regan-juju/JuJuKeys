@@ -84,10 +84,10 @@ internal object Themes {
         KbTheme(
             "noirglass", "Noir glass",
             // nearly black glass keypad, picture only a faint texture; coloured 🌐 and 🎤
-            bg = Color(0xFF111113), blobs = emptyList(), bgImage = com.reganbarua.jujukeys.R.drawable.theme_colour, bgVeil = 0x94,
+            bg = Color(0xFF252626), blobs = emptyList(),
             key = Color(0x1AFFFFFF), keyPressed = Color(0x44FFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xF0FFFFFF), edge = Color(0x59FFFFFF), crisp = 0.7f,
-            panel = Color(0xF50E0E10), nav = 0xFF111113.toInt(),
+            panel = Color(0xF5252626), nav = 0xFF252626.toInt(),
             navGlobe = Color(0xFF5BE0B0), navMic = Color(0xFFFFB347),
         ),
         KbTheme(
