@@ -261,8 +261,9 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
             val oh = prefs.oneHand
             if (oh != 0) {
                 // one-handed: a thin side button (widen / move to the other side)
+                Box(Modifier.matchParentSize()) {
                 Column(
-                    Modifier.align(if (oh == 1) Alignment.CenterEnd else Alignment.CenterStart).fillMaxWidth(0.16f).fillMaxHeight(),
+                    Modifier.align(if (oh == 1) Alignment.CenterEnd else Alignment.CenterStart).fillMaxWidth(0.16f),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
                 ) {
                     PressBox(Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = IosColors.key, pressedColor = IosColors.keyPressed,
@@ -270,6 +271,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     Spacer(Modifier.height(10.dp))
                     PressBox(Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = IosColors.key, pressedColor = IosColors.keyPressed,
                         onTap = { actions.onOneHand(if (oh == 1) 2 else 1) }) { Text("⇄", color = IosColors.text, fontSize = 18.sp) }
+                }
                 }
             }
             Column((if (oh == 0) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.84f).align(if (oh == 1) Alignment.TopStart else Alignment.TopEnd))) {
