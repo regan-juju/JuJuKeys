@@ -165,6 +165,18 @@ internal object Themes {
             ),
         ),
         KbTheme(
+            "quill", "Charcoal glass",
+            // solid charcoal, soft grey rounded keys with a glassy top sheen, soft white glow behind (iPhone-style reference)
+            bg = Color(0xFF333334), blobs = emptyList(),
+            key = Color(0xFF4A4A4D), keyPressed = Color(0xFF6A6A6E), fn = Color(0xFF404043),
+            glassTop = Color(0x59FFFFFF), edge = Color(0x26FFFFFF),
+            card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
+            panel = Color(0xFF2A2A2C), nav = 0xFF333334.toInt(),
+            glow = listOf(
+                Blob(0.50f, 0.55f, Color(0x26FFFFFF), 0.70f), Blob(0.50f, 0.92f, Color(0x1FBFD4FF), 0.45f),
+            ),
+        ),
+        KbTheme(
             "white", "White glass",
             bg = Color(0xF5D6D8DC),
             blobs = listOf(Blob(0.20f, 0.80f, Color(0x5996C8FF), 0.60f), Blob(0.80f, 0.25f, Color(0x59FFC8DC), 0.60f)),
