@@ -164,7 +164,6 @@ internal object Themes {
                 Blob(0.12f, 0.90f, Color(0x801FAE5A), 0.32f), Blob(0.84f, 0.92f, Color(0x80FFD21F), 0.30f),
             ),
         ),
-        ),
         KbTheme(
             "white", "White glass",
             bg = Color(0xF5D6D8DC),
