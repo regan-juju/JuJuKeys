@@ -239,6 +239,9 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
     val pressed = remember { mutableStateListOf<Int>() }
     // afterglow: a released key keeps its light a moment and fades out (a quick tap is otherwise invisible)
     val released = remember { androidx.compose.runtime.mutableStateMapOf<Int, Long>() }
+    // every press lights in the next colour of the rainbow (so each tap glows differently)
+    val glowSeed = remember { androidx.compose.runtime.mutableStateMapOf<Int, Int>() }
+    val pressCounter = remember { intArrayOf(0) }
     var glowClock by remember { mutableStateOf(0L) }
     androidx.compose.runtime.LaunchedEffect(released.size) {
         while (released.isNotEmpty()) {
@@ -295,6 +298,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                                     touches[c.id] = t
                                     pressed.add(i)
                                     released.remove(i)
+                                    glowSeed[i] = pressCounter[0]++
                                     feedback(
                                         when (k.type) {
                                             KType.SPACE -> KeyKind.SPACE
@@ -369,7 +373,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             val tc = tint.getOrNull(i)
             if (k.type == KType.RETURN && tc == null) {
                 // return / search: plain and faded (like iPhone) — coloured only in the rainbow theme
-                val rc = rainbowFor(6)
+                val rc = rainbowFor(glowSeed[i] ?: 6)
                 if (glowLevel > 0.01f) drawGlowBehind(r, corner, rc, strong = true, level = glowLevel)
                 drawRoundRect(if (down) IosColors.fadedPressed else IosColors.faded, r.topLeft, r.size, cr)
                 if (glowLevel > 0.01f) drawGlowInside(r, corner, rc, strong = true, level = glowLevel)
@@ -377,7 +381,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
                 // bright top edge; pressed keys swell a little
                 val kr = if (down) r.inflate(1.5.dp.toPx()).translate(0f, 1.dp.toPx()) else r
-                val gc = if (glowLevel > 0.01f) pressGlow(k, i) else null
+                val gc = if (glowLevel > 0.01f) rainbowFor(glowSeed[i] ?: (if (k.type == KType.CHAR && k.col >= 0) k.col else i)) else null
                 val strongKey = k.type == KType.RETURN
                 if (gc != null) {
                     // glow in this key's own rainbow colour, rising from below the key

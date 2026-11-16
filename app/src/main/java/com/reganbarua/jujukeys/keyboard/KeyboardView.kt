@@ -587,8 +587,7 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
     ) {
         // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
         StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
-            if (IosColors.theme.crisp > 0f) LineGlobe(IosColors.theme.navGlobe ?: IosColors.text, Modifier.size(32.dp))
-            else Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.theme.navGlobe ?: IosColors.text, modifier = Modifier.size(32.dp))
+            LineGlobe(IosColors.theme.navGlobe ?: if (IosColors.theme.light) Color(0xFF0A84FF) else Color(0xFF4FC3FF), Modifier.size(32.dp))
         }
         if (state.prefs.showSuggestions && state.emojiSearch == null) {
             Spacer(Modifier.width(20.dp))
@@ -603,8 +602,7 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
-                if (IosColors.theme.crisp > 0f) LineMic(IosColors.theme.navMic ?: IosColors.text, Modifier.size(32.dp))
-                else Icon(Symbols.mic, "ভয়েস", tint = IosColors.theme.navMic ?: IosColors.text, modifier = Modifier.size(32.dp))
+                LineMic(IosColors.theme.navMic ?: if (IosColors.theme.light) Color(0xFFFF6A3D) else Color(0xFFFF8A6B), Modifier.size(32.dp))
             }
         } else {
             Spacer(Modifier.width(52.dp))

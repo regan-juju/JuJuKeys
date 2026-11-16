@@ -541,7 +541,7 @@ private fun Status(icon: ImageVector?, text: String, color: Color) {
 private fun SmallIcon(icon: ImageVector, description: String, onTap: () -> Unit) {
     PressBox(
         Modifier.size(38.dp),
-        shape = CircleShape,
+        shape = RoundedCornerShape(12.dp),
         color = IosColors.key, pressedColor = IosColors.keyPressed,
         onTap = onTap
     ) {
@@ -584,7 +584,7 @@ internal fun ClipboardPanel(state: KeyboardState, clips: List<ClipItem>, actions
             Spacer(Modifier.weight(1f))
             if (enabled && clips.isNotEmpty()) {
                 PressBox(
-                    Modifier.size(38.dp), shape = CircleShape,
+                    Modifier.size(38.dp), shape = RoundedCornerShape(12.dp),
                     color = if (pinMode) Color(0xFFFFD54F) else IosColors.key,
                     pressedColor = IosColors.keyPressed,
                     onTap = { if (pinMode) finishPins() else { selected = null; picks.clear(); pinMode = true } }

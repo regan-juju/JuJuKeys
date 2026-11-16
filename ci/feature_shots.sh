@@ -104,6 +104,10 @@ shot 08-textreplace-list
 sh input tap 1000 118; sleep 2
 shot 09-add-sheet
 
+# ---- 4a. every press lights a new colour (same key g, three taps)
+open_demo --es theme noirglass --ez plain true
+kb; sh input tap 540 1402; shot 08c-press1; sleep 1; sh input tap 540 1402; shot 08d-press2; sleep 1; sh input tap 540 1402; shot 08e-press3; sleep 1
+
 # ---- 4b. clipboard page (real panel)
 open_demo --es theme noirglass --ez plain true
 kb; longpress_lang; tapp 220 1120 2.5
