@@ -66,9 +66,9 @@ internal object Themes {
                 Blob(0.88f, 0.28f, Color(0x1F3C3C8C), 0.50f), Blob(0.30f, 0.18f, Color(0x1A6E6432), 0.45f),
             ),
             // glass keys over a soft blurred grey picture behind the key pad; the bottom strip (🌐 ^ 🎤) stays plain dark
-            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B,
-            key = Color(0x2EFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x22FFFFFF),
-            glassTop = Color(0xCCFFFFFF), edge = Color(0x59FFFFFF),
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0xA8,
+            key = Color(0x1CFFFFFF), keyPressed = Color(0x4DFFFFFF), fn = Color(0x1AFFFFFF),
+            glassTop = Color(0xCCFFFFFF), edge = Color(0x4DFFFFFF),
         ),
         KbTheme(
             "deep", "Deep liquid glass",
