@@ -222,6 +222,18 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                             )
                             drawRect(Color(theme.bgVeil shl 24), size = Size(w, padH))   // slight dark veil so letters stay clear
                         }
+                        if (theme.crisp > 0f) {
+                            // soft dark gloss over the whole keyboard: light sweep from the top-left, a glassy band along the top,
+                            // and a faint glow in the bottom-right corner
+                            val c = theme.crisp
+                            drawRect(Brush.linearGradient(
+                                0f to Color.White.copy(alpha = 0.11f * c), 0.5f to Color.Transparent,
+                                start = Offset.Zero, end = Offset(w, h)))
+                            drawRect(Brush.verticalGradient(
+                                0f to Color.White.copy(alpha = 0.09f * c), 0.2f to Color.Transparent, startY = 0f, endY = h))
+                            drawRect(Brush.radialGradient(
+                                listOf(Color.White.copy(alpha = 0.06f * c), Color.Transparent), Offset(w * 0.85f, h), w * 0.6f))
+                        }
                     }
                 }
                 .border(1.dp, IosColors.topEdge, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
