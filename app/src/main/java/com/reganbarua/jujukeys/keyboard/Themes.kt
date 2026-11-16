@@ -159,10 +159,11 @@ internal object Themes {
             panel = Color(0xE61C1C1E), nav = 0xFF1C1C1E.toInt(),
             blur = 30,
             glow = listOf(
-                Blob(0.08f, 0.10f, Color(0x707A3CFF), 0.50f), Blob(0.38f, 0.32f, Color(0x66FF7A1A), 0.48f),
-                Blob(0.74f, 0.08f, Color(0x66E23A3A), 0.46f), Blob(0.96f, 0.42f, Color(0x701E7BFF), 0.48f),
-                Blob(0.14f, 0.88f, Color(0x661FAE5A), 0.46f), Blob(0.80f, 0.92f, Color(0x66FFD21F), 0.42f),
+                Blob(0.10f, 0.12f, Color(0x8C7A3CFF), 0.36f), Blob(0.40f, 0.32f, Color(0x80FF7A1A), 0.34f),
+                Blob(0.76f, 0.10f, Color(0x80E23A3A), 0.32f), Blob(0.97f, 0.42f, Color(0x8C1E7BFF), 0.34f),
+                Blob(0.12f, 0.90f, Color(0x801FAE5A), 0.32f), Blob(0.84f, 0.92f, Color(0x80FFD21F), 0.30f),
             ),
+        ),
         ),
         KbTheme(
             "white", "White glass",
