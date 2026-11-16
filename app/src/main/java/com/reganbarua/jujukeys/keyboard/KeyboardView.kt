@@ -586,7 +586,8 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
     ) {
         // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
         StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
-            Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.theme.navGlobe ?: IosColors.text, modifier = Modifier.size(32.dp))
+            if (IosColors.theme.crisp > 0f) LineGlobe(IosColors.theme.navGlobe ?: IosColors.text, Modifier.size(32.dp))
+            else Icon(Symbols.globe, "কীবোর্ড বদলান", tint = IosColors.theme.navGlobe ?: IosColors.text, modifier = Modifier.size(32.dp))
         }
         if (state.prefs.showSuggestions && state.emojiSearch == null) {
             Spacer(Modifier.width(20.dp))
@@ -601,7 +602,8 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
-                Icon(Symbols.mic, "ভয়েস", tint = IosColors.theme.navMic ?: IosColors.text, modifier = Modifier.size(32.dp))
+                if (IosColors.theme.crisp > 0f) LineMic(IosColors.theme.navMic ?: IosColors.text, Modifier.size(32.dp))
+                else Icon(Symbols.mic, "ভয়েস", tint = IosColors.theme.navMic ?: IosColors.text, modifier = Modifier.size(32.dp))
             }
         } else {
             Spacer(Modifier.width(52.dp))
@@ -771,4 +773,41 @@ internal fun PressBox(
         contentAlignment = Alignment.Center,
         content = content
     )
+}
+
+
+/** Thin-line globe (outline + meridians + parallels), like the iPhone one. */
+@Composable
+private fun LineGlobe(color: Color, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width; val c = Offset(w / 2, w / 2); val r = w * 0.44f
+        val st = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.065f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawCircle(color, r, c, style = st)
+        drawLine(color, Offset(c.x - r, c.y), Offset(c.x + r, c.y), w * 0.055f)
+        drawLine(color, Offset(c.x, c.y - r), Offset(c.x, c.y + r), w * 0.055f)
+        // meridian ellipse
+        drawOval(color, Offset(c.x - r * 0.45f, c.y - r), androidx.compose.ui.geometry.Size(r * 0.9f, r * 2f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.055f))
+        // parallels (arcs)
+        for (k in listOf(-1, 1)) {
+            val dy = k * r * 0.5f; val hw = kotlin.math.sqrt(r * r - dy * dy)
+            drawLine(color, Offset(c.x - hw, c.y + dy), Offset(c.x + hw, c.y + dy), w * 0.05f)
+        }
+    }
+}
+
+/** Thin-line microphone with U holder and stand, like the iPhone one. */
+@Composable
+private fun LineMic(color: Color, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width; val cx = w / 2
+        val sw = w * 0.065f
+        val st = androidx.compose.ui.graphics.drawscope.Stroke(width = sw, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        val bw = w * 0.30f
+        drawRoundRect(color, Offset(cx - bw / 2, w * 0.06f), androidx.compose.ui.geometry.Size(bw, w * 0.50f), androidx.compose.ui.geometry.CornerRadius(bw / 2), style = st)
+        // U holder
+        val ur = w * 0.27f
+        drawArc(color, 0f, 180f, false, Offset(cx - ur, w * 0.40f - 0f), androidx.compose.ui.geometry.Size(ur * 2, w * 0.40f), style = st)
+        drawLine(color, Offset(cx, w * 0.80f), Offset(cx, w * 0.93f), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(color, Offset(cx - w * 0.17f, w * 0.93f), Offset(cx + w * 0.17f, w * 0.93f), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+    }
 }
