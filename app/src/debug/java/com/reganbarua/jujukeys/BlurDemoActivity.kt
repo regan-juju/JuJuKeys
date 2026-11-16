@@ -16,12 +16,13 @@ import com.reganbarua.jujukeys.settings.Prefs
 class BlurDemoActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.hasExtra("noglow")) Prefs.setBoolean(this, "blur_glow", !intent.getBooleanExtra("noglow", false))
         intent.getStringExtra("theme")?.let { Prefs.setString(this, "theme", it) }
         // debug only: a ready password replacement (shortcut pwx → Secret#123), used by the emulator test
         if (intent.getBooleanExtra("seedpw", false)) com.reganbarua.jujukeys.textrep.ReplaceStore(this).save(null, "pwx", "Secret#123", true)
         val root = FrameLayout(this)
         if (!intent.getBooleanExtra("plain", false)) root.addView(Colourful(this), ViewGroup.LayoutParams(-1, -1))
-        else root.setBackgroundColor(0xFF0F1013.toInt())   // dark like a chat app: the glow must show without anything colourful behind
+        else root.setBackgroundColor(if (intent.getBooleanExtra("white", false)) 0xFFF8F8F6.toInt() else 0xFF0F1013.toInt())   // dark like a chat app: the glow must show without anything colourful behind
         val et = EditText(this).apply {
             setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY); hint = "type here"; setBackgroundColor(0x66000000)
             if (intent.getBooleanExtra("password", false)) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD

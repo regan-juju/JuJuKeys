@@ -47,6 +47,11 @@ open_demo --es theme blur
 shot 01-blur-open
 open_demo --es theme blur --ez plain true
 shot 01b-blur-dark-bg
+open_demo --es theme blur --ez plain true --ez white true --ez noglow true
+shot 01c-blur-white-app-noglow
+open_demo --es theme blur --ez noglow true
+shot 01d-blur-colour-app-noglow
+open_demo --es theme blur --ez noglow false
 kb; longpress_lang
 shot 02-tools-row
 

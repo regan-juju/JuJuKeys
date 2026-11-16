@@ -151,7 +151,7 @@ internal object Themes {
         KbTheme(
             "blur", "Blur glass",
             // see-through dark glass: the app behind the keyboard shows blurred through it (like the iPhone keyboard)
-            bg = Color(0x80121318), blobs = emptyList(),
+            bg = Color(0xD0141A28), blobs = emptyList(),   // dark navy veil: stays dark even over a white app (light-mode chat), like the demo
             // dark smoked-glass keys (chosen "middle" darkness), light blur so the apps behind stay faintly visible
             key = Color(0x4D08090D), keyPressed = Color(0x8C9A9AA2), fn = Color(0x3808090D),
             glassTop = Color(0xA8FFFFFF), edge = Color(0x40FFFFFF),
