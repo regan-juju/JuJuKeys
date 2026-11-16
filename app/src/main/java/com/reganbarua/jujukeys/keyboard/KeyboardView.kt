@@ -172,7 +172,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
     }
 
     // key(theme): a theme change rebuilds the keyboard once so every part picks up the new colours
-    key(theme.id) {
+    key(theme.id, prefs.blurGlow) {
     CompositionLocalProvider(
         LocalIndication provides RainbowIndication,
         LocalKeyFeedback provides feedback,
@@ -200,9 +200,13 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                         val c = b.color.copy(alpha = (b.color.alpha * 1.6f).coerceAtMost(0.55f))
                         Brush.radialGradient(listOf(c, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r)
                     }
+                    val glows = if (prefs.blurGlow) theme.glow.map { b ->
+                        Brush.radialGradient(listOf(b.color, Color.Transparent), Offset(w * b.x, h * b.y), w * b.r)
+                    } else emptyList()
                     onDrawBehind {
                         drawRect(bg)
                         blobs.forEach { drawRect(it) }
+                        glows.forEach { drawRect(it) }
                         if (bgBitmap != null) {
                             // the picture fills the key pad only; the bottom strip (🌐 ^ 🎤) stays plain dark
                             val padH = (h - 62.dp.toPx()).coerceAtLeast(1f)

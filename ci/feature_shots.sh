@@ -45,6 +45,8 @@ open_demo() {  # extras...
 # ---- 1. blur theme open (Bangla default), then tools row
 open_demo --es theme blur
 shot 01-blur-open
+open_demo --es theme blur --ez plain true
+shot 01b-blur-dark-bg
 kb; longpress_lang
 shot 02-tools-row
 

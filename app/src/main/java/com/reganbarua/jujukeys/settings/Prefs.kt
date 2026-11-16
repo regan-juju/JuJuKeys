@@ -24,6 +24,7 @@ data class KeyboardPrefs(
     val longPressSymbols: Boolean = true,
     val longPressDelay: Int = 300,          // ms
     val spaceCursorDelay: Int = 900,        // ms: hold the space bar this long, then slide to move the cursor (0 = at once)
+    val blurGlow: Boolean = true,           // Blur glass theme: soft colour glow behind the keys
     val smartTouch: Boolean = true,         // English: a touch near the edge between two keys picks the likelier letter (cat, not car)
     val touchOffset: Int = 0,               // dp: touches between two rows lean this far upward (0 = off; default off since v1.0.64)
     val banglaTextSize: Int = 0,            // 0 normal, 1 large, 2 larger, 3 largest (Bangla text only)
@@ -82,6 +83,7 @@ object Prefs {
             spaceCursorSpeed = p.getInt("space_cursor_speed", d.spaceCursorSpeed).coerceIn(1, 100),
             banglaFont = p.getInt("bangla_font", d.banglaFont).coerceIn(0, 1),
             banglaTextSize = p.getInt("bangla_text_size", d.banglaTextSize).coerceIn(0, 3),
+            blurGlow = p.getBoolean("blur_glow", d.blurGlow),
             smartTouch = p.getBoolean("smart_touch", d.smartTouch),
             touchOffset = p.getInt("touch_offset", d.touchOffset).coerceIn(0, 12),
             showSuggestions = p.getBoolean("suggestions", d.showSuggestions),

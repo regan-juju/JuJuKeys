@@ -44,6 +44,8 @@ internal class KbTheme(
     val bgVeil: Int = 0x40,
     /** >0: blur what is behind the keyboard window by this many pixels (Android 12+, only where the phone allows it). */
     val blur: Int = 0,
+    /** Blur glass: soft colour glows behind the glass keys, so the keyboard looks see-through whatever app is behind (Settings switch). */
+    val glow: List<Blob> = emptyList(),
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -156,6 +158,11 @@ internal object Themes {
             card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
             panel = Color(0xE61C1C1E), nav = 0xFF1C1C1E.toInt(),
             blur = 30,
+            glow = listOf(
+                Blob(0.08f, 0.10f, Color(0x707A3CFF), 0.50f), Blob(0.38f, 0.32f, Color(0x66FF7A1A), 0.48f),
+                Blob(0.74f, 0.08f, Color(0x66E23A3A), 0.46f), Blob(0.96f, 0.42f, Color(0x701E7BFF), 0.48f),
+                Blob(0.14f, 0.88f, Color(0x661FAE5A), 0.46f), Blob(0.80f, 0.92f, Color(0x66FFD21F), 0.42f),
+            ),
         ),
         KbTheme(
             "white", "White glass",
