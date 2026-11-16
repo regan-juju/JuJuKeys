@@ -45,10 +45,10 @@ open_demo() {  # extras...
 # ---- 1. blur theme open (Bangla default), then tools row
 open_demo --es theme blur
 shot 01-blur-open
-open_demo --es theme quill --ez plain true
-shot 01q-quill-dark
-open_demo --es theme quill --ez plain true --ez white true
-shot 01r-quill-white-app
+open_demo --es theme current --ez plain true
+shot 01q-glass-dark
+open_demo --es theme current --ez plain true --ez white true
+shot 01r-glass-white-app
 open_demo --es theme blur --ez plain true
 shot 01b-blur-dark-bg
 open_demo --es theme blur --ez plain true --ez white true --ez noglow true

@@ -65,7 +65,10 @@ internal object Themes {
                 Blob(0.18f, 0.80f, Color(0x38286E3C), 0.55f), Blob(0.62f, 0.72f, Color(0x29822D2D), 0.50f),
                 Blob(0.88f, 0.28f, Color(0x1F3C3C8C), 0.50f), Blob(0.30f, 0.18f, Color(0x1A6E6432), 0.45f),
             ),
-            key = Color(0x668C8C8C), keyPressed = Color(0xA8B4B4B4), fn = Color(0x38707070), glassTop = Color(0xA6FFFFFF),
+            // glass keys over a soft blurred grey picture behind the key pad; the bottom strip (🌐 ^ 🎤) stays plain dark
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B,
+            key = Color(0x2EFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x22FFFFFF),
+            glassTop = Color(0xCCFFFFFF), edge = Color(0x59FFFFFF),
         ),
         KbTheme(
             "deep", "Deep liquid glass",
@@ -132,17 +135,6 @@ internal object Themes {
                 Blob(0.76f, 0.10f, Color(0x80E23A3A), 0.32f), Blob(0.97f, 0.42f, Color(0x8C1E7BFF), 0.34f),
                 Blob(0.12f, 0.90f, Color(0x801FAE5A), 0.32f), Blob(0.84f, 0.92f, Color(0x80FFD21F), 0.30f),
             ),
-        ),
-        KbTheme(
-            "quill", "Charcoal glass",
-            // dark glass keys over a soft blurred grey picture that fills the whole keyboard; coloured 🌐 and 🎤
-            bg = Color(0xFF1A1A1C), blobs = emptyList(),
-            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x6B, bgFull = true,
-            key = Color(0x2EFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x22FFFFFF),
-            glassTop = Color(0xCCFFFFFF), edge = Color(0x59FFFFFF),
-            card = Color(0x40FFFFFF), chip = Color(0x66FFFFFF), bubble = Color(0xFF3A3A3C),
-            panel = Color(0xF21C1C1E), nav = 0xFF1A1A1C.toInt(),
-            navGlobe = Color(0xFF4FC3FF), navMic = Color(0xFFFF8A6B),
         ),
         KbTheme(
             "white", "White glass",
