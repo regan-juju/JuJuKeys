@@ -111,7 +111,7 @@ for n in 1 2 3 4; do sh "input tap 540 1402; screencap -p /sdcard/p$n.png"; adb 
 
 # ---- 4b. clipboard page (real panel)
 open_demo --es theme noirglass --ez plain true
-kb; longpress_lang; tapp 220 1120 2.5
+kb; longpress_lang; tapp 300 1075 2.5
 shot 08b-clipboard
 
 # ---- 4c. tools page (Gboard style), text editing, themes, one-handed
