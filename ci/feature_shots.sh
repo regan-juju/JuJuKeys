@@ -135,7 +135,9 @@ done
 
 # ---- 4e. backspace light walks through colours by itself
 open_demo --es theme current --ez plain true
-kb; for n in 1 2 3 4; do shot 13-back$n; sleep 2.3; done
+kb
+sh "for n in 1 2 3 4; do screencap -p /sdcard/b\$n.png; sleep 1.1; done"
+for n in 1 2 3 4; do adb pull /sdcard/b$n.png shots/api${API}-13-back$n.png >/dev/null 2>&1; done
 
 # ---- 5. password entry + phone lock
 sh locksettings set-pin 1234 >> $LOG
