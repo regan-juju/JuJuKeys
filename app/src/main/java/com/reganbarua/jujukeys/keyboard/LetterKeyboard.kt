@@ -378,9 +378,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 // return / search: plain and faded (like iPhone) — coloured only in the rainbow theme
                 val rc = rainbowFor(glowSeed[i] ?: 6)
                 if (glowLevel > 0.01f) drawGlowBehind(r, corner, rc, strong = true, level = glowLevel)
-                drawRoundRect(if (down) IosColors.bluePressed else IosColors.blue, r.topLeft, r.size, cr)
-                drawRoundRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.22f), 0.5f to Color.Transparent, startY = r.top, endY = r.bottom), r.topLeft, r.size, cr)
-                drawRoundRect(Color.White.copy(alpha = 0.35f), r.topLeft, r.size, cr, style = Stroke(width = 0.9.dp.toPx()))
+                drawRoundRect(if (down) IosColors.fadedPressed else IosColors.faded, r.topLeft, r.size, cr)
                 if (glowLevel > 0.01f) drawGlowInside(r, corner, rc, strong = true, level = glowLevel)
             } else {
                 // glass key: soft shadow, see-through body lighter at the top, diagonal sheen,
@@ -427,7 +425,7 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
                 }
                 KType.RETURN -> drawIcon(
                     if (enterLabel == "search") searchPainter else returnPainter,
-                    r, iconPx + 1.dp.toPx(), if (tint.getOrNull(i) != null) IosColors.text else Color.White
+                    r, iconPx + 1.dp.toPx(), if (tint.getOrNull(i) != null) IosColors.text else IosColors.fadedIcon
                 )
                 KType.SHIFT -> drawIcon(shiftPainter, r, iconPx, IosColors.text)
                 KType.EMOJI -> {
