@@ -1360,39 +1360,20 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
             Spacer(Modifier.weight(1f))
             SmallIcon(Symbols.mic, "Voice") { actions.onPanel(Panel.KEYS); actions.onVoice() }
         }
-        val items = pages[page]
-        Column(Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (r in 0 until 3) {
-                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (c in 0 until 2) {
-                        val it = items.getOrNull(r * 2 + c)
-                        if (it == null) { Spacer(Modifier.weight(1f)); continue }
-                        PressBox(
-                            Modifier.weight(1f).fillMaxHeight(), shape = RoundedCornerShape(16.dp),
-                            color = IosColors.key, pressedColor = IosColors.keyPressed, onTap = it.run
-                        ) {
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier.size(width = 44.dp, height = 40.dp).clip(RoundedCornerShape(10.dp))
-                                        .background(Color.White.copy(alpha = 0.12f))
-                                        .border(0.8.dp, IosColors.glassEdge, RoundedCornerShape(10.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) { it.icon() }
-                                Spacer(Modifier.width(10.dp))
-                                Text(it.label, color = IosColors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                if (it.more) Text("›", color = IosColors.text.copy(alpha = 0.7f), fontSize = 22.sp)
-                            }
+        val items = pages.flatten()
+        Column(Modifier.fillMaxWidth().weight(1f).padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            for (r in 0 until 2) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    for (c in 0 until 5) {
+                        val it = items.getOrNull(r * 5 + c)
+                        if (it == null) { Spacer(Modifier.width(40.dp)); continue }
+                        Column(Modifier.width(62.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            ToolButton(false, it.run) { it.icon() }
+                            Spacer(Modifier.height(4.dp))
+                            Text(it.label, color = IosColors.text.copy(alpha = 0.8f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
-            }
-        }
-        Row(Modifier.fillMaxWidth().height(26.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            for (i in 0..1) {
-                Box(
-                    Modifier.padding(horizontal = 5.dp).size(8.dp).clip(CircleShape)
-                        .background(IosColors.text.copy(alpha = if (i == page) 0.9f else 0.3f)).clickable { page = i }
-                )
             }
         }
     }
