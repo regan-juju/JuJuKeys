@@ -68,6 +68,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -327,8 +328,9 @@ internal fun BackKey(actions: KeyboardActions) {
     // the light on the backspace key walks through the rainbow by itself, one colour after another
     val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "delLight")
     val phase by spin.animateFloat(
-        0f, PressRainbow.size.toFloat(),
-        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(PressRainbow.size * 900, easing = androidx.compose.animation.core.LinearEasing)),
+        initialValue = 0f, targetValue = PressRainbow.size.toFloat(),
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(durationMillis = PressRainbow.size * 900, easing = androidx.compose.animation.core.LinearEasing)),
         label = "delPhase"
     )
     PressBox(
