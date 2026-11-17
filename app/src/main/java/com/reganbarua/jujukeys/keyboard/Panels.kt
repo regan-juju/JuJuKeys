@@ -108,6 +108,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.reganbarua.jujukeys.security.SensitiveAction
@@ -1360,15 +1364,63 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
             Spacer(Modifier.weight(1f))
             SmallIcon(Symbols.mic, "Voice") { actions.onPanel(Panel.KEYS); actions.onVoice() }
         }
-        val items = pages.flatten()
-        Column(Modifier.fillMaxWidth().weight(1f).padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        val base = pages.flatten()
+        val toolCtx = LocalContext.current
+        var labels by remember {
+            val saved = com.reganbarua.jujukeys.settings.Prefs.sp(toolCtx).getString("tools_order", "").orEmpty()
+                .split("|").filter { l -> base.any { it.label == l } }.distinct()
+            mutableStateOf(saved + base.map { it.label }.filter { it !in saved })
+        }
+        val items = labels.map { l -> base.first { it.label == l } }
+        var dragIdx by remember { mutableStateOf(-1) }
+        var dragX by remember { mutableStateOf(0f) }
+        var dragY by remember { mutableStateOf(0f) }
+        var suppressUntil by remember { mutableStateOf(0L) }
+        var gridW by remember { mutableStateOf(0) }
+        val dens = androidx.compose.ui.platform.LocalDensity.current
+        Column(
+            Modifier.fillMaxWidth().weight(1f).padding(top = 18.dp)
+                .onSizeChanged { gridW = it.width },
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
             for (r in 0 until 2) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth().zIndex(if (dragIdx in 0..9 && dragIdx / 5 == r) 1f else 0f), horizontalArrangement = Arrangement.SpaceBetween) {
                     for (c in 0 until 5) {
-                        val it = items.getOrNull(r * 5 + c)
-                        if (it == null) { Spacer(Modifier.width(40.dp)); continue }
-                        Column(Modifier.width(62.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            ToolButton(false, it.run) { it.icon() }
+                        val idx = r * 5 + c
+                        val it = items.getOrNull(idx)
+                        if (it == null) { Spacer(Modifier.width(62.dp)); continue }
+                        val mine = dragIdx == idx
+                        Column(
+                            Modifier.width(62.dp)
+                                .zIndex(if (mine) 1f else 0f)
+                                .graphicsLayer {
+                                    if (mine) { translationX = dragX; translationY = dragY; scaleX = 1.12f; scaleY = 1.12f }
+                                }
+                                .pointerInput(idx, labels) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { dragIdx = idx; dragX = 0f; dragY = 0f; suppressUntil = Long.MAX_VALUE },
+                                        onDrag = { ch, d -> ch.consume(); dragX += d.x; dragY += d.y },
+                                        onDragEnd = {
+                                            val colStep = (gridW - 62.dp.toPx()) / 4f
+                                            val rowStep = 72.dp.toPx()
+                                            val nc = (c + Math.round(dragX / colStep)).coerceIn(0, 4)
+                                            val nr = (r + Math.round(dragY / rowStep)).coerceIn(0, 1)
+                                            val to = (nr * 5 + nc).coerceIn(0, labels.size - 1)
+                                            if (to != idx) {
+                                                val l = labels.toMutableList()
+                                                l.add(to, l.removeAt(idx))
+                                                labels = l
+                                                com.reganbarua.jujukeys.settings.Prefs.setString(toolCtx, "tools_order", l.joinToString("|"))
+                                            }
+                                            dragIdx = -1; dragX = 0f; dragY = 0f
+                                            suppressUntil = System.currentTimeMillis() + 400
+                                        },
+                                        onDragCancel = { dragIdx = -1; dragX = 0f; dragY = 0f; suppressUntil = System.currentTimeMillis() + 400 },
+                                    )
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            ToolButton(false, { if (System.currentTimeMillis() > suppressUntil) it.run() }) { it.icon() }
                             Spacer(Modifier.height(4.dp))
                             Text(it.label, color = IosColors.text.copy(alpha = 0.8f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }

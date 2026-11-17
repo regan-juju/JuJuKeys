@@ -153,6 +153,12 @@ sh input tap 400 205; sleep 4
 shot 12-reopened
 note "password field after keyboard reopened (expect 10 dots): $(fieldtext)"
 sh logcat -d -t 600 | grep -iE "jujukeys|AndroidRuntime|FATAL" | tail -60 > shots/api${API}-log.txt
+# ---- drag to rearrange tools (Emoji -> second slot)
+open_demo --es theme noirglass --ez plain true
+kb; longpress_lang
+shot 08k-tools-before-drag
+sh input draganddrop 102 1272 321 1272 1200; sleep 1.5
+shot 08l-tools-after-drag
 # ---- last: one-handed mode (it is saved in prefs, so nothing may run after it)
 open_demo --es theme noirglass --ez plain true
 kb; longpress_lang; tapp 759 1461 1.5
