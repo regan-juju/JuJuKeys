@@ -132,6 +132,9 @@ for T in current darkglass noirglass; do
   open_demo --es theme $T --ez plain true
   kb; shot 09-theme-$T
 done
+open_demo --es theme current --ez plain true
+kb; tapp 75 1717 1.5
+shot 09b-symbols-page
 
 # ---- 4e. backspace light changes on each press and stays lit
 open_demo --es theme current --ez plain true
