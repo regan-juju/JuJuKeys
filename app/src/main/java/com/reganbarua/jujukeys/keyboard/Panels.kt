@@ -391,10 +391,10 @@ private fun KeepIcon() {
 }
 
 @Composable
-private fun ToolButton(active: Boolean, onTap: () -> Unit, content: @Composable () -> Unit) {
+private fun ToolButton(active: Boolean, onTap: () -> Unit, big: Boolean = false, content: @Composable () -> Unit) {
     PressBox(
-        Modifier.size(width = 40.dp, height = 38.dp),
-        shape = RoundedCornerShape(10.dp),
+        Modifier.size(width = if (big) 58.dp else 40.dp, height = if (big) 48.dp else 38.dp),
+        shape = RoundedCornerShape(if (big) 12.dp else 10.dp),
         color = if (active) IosColors.blue.copy(alpha = 0.45f) else IosColors.key,
         pressedColor = IosColors.keyPressed,
         onTap = onTap
@@ -1402,7 +1402,7 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
                                         onDrag = { ch, d -> ch.consume(); dragX += d.x; dragY += d.y },
                                         onDragEnd = {
                                             val colStep = (gridW - 62.dp.toPx()) / 4f
-                                            val rowStep = 72.dp.toPx()
+                                            val rowStep = 82.dp.toPx()
                                             val nc = (c + Math.round(dragX / colStep)).coerceIn(0, 4)
                                             val nr = (r + Math.round(dragY / rowStep)).coerceIn(0, 1)
                                             val to = (nr * 5 + nc).coerceIn(0, labels.size - 1)
@@ -1420,9 +1420,9 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
                                 },
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            ToolButton(false, { if (System.currentTimeMillis() > suppressUntil) it.run() }) { it.icon() }
+                            ToolButton(false, { if (System.currentTimeMillis() > suppressUntil) it.run() }, big = true) { it.icon() }
                             Spacer(Modifier.height(4.dp))
-                            Text(it.label, color = IosColors.text.copy(alpha = 0.8f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(it.label, color = IosColors.text.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

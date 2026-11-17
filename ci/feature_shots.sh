@@ -118,10 +118,10 @@ shot 08b-clipboard
 open_demo --es theme noirglass --ez plain true
 kb; longpress_lang
 shot 08f-tools-page
-tapp 978 1272 1.5
+tapp 978 1285 1.5
 shot 08h-edit-page
 tapp 80 1120 1.0
-longpress_lang; tapp 102 1461 1.5
+longpress_lang; tapp 102 1501 1.5
 shot 08i-themes-page
 
 # ---- 4d. every theme: keypad + bottom strip (globe / mic colours)
@@ -157,10 +157,10 @@ sh logcat -d -t 600 | grep -iE "jujukeys|AndroidRuntime|FATAL" | tail -60 > shot
 open_demo --es theme noirglass --ez plain true
 kb; longpress_lang
 shot 08k-tools-before-drag
-sh input draganddrop 102 1272 321 1272 1200; sleep 1.5
+sh input draganddrop 102 1285 321 1285 1200; sleep 1.5
 shot 08l-tools-after-drag
 # ---- last: one-handed mode (it is saved in prefs, so nothing may run after it)
 open_demo --es theme noirglass --ez plain true
-kb; longpress_lang; tapp 759 1461 1.5
+kb; longpress_lang; tapp 759 1501 1.5
 shot 08j-one-handed
 cat $LOG
