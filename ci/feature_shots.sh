@@ -130,6 +130,12 @@ tapp 80 1120 1.0
 longpress_lang; sh input swipe 800 1400 200 1400 200; sleep 1; tapp 270 1500 1.5
 shot 08j-one-handed
 
+# ---- 4d. every theme: keypad + bottom strip (globe / mic colours)
+for T in current darkglass noirglass deep amoled puredark rainbow pattern blur white; do
+  open_demo --es theme $T --ez plain true
+  kb; shot 09-theme-$T
+done
+
 # ---- 5. password entry + phone lock
 sh locksettings set-pin 1234 >> $LOG
 open_demo --es theme blur --ez password true --ez seedpw true

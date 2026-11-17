@@ -16,7 +16,7 @@ data class KeyboardPrefs(
     val boldKeys: Boolean = true,
     // পছন্দসমূহ — লেআউট
     val oneHand: Int = 0,                   // 0 off, 1 keyboard on the left, 2 on the right
-    val heightScale: Float = 1.1f,          // 1.0 ছোট / 1.1 মাঝারি (আগের "Large") / 1.2 বড় / 1.3 অনেক বড়
+    val heightScale: Float = 1.2f,          // 1.0 extra small / 1.1 small / 1.2 Normal (the old "Large") / 1.3 Large
     // পছন্দসমূহ — কী চাপলে
     val sound: Boolean = false,
     val vibrate: Boolean = true,

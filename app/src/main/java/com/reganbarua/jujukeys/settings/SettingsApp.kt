@@ -308,7 +308,7 @@ private fun PreferencesPage(p: KeyboardPrefs, refresh: () -> Unit) {
     Header("Layout")
     ChoiceItem(
         "Keyboard height",
-        listOf(1.0f to "Small", 1.1f to "Normal", 1.2f to "Large", 1.3f to "Extra large"), p.heightScale
+        listOf(1.0f to "Extra small", 1.1f to "Small", 1.2f to "Normal", 1.3f to "Large"), p.heightScale
     ) { Prefs.setFloat(context, "height_scale", it); refresh() }
     Header("Auto-hide")
     ToggleItem("Hide the keyboard when idle", "The keyboard closes by itself if no key is pressed for a while", "auto_hide", p.autoHide, refresh)
