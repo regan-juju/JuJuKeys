@@ -68,7 +68,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -322,23 +321,20 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 }
 
 /** ⟵ Backspace in the top bar: faded long arrow, hold to keep deleting. */
+/** Colour state of the backspace light (kept while the keyboard process lives). */
+internal object DelLight {
+    var idx by androidx.compose.runtime.mutableIntStateOf(0)
+    var last = 0L
+}
+
 @Composable
 internal fun BackKey(actions: KeyboardActions) {
     // same thin soft light round the border as the ক / A key (outside only), in soft red for delete
-    // the light on the backspace key walks through the rainbow by itself, one colour after another
-    val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "delLight")
-    val phase by spin.animateFloat(
-        initialValue = 0f, targetValue = PressRainbow.size.toFloat(),
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(durationMillis = PressRainbow.size * 900, easing = androidx.compose.animation.core.LinearEasing)),
-        label = "delPhase"
-    )
+    // the light changes colour only when backspace is pressed, and the last colour stays lit until the next press
+    val delCol = rainbowFor(DelLight.idx)
     PressBox(
         Modifier.size(width = 62.dp, height = 38.dp)
             .drawBehind {
-                val n = PressRainbow.size
-                val i = phase.toInt().coerceIn(0, n - 1)
-                val delCol = androidx.compose.ui.graphics.lerp(PressRainbow[i], PressRainbow[(i + 1) % n], phase - i)
                 val cr = 10.dp.toPx()
                 val keyPath = androidx.compose.ui.graphics.Path().apply {
                     addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(cr)))
@@ -358,7 +354,11 @@ internal fun BackKey(actions: KeyboardActions) {
             },
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
-        onTap = { actions.onBackspace() },
+        onTap = {
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - DelLight.last > 350) { DelLight.idx++; DelLight.last = now }   // holding does not flicker
+            actions.onBackspace()
+        },
         repeating = true,
         kind = KeyKind.DELETE
     ) {

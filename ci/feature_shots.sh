@@ -133,11 +133,10 @@ for T in current darkglass noirglass; do
   kb; shot 09-theme-$T
 done
 
-# ---- 4e. backspace light walks through colours by itself
+# ---- 4e. backspace light changes on each press and stays lit
 open_demo --es theme current --ez plain true
-sh settings put global animator_duration_scale 1.0; sleep 1
 kb
-sh "for n in 1 2 3 4; do input tap 540 1860; screencap -p /sdcard/b\$n.png; sleep 0.5; done"
+sh "for n in 1 2 3; do input tap 975 1070; sleep 0.6; screencap -p /sdcard/b\$n.png; sleep 0.5; done; sleep 4; screencap -p /sdcard/b4.png"
 for n in 1 2 3 4; do adb pull /sdcard/b$n.png shots/api${API}-13-back$n.png >/dev/null 2>&1; done
 
 # ---- 5. password entry + phone lock
