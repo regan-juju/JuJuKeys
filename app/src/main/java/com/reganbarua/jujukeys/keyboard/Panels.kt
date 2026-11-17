@@ -725,18 +725,18 @@ private fun ClipGrid(
         val recent = clips.filter { !it.pinned }
         val pinned = clips.filter { it.pinned }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (recent.isNotEmpty()) {
-                item(span = { GridItemSpan(2) }) { SectionTitle("Recent") }
+                item(span = { GridItemSpan(3) }) { SectionTitle("Recent") }
                 items(recent, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
             if (pinned.isNotEmpty()) {
-                item(span = { GridItemSpan(2) }) { SectionTitle("Pinned") }
+                item(span = { GridItemSpan(3) }) { SectionTitle("Pinned") }
                 items(pinned, key = { it.id }) { c -> ClipTile(c, c.id == selected, unlocked, actions, pinPick?.invoke(c.id), onPinToggle) { onSelect(c.id) } }
             }
         }
@@ -755,14 +755,14 @@ private fun ClipTile(
 ) {
     Box(
         Modifier
-            .heightIn(min = 46.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .heightIn(min = 34.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(if (isSelected) IosColors.keyPressed else IosColors.card)
             .combinedClickable(
                 onClick = { if (pinPick != null) onPinToggle(clip.id) else actions.onClipTap(clip.id) },
                 onLongClick = { if (pinPick == null) onLongPress() }
             )
-            .padding(start = 12.dp, end = if (pinPick != null) 34.dp else 12.dp, top = 7.dp, bottom = 7.dp),
+            .padding(start = 9.dp, end = if (pinPick != null) 30.dp else 9.dp, top = 4.dp, bottom = 4.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         if (clip.sensitive && !unlocked) {
@@ -773,7 +773,7 @@ private fun ClipTile(
             )
         } else {
             Text(
-                clip.text, color = IosColors.text, fontSize = 15.sp, maxLines = 2,
+                clip.text, color = IosColors.text, fontSize = 13.sp, maxLines = 2,
                 overflow = TextOverflow.Ellipsis, fontFamily = fontOf(clip.text)
             )
         }
@@ -1314,18 +1314,18 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
     fun glyph(g: String): @Composable () -> Unit = { Text(g, color = IosColors.text, fontSize = 26.sp) }
     val pages = listOf(
         listOf(
-            ToolItem("Emoji", true, glyph("☺")) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
-            ToolItem("Sticker", true, glyph("▣")) { actions.onStickerTab(true); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Emoji", true, { Icon(androidx.compose.material.icons.Icons.Outlined.EmojiEmotions, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Sticker", true, { Icon(androidx.compose.material.icons.Icons.Outlined.StickyNote2, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(true); actions.onPanel(Panel.EMOJI) },
             ToolItem("Text replace", false, { ReplaceIcon(IosColors.text) }) { actions.onPanel(Panel.KEYS); actions.onOpenTextReplace() },
-            ToolItem("Undo", false, glyph("↶")) { actions.onPanel(Panel.KEYS); actions.onUndo() },
-            ToolItem("Text editing", true, glyph("I")) { actions.onPanel(Panel.EDIT) },
-            ToolItem("Theme", true, glyph("🎨")) { actions.onPanel(Panel.THEMES) },
+            ToolItem("Undo", false, { Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.Undo, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onUndo() },
+            ToolItem("Text editing", true, { Icon(androidx.compose.material.icons.Icons.Filled.TextFields, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.EDIT) },
+            ToolItem("Theme", true, { Icon(androidx.compose.material.icons.Icons.Outlined.Palette, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.THEMES) },
         ),
         listOf(
-            ToolItem("Resize", false, glyph("⤢")) { actions.onResize() },
+            ToolItem("Resize", false, { Icon(androidx.compose.material.icons.Icons.Filled.OpenInFull, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onResize() },
             ToolItem("Next language", false, { Icon(Symbols.globe, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onToggleLanguage() },
-            ToolItem("One-handed", false, glyph("▯")) { actions.onOneHand(1) },
-            ToolItem("Share keyboard", false, glyph("⤴")) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
+            ToolItem("One-handed", false, { Icon(androidx.compose.material.icons.Icons.Outlined.PhoneAndroid, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onOneHand(1) },
+            ToolItem("Share keyboard", false, { Icon(androidx.compose.material.icons.Icons.Filled.Share, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
         )
     )
     Column(
@@ -1365,7 +1365,12 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
                             color = IosColors.key, pressedColor = IosColors.keyPressed, onTap = it.run
                         ) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { it.icon() }
+                                Box(
+                                    Modifier.size(width = 44.dp, height = 40.dp).clip(RoundedCornerShape(10.dp))
+                                        .background(Color.White.copy(alpha = 0.12f))
+                                        .border(0.8.dp, IosColors.glassEdge, RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { it.icon() }
                                 Spacer(Modifier.width(10.dp))
                                 Text(it.label, color = IosColors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 if (it.more) Text("›", color = IosColors.text.copy(alpha = 0.7f), fontSize = 22.sp)
