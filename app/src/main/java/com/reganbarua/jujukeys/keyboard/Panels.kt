@@ -48,6 +48,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EmojiEmotions
+import androidx.compose.material.icons.outlined.StickyNote2
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
@@ -1314,18 +1321,18 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
     fun glyph(g: String): @Composable () -> Unit = { Text(g, color = IosColors.text, fontSize = 26.sp) }
     val pages = listOf(
         listOf(
-            ToolItem("Emoji", true, { Icon(androidx.compose.material.icons.Icons.Outlined.EmojiEmotions, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
-            ToolItem("Sticker", true, { Icon(androidx.compose.material.icons.Icons.Outlined.StickyNote2, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(true); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Emoji", true, { Icon(Icons.Outlined.EmojiEmotions, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(false); actions.onPanel(Panel.EMOJI) },
+            ToolItem("Sticker", true, { Icon(Icons.Outlined.StickyNote2, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onStickerTab(true); actions.onPanel(Panel.EMOJI) },
             ToolItem("Text replace", false, { ReplaceIcon(IosColors.text) }) { actions.onPanel(Panel.KEYS); actions.onOpenTextReplace() },
-            ToolItem("Undo", false, { Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.Undo, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onUndo() },
-            ToolItem("Text editing", true, { Icon(androidx.compose.material.icons.Icons.Filled.TextFields, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.EDIT) },
-            ToolItem("Theme", true, { Icon(androidx.compose.material.icons.Icons.Outlined.Palette, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.THEMES) },
+            ToolItem("Undo", false, { Icon(Icons.AutoMirrored.Filled.Undo, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onUndo() },
+            ToolItem("Text editing", true, { Icon(Icons.Filled.TextFields, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.EDIT) },
+            ToolItem("Theme", true, { Icon(Icons.Outlined.Palette, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.THEMES) },
         ),
         listOf(
-            ToolItem("Resize", false, { Icon(androidx.compose.material.icons.Icons.Filled.OpenInFull, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onResize() },
+            ToolItem("Resize", false, { Icon(Icons.Filled.OpenInFull, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onResize() },
             ToolItem("Next language", false, { Icon(Symbols.globe, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onToggleLanguage() },
-            ToolItem("One-handed", false, { Icon(androidx.compose.material.icons.Icons.Outlined.PhoneAndroid, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onOneHand(1) },
-            ToolItem("Share keyboard", false, { Icon(androidx.compose.material.icons.Icons.Filled.Share, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
+            ToolItem("One-handed", false, { Icon(Icons.Outlined.PhoneAndroid, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onOneHand(1) },
+            ToolItem("Share keyboard", false, { Icon(Icons.Filled.Share, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
         )
     )
     Column(
