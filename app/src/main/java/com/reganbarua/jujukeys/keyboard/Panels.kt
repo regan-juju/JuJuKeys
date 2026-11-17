@@ -1335,7 +1335,7 @@ internal fun ToolsPanel(state: KeyboardState, actions: KeyboardActions) {
         listOf(
             ToolItem("Resize", false, { Icon(Icons.Filled.OpenInFull, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onResize() },
             ToolItem("Language", false, { Icon(Symbols.globe, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onToggleLanguage() },
-            ToolItem("One-handed", false, { Icon(Icons.Outlined.PhoneAndroid, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onOneHand(1) },
+            ToolItem("One-handed", false, { Icon(Icons.Outlined.PhoneAndroid, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onOneHand((state.prefs.oneHand + 1) % 3) },
             ToolItem("Share", false, { Icon(Icons.Filled.Share, null, tint = IosColors.text, modifier = Modifier.size(24.dp)) }) { actions.onPanel(Panel.KEYS); actions.onShareKeyboard() },
         )
     )
