@@ -124,7 +124,7 @@ private val BaseRowHeight = 49.1.dp
 // Gaps around each key: big, nearly square keys (≈36 × 45 dp at Normal) with small gaps.
 // Shared by letters, symbols and the number pad. Touches in a gap go to the nearest key.
 internal val KeyHPad = 1.4.dp
-internal val KeyVPad = 4.5.dp
+internal val KeyVPad = 6.dp   // keys a little shorter top to bottom; row pitch (keyboard height) unchanged
 private const val BengaliDigits = "০১২৩৪৫৬৭৮৯"
 
 /** Sound/vibration callback for every key press. */

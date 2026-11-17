@@ -324,10 +324,19 @@ private fun ConfirmChip(text: String, bg: Color, fg: Color, onTap: () -> Unit) {
 @Composable
 internal fun BackKey(actions: KeyboardActions) {
     // same thin soft light round the border as the ক / A key (outside only), in soft red for delete
-    val delCol = Color(0xFFFF6B81)
+    // the light on the backspace key walks through the rainbow by itself, one colour after another
+    val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "delLight")
+    val phase by spin.animateFloat(
+        0f, PressRainbow.size.toFloat(),
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(PressRainbow.size * 900, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "delPhase"
+    )
     PressBox(
         Modifier.size(width = 62.dp, height = 38.dp)
             .drawBehind {
+                val n = PressRainbow.size
+                val i = phase.toInt().coerceIn(0, n - 1)
+                val delCol = androidx.compose.ui.graphics.lerp(PressRainbow[i], PressRainbow[(i + 1) % n], phase - i)
                 val cr = 10.dp.toPx()
                 val keyPath = androidx.compose.ui.graphics.Path().apply {
                     addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(cr)))
@@ -342,8 +351,9 @@ internal fun BackKey(actions: KeyboardActions) {
                         )
                     }
                 }
-            }
-            .border(1.dp, delCol, RoundedCornerShape(10.dp)),
+                drawRoundRect(delCol, size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(cr),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()))
+            },
         shape = RoundedCornerShape(10.dp),
         color = IosColors.keyOr(9, IosColors.key), pressedColor = IosColors.rainbowAt(9)?.let { IosColors.pressedOf(it) } ?: IosColors.keyPressed,
         onTap = { actions.onBackspace() },

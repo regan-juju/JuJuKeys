@@ -133,6 +133,10 @@ for T in current darkglass noirglass; do
   kb; shot 09-theme-$T
 done
 
+# ---- 4e. backspace light walks through colours by itself
+open_demo --es theme current --ez plain true
+kb; for n in 1 2 3 4; do shot 13-back$n; sleep 2.3; done
+
 # ---- 5. password entry + phone lock
 sh locksettings set-pin 1234 >> $LOG
 open_demo --es theme blur --ez password true --ez seedpw true
