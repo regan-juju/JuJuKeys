@@ -775,7 +775,9 @@ internal fun PressBox(
                     start = Offset.Zero, end = Offset(size.width, size.height)
                 )
                 val lip = if (cz > 0f) Brush.verticalGradient(0f to Color.White.copy(alpha = 0.85f * cz), 0.22f to Color.Transparent) else null
+                val kd = IosColors.theme.keyDark
                 onDrawBehind {
+                    if (kd > 0f) drawRect(Color.Black.copy(alpha = kd))
                     drawRect(body); drawRect(sheen)
                     if (lip != null) {
                         val inset = 0.9.dp.toPx()

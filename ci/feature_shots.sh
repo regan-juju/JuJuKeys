@@ -128,7 +128,7 @@ longpress_lang; tapp 810 1710 1.5
 shot 08i-themes-page
 
 # ---- 4d. every theme: keypad + bottom strip (globe / mic colours)
-for T in current darkglass noirglass deep amoled puredark rainbow pattern blur white; do
+for T in current darkglass noirglass; do
   open_demo --es theme $T --ez plain true
   kb; shot 09-theme-$T
 done

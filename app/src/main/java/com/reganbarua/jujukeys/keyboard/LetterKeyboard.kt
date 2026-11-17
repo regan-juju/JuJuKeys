@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -209,9 +210,11 @@ internal fun LetterKeyboard(state: KeyboardState, actions: KeyboardActions, prev
             rims = rects.map { r -> IosColors.glassBrush(t, r.top, r.bottom) to IosColors.glassBrush(t, r.top - grow, r.bottom + grow) },
             bodies = rects.mapIndexed { i, r ->
                 val base = tint.getOrNull(i)?.first ?: IosColors.key
-                if (t.crisp > 0f) Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.26f * t.crisp), 0.55f to Color.White.copy(alpha = 0.04f * t.crisp),
-                    1f to Color.White.copy(alpha = 0.10f * t.crisp), startY = r.top, endY = r.bottom)
+                if (t.crisp > 0f) {
+                    val smoke = Color.Black.copy(alpha = t.keyDark)
+                    fun g(a: Float) = Color.White.copy(alpha = a * t.crisp).compositeOver(smoke)
+                    Brush.verticalGradient(0f to g(0.26f), 0.55f to g(0.04f), 1f to g(0.10f), startY = r.top, endY = r.bottom)
+                }
                 else Brush.verticalGradient(listOf(lerp(base, Color.White, 0.10f), base), startY = r.top, endY = r.bottom)
             },
             sheens = rects.map { r ->

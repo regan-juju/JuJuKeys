@@ -53,6 +53,8 @@ internal class KbTheme(
     val navMic: Color? = null,
     /** >0: crisp glass keys (clear outline all round, bright top edge, soft drop shadow, clearer body). 1 = full strength. */
     val crisp: Float = 0f,
+    /** Extra dark smoke under every glass key (0 = none). */
+    val keyDark: Float = 0f,
 ) {
     /** Flat background like the iPhone keyboard: no colour glows behind the keys (all themes). */
     val blobs: List<Blob> = emptyList()
@@ -68,7 +70,7 @@ internal object Themes {
                 Blob(0.88f, 0.28f, Color(0x1F3C3C8C), 0.50f), Blob(0.30f, 0.18f, Color(0x1A6E6432), 0.45f),
             ),
             // glass keys over a soft blurred grey picture behind the key pad; the bottom strip (🌐 ^ 🎤) stays plain dark
-            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x8E,
+            bgImage = com.reganbarua.jujukeys.R.drawable.theme_glass, bgVeil = 0x8E, keyDark = 0.34f,
             key = Color(0x1AFFFFFF), keyPressed = Color(0x66FFFFFF), fn = Color(0x1AFFFFFF),
             glassTop = Color(0xFFFFFFFF), edge = Color(0x59FFFFFF), crisp = 1f,
         ),
