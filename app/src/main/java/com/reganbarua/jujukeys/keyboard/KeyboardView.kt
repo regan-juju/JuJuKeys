@@ -352,13 +352,13 @@ private fun ReturnKey(
     val rc = IosColors.rainbowAt(rainbow)
     PressBox(
         modifier.keyPadding(),
-        color = rc ?: IosColors.faded, pressedColor = rc?.let { IosColors.pressedOf(it) } ?: IosColors.fadedPressed,
+        color = rc ?: IosColors.blue, pressedColor = rc?.let { IosColors.pressedOf(it) } ?: IosColors.bluePressed,
         onTap = { actions.onEnter() },
         kind = KeyKind.RETURN
     ) {
         Icon(
             if (label == "search") Symbols.search else Symbols.keyboardReturn, "Return",
-            tint = if (rc != null) IosColors.text else IosColors.fadedIcon, modifier = Modifier.size(26.dp)
+            tint = if (rc != null) IosColors.text else Color.White, modifier = Modifier.size(26.dp)
         )
     }
 }
