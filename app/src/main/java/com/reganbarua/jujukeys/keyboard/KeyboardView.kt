@@ -287,7 +287,7 @@ fun KeyboardView(state: KeyboardState, clips: List<ClipItem>, actions: KeyboardA
                     else -> SuggestionBar(state, actions)
                 }
 
-                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (isFullPage(state.panel) && !searching) 110.dp else 0.dp))) {
+                Box(Modifier.fillMaxWidth().height(keyAreaHeight(prefs) + 2.dp + (if (isFullPage(state.panel) && !searching) 94.dp else 0.dp))) {
                     when (state.panel) {
                         Panel.KEYS, Panel.SUGGESTIONS -> KeysPanel(state, actions, preview)
                         Panel.CLIPBOARD -> ClipboardPanel(state, clips, actions)
@@ -604,12 +604,12 @@ internal fun KeyLabel(text: String, size: TextUnit) {
 @Composable
 private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
     Row(
-        Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 🌐 = switch to the next keyboard only (hold: list of keyboards). Settings is in the top bar.
         StripButton(onTap = { actions.onNextKeyboard() }, onLongPress = { actions.onShowImePicker() }) {
-            LineGlobe(IosColors.theme.navGlobe ?: if (IosColors.theme.light) Color(0xFF0A84FF) else Color(0xFF4FC3FF), Modifier.size(32.dp))
+            LineGlobe(IosColors.theme.navGlobe ?: if (IosColors.theme.light) Color(0xFF0A84FF) else Color(0xFF4FC3FF), Modifier.size(28.dp))
         }
         if (state.prefs.showSuggestions && state.emojiSearch == null) {
             Spacer(Modifier.width(20.dp))
@@ -624,7 +624,7 @@ private fun BottomStrip(state: KeyboardState, actions: KeyboardActions) {
         Spacer(Modifier.weight(1f))
         if (state.prefs.showVoiceKey) {
             StripButton(onTap = { actions.onVoice() }) {
-                LineMic(IosColors.theme.navMic ?: if (IosColors.theme.light) Color(0xFFFF6A3D) else Color(0xFFFF8A6B), Modifier.size(32.dp))
+                LineMic(IosColors.theme.navMic ?: if (IosColors.theme.light) Color(0xFFFF6A3D) else Color(0xFFFF8A6B), Modifier.size(28.dp))
             }
         } else {
             Spacer(Modifier.width(52.dp))
