@@ -126,9 +126,6 @@ shot 08h-edit-page
 tapp 80 1120 1.0
 longpress_lang; tapp 810 1710 1.5
 shot 08i-themes-page
-tapp 80 1120 1.0
-longpress_lang; sh input swipe 800 1400 200 1400 200; sleep 1; tapp 270 1500 1.5
-shot 08j-one-handed
 
 # ---- 4d. every theme: keypad + bottom strip (globe / mic colours)
 for T in current darkglass noirglass deep amoled puredark rainbow pattern blur white; do
@@ -150,4 +147,8 @@ sh input tap 400 205; sleep 4
 shot 12-reopened
 note "password field after keyboard reopened (expect 10 dots): $(fieldtext)"
 sh logcat -d -t 600 | grep -iE "jujukeys|AndroidRuntime|FATAL" | tail -60 > shots/api${API}-log.txt
+# ---- last: one-handed mode (it is saved in prefs, so nothing may run after it)
+open_demo --es theme noirglass --ez plain true
+kb; longpress_lang; sh input swipe 800 1400 200 1400 200; sleep 1; tapp 270 1500 1.5
+shot 08j-one-handed
 cat $LOG
